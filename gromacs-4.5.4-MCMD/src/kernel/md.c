@@ -1950,7 +1950,7 @@ double do_md(FILE *fplog,t_commrec *cr,int nfile,const t_filenm fnm[],
     gmx_repl_ex_t repl_ex=NULL;
     int        nchkpt=1;
 
-    gmx_localtop_t *top;	
+    gmx_localtop_t *top;    
     t_mdebin *mdebin=NULL;
     t_state    *state=NULL;
     rvec       *f_global=NULL;
@@ -1982,14 +1982,14 @@ double do_md(FILE *fplog,t_commrec *cr,int nfile,const t_filenm fnm[],
     t_coupl_rec *tcr=NULL;
     rvec        *xcopy=NULL,*vcopy=NULL,*cbuf=NULL;
     matrix      boxcopy={{0}},lastbox;
-	tensor      tmpvir;
-	real        fom,oldfom,veta_save,pcurr,scalevir,tracevir;
-	real        vetanew = 0;
+    tensor      tmpvir;
+    real        fom,oldfom,veta_save,pcurr,scalevir,tracevir;
+    real        vetanew = 0;
     double      cycles;
-	real        saved_conserved_quantity = 0;
+    real        saved_conserved_quantity = 0;
     real        last_ekin = 0;
-	int         iter_i;
-	t_extmass   MassQ;
+    int         iter_i;
+    t_extmass   MassQ;
     int         **trotter_seq; 
     char        sbuf[STEPSTRSIZE],sbuf2[STEPSTRSIZE];
     int         handled_stop_condition=gmx_stop_cond_none; /* compare to get_stop_condition*/
@@ -2324,7 +2324,7 @@ const double pi_const = 3.1415;
         }
         /* Set the initial energy history in state by updating once */
         update_energyhistory(&state_global->enerhist,mdebin);
-    }	
+    }   
 
     if ((state->flags & (1<<estLD_RNG)) && (Flags & MD_READ_RNG)) {
         /* Set the random state if we read a checkpoint file */
@@ -3035,7 +3035,7 @@ if (count_FE) {
       USERINT1 = ir->userint1;
       T_MEAN   = ir->userreal1*1e-12;  /* Peak of the gaussian pulse in ps           */
       nphot    = (double)ir->userreal2;  /* Number of photons                      */
-      width    = ir->userreal3*1e-12;  /* Width of the peak (in time, in ps)           */
+      width    = ir->userreal3*1e-12;  /* Width of the peak (in time, in ps) SIGMA           */
       rho      = ((double)ir->userreal4)*1e-9*100;  /* Diameter of the focal spot (nm)       */
 
      
@@ -3059,13 +3059,21 @@ if (count_FE) {
                 exit(0);
             }
 
-
+            // init files
              fp = fopen("./simulation_output/mean_charge_vs_time.txt", "w");  // open the file in write mode
             if (fp == NULL) {
                 printf("Error: could not open file.\n");
                 return 1;
             }
             fclose(fp);  // close the file
+
+            fp = fopen("./simulation_output/pulse_profile.txt", "w");  // open the file in write mode
+            if (fp == NULL) {
+                printf("Error: could not open file.\n");
+                return 1;
+            }
+            fclose(fp);  // close the file
+
 
             fp = fopen("./simulation_output/electron_data.txt", "w");  // open the file in write mode
             if (fp == NULL) {
@@ -3971,6 +3979,14 @@ void shuffle(int arr[], int size) {
                 return 1;
             }
             fprintf(fp, "%lf %lf\n", t, mean_charge);  // write each element to the file
+            fclose(fp);  // close the file
+
+            fp = fopen("./simulation_output/pulse_profile.txt", "a");  // open the file in write mode
+            if (fp == NULL) {
+                printf("Error: could not open file.\n");
+                return 1;
+            }
+            fprintf(fp, "%lf %lf\n", t, INTENSITY);  // write each element to the file
             fclose(fp);  // close the file
 
             fp = fopen("./simulation_output/electron_data.txt", "a");  // open the file in write mode
