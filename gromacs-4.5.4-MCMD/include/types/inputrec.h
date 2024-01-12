@@ -273,10 +273,18 @@ typedef struct {
   int  userint2;
   int  userint3;
   int  userint4;
+  int  userint5;        /* User determined parameters                   */
+  int  userint6;
+  int  userint7;
+  int  userint8;
   real userreal1;
   real userreal2;
   real userreal3;
   real userreal4;
+  real userreal5;
+  real userreal6;
+  real userreal7;
+  real userreal8;
   t_grpopts opts;	/* Group options				*/
   t_cosines ex[DIM];	/* Electric field stuff	(spatial part)		*/
   t_cosines et[DIM];	/* Electric field stuff	(time part)		*/

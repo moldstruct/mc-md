@@ -1154,10 +1154,18 @@ void get_ir(const char *mdparin,const char *mdparout,
   ITYPE ("userint2",    ir->userint2,   0);
   ITYPE ("userint3",    ir->userint3,   0);
   ITYPE ("userint4",    ir->userint4,   0);
+  ITYPE ("userint1",    ir->userint5,   0);
+  ITYPE ("userint2",    ir->userint6,   0);
+  ITYPE ("userint3",    ir->userint7,   0);
+  ITYPE ("userint4",    ir->userint8,   0);
   RTYPE ("userreal1",   ir->userreal1,  0);
   RTYPE ("userreal2",   ir->userreal2,  0);
   RTYPE ("userreal3",   ir->userreal3,  0);
   RTYPE ("userreal4",   ir->userreal4,  0);
+  RTYPE ("userreal1",   ir->userreal5,  0);
+  RTYPE ("userreal2",   ir->userreal6,  0);
+  RTYPE ("userreal3",   ir->userreal7,  0);
+  RTYPE ("userreal4",   ir->userreal8,  0);
 #undef CTYPE
 
   write_inpfile(mdparout,ninp,inp,FALSE,wi);
