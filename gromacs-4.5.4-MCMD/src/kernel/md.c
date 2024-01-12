@@ -3043,7 +3043,8 @@ if (count_FE) {
     userreal1 - Peak of the gaussian pulse in ps
     userreal2 - Total number of photons in the pulse
     userreal3 - Width of the peak in ps. This is the sigma value of the guassian.
-    userreal4 - Diameter of the focal spot (nm) 
+    userreal4 - Diameter of the focal spot [nm]
+    userreal5 - Photon energy [eV]
     */
 
 
@@ -3287,7 +3288,7 @@ if (count_FE) {
             int match[3];
             current_num_free_electrons  = num_free_electrons;
    
-            double photon_energy = 600;  // in eV
+            double photon_energy = ir->userreal5;  // in eV
             double critical_potential;
             double ionization_energy;
             int found_match, found_match_collisional;
