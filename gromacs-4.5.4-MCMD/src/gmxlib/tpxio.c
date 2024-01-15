@@ -739,11 +739,19 @@ static void do_inputrec(t_fileio *fio, t_inputrec *ir,gmx_bool bRead,
     gmx_fio_do_int(fio,ir->userint1); 
     gmx_fio_do_int(fio,ir->userint2); 
     gmx_fio_do_int(fio,ir->userint3); 
-    gmx_fio_do_int(fio,ir->userint4); 
+    gmx_fio_do_int(fio,ir->userint4);
+    gmx_fio_do_int(fio,ir->userint5); 
+    gmx_fio_do_int(fio,ir->userint6); 
+    gmx_fio_do_int(fio,ir->userint7); 
+    gmx_fio_do_int(fio,ir->userint8);  
     gmx_fio_do_real(fio,ir->userreal1); 
     gmx_fio_do_real(fio,ir->userreal2); 
     gmx_fio_do_real(fio,ir->userreal3); 
     gmx_fio_do_real(fio,ir->userreal4); 
+    gmx_fio_do_real(fio,ir->userreal5); 
+    gmx_fio_do_real(fio,ir->userreal6); 
+    gmx_fio_do_real(fio,ir->userreal7); 
+    gmx_fio_do_real(fio,ir->userreal8); 
     
     /* pull stuff */
     if (file_version >= 48) {

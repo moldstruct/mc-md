@@ -671,10 +671,18 @@ void pr_inputrec(FILE *fp,int indent,const char *title,t_inputrec *ir,
     PI("userint2",ir->userint2);
     PI("userint3",ir->userint3);
     PI("userint4",ir->userint4);
+    PI("userint5",ir->userint5);
+    PI("userint6",ir->userint6);
+    PI("userint7",ir->userint7);
+    PI("userint8",ir->userint8);
     PR("userreal1",ir->userreal1);
     PR("userreal2",ir->userreal2);
     PR("userreal3",ir->userreal3);
     PR("userreal4",ir->userreal4);
+    PR("userreal5",ir->userreal5);
+    PR("userreal6",ir->userreal6);
+    PR("userreal7",ir->userreal7);
+    PR("userreal8",ir->userreal8);
     pr_grp_opts(fp,indent,"grpopts",&(ir->opts),bMDPformat);
     pr_cosine(fp,indent,"efield-x",&(ir->ex[XX]),bMDPformat);
     pr_cosine(fp,indent,"efield-xt",&(ir->et[XX]),bMDPformat);
