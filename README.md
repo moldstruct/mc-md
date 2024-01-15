@@ -2,9 +2,9 @@
 Hybrid Monte Carlo / Molecular Dynamics
 
 ## TODO:
-    * Add examples
+    * Add examples 
     * Write a more cohesive guide
-    * Specify units for output
+    * Specify units for output (check)
 
 
 ## Important parameters
@@ -28,7 +28,7 @@ If you want to use even more parameters for whatever reason, everything up to us
 Along with the normal MD output that a GROMACS sim would give, when the userint5 is set to 1, 
 then additional output will be given in /path_to_sim-directory/simulation_output in the form of 4 .txt files.
 
-### electron_data.txt  @@@ TODO: SPECIFY UNITS
+### electron_data.txt 
 
 Contains information about electrons and other ionization goodies for each timestep.
 
