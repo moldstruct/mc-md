@@ -1,6 +1,12 @@
 # mc-md
 Hybrid Monte Carlo / Molecular Dynamics
 
+## TODO:
+    * Add examples
+    * Write a more cohesive guide
+    * Specify units for output
+
+
 ## Important parameters
     userint1 - (default = 1)Alter forcefield. If set to zero the everything should run as unmodifed gromacs 4.5.4 (hopefully)
     userint2 - (default = 1)Do charge transfer. Enables the charge transfer module 
