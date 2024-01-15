@@ -34,13 +34,13 @@ Contains information about electrons and other ionization goodies for each times
 
 Column 1: time in picoseconds.
 
-Column 2: electron density in (electrons per nm^3?).
+Column 2: electron density in electrons/cm^3.
 
-Column 3: electron temperature in _.
+Column 3: electron temperature in eV.
 
-Column 4: debye length in (nm?).
+Column 4: debye length in nm.
 
-Column 5: rg_factor???.
+Column 5: volume expansion (current radius of gyration / initial radius of gyration)
 
 
 ### mean_charge_vs_time.txt 
