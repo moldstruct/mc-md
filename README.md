@@ -1,6 +1,6 @@
 # Hybrid Monte Carlo / Molecular Dynamics
-This is a Hybrid Monte Carlo / Molecular Dynamics (MC/MD) model that is part of the **MOLDSTRUCT** toolbox. It can be used to simulate photon-matter interaction for smaller systems like single proteins. '
-The code is based on a modified version of GROMACS [webpage](https://www.gromacs.org/).
+This is a Hybrid Monte Carlo / Molecular Dynamics (MC/MD) model that is part of the **MOLDSTRUCT** toolbox. It can be used to simulate photon-matter interaction for smaller systems like single proteins.
+The code is based on a modified version of GROMACS ([webpage](https://www.gromacs.org/)).
 With functionality close to the normal GROMACS but with some additional parameters to control ionization. Running the code requires that atomic data (more details later) is supplied for the appropriate energy.
 The model is developed by the Biophysics group at Uppsala University and is published here [link to article](PUT URL HERE WHEN PUBLISHED).
 
@@ -9,7 +9,7 @@ The model is developed by the Biophysics group at Uppsala University and is publ
 - Guide to running sims
 - example
    - Write guide
-   - upload exampel files
+   - upload example files
 
 
 # Manual
