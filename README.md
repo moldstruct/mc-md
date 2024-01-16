@@ -5,7 +5,7 @@ With functionality close to the normal GROMACS but with some additional paramete
 The model is developed by the Biophysics group at Uppsala University and is published here [link to article](PUT URL HERE WHEN PUBLISHED).
 
 # Todo 
-- Write something about atomic data
+- Fill in detail in brackets in atomic data
 - Guide to running sims
 - example
    - Write guide
@@ -95,16 +95,45 @@ So for hydrogen two rows of the file might look like this:
 1 0 0 13.5984
 ```
 
-### `rate_transitions_to_gromacs.txt`
-This file contains all possible transitions for an atomic species. Each initial state has its own row and has the format `initial state ; final state transition_rate`, or `a b c ; a' b' c' transition_rate ;`.
-Here a `;` is used to separate the initial and final states. In the case of multiple possible final states, we add one more final state and rate after the first one like `a b c ; a' b' c' transition_rate' ; a'' b'' c'' transition_rate''`.
+### `rate_transitions_to_gromacs_X.txt`
+This file contains all possible transitions for an atomic species. Each initial state has its own row and has the format 
+`initial state ; final state transition_rate`, or 
+`a b c ; a' b' c' transition_rate ;`.
+Here a `;` is used to separate the initial and final states. In the case of multiple possible final states, we add one more final state and rate after the first one like 
+`a b c ; a' b' c' transition_rate' ; a'' b'' c'' transition_rate'' ;`.
+This pattern continues for more final states.
 We look at hydrogen again, the transitions `1 0 0` -> `0 0 0` and `0 1 0` -> `0 0 0`/`1 0 0`  could look like this:
 ```
 1 0 0 ;0 0 0 6.230054227114906e-23 ;
 0 1 0 ;0 0 0 1.8994473708741955e-24 ;1 0 0 0.008360485299247617 ;
 ```
 
+### `collosional_parameters_X.txt`
+This file is very similar to the previous one, but we have 5 parameters `c0`,`c1`,`c2`,`c3`, and `c4` instead of the one for transition rate.
+These parameters correspond to... [fill in this]
+So the format would be 
+`initial state ; final state c0 c1 c2 c3 c4 ;` or 
+`a b c ; a' b' c' c0 c1 c2 c3 c4 ;`.
+For multiple possible final states we do the same as for transition rates and simply append them at the end of the line. Two possible final states would look like:
+`a b c ; a' b' c' c0' c1' c2' c3' c4'; a'' b'' c'' c0'' c1'' c2'' c3'' c4'' ;`.
+So in the case of Hydrogen, some transitions might look like this:
+```
+0 1 0 ; 0 0 0 6.137 -11.4766 5.3396 0.0 1.82698 ; 
+1 0 0 ; 0 0 0 3.8256 -7.3391 3.5135 0.0 3.40109 ; 0 1 0 3.40698 -6.17434 36.1298 -26.325 2.5358 ; 
+```
 
+### `statistical_weight_X.txt`
+[How do we generate this number? What is the statistical weight?]
+This is very similar to the energy level, each row is a state `a b c` followed by the states statistical weight. 
+An example from the Hydrogen again:
+```
+0 0 0 1.0
+1 0 0 2.0
+```
+
+And that is that!
+Remember that some of these parameters are dependant on the photon energy.
+How we supply these files to the simulation is covered in the next section.
 
 
 ## Running a simulation
