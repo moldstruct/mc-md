@@ -116,11 +116,6 @@ All observables are in the same units as the other files.
 ### Example 1
 
 ## Limitations
-### Systems blowing up (Too much!)
-For high ionization we get huge forces, this can make the numerical integration unstable. 
-If you suspect this check the kinetic and potential energy of the system. As long as they look relativly smooth it should be okay.
-The work around is usually to lower the stepsize. The simulations in the publication are done at 1as timestep.
-
 ### Atomic species
 In the way that the code is written it currently can only handle a few atomic species.
 At the moment the list consists of
@@ -132,6 +127,16 @@ At the moment the list consists of
 - Iron.
 
 With a bit of programming knowledge this can easily be extended, look in the `md.c` file in `gromacs-4.5.4-MCMD/src/kernel`.
+
+### Only serial simulations
+Currently a simulation can only utilize one core. One can however run many simulations in parallel, as one might want enough simulations to evaluate statistics.
+
+### Systems blowing up (Too much!)
+For high ionization we get huge forces, this can make the numerical integration unstable. 
+If you suspect this check the kinetic and potential energy of the system. As long as they look relativly smooth it should be okay.
+The work around is usually to lower the stepsize. The simulations in the publication are done at 1as timestep.
+
+
 
 
 
