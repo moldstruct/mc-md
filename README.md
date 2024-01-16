@@ -97,7 +97,7 @@ Column 1: time in picoseconds.
 Column 2: mean charge of the system in elementary charge units e.
 
 
-### pusle_profile.txt
+### pulse_profile.txt
 
 Contains information about the intensity of the laser pulse at each timestep.
 
@@ -106,9 +106,9 @@ Column 1: time in picoseconds.
 Column 2: X-ray intensity [unit?].
 
 
-### eletronic_transitions_log.txt
+### electronic_transitions_log.txt
 
-This file logs all electornic transitions and at what time they occur in ps, as well as the current Monte Carlo timestep.
+This file logs all electronic transitions and at what time they occur in ps, as well as the current Monte Carlo timestep.
 
 All observables are in the same units as the other files.
 
