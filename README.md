@@ -84,9 +84,25 @@ The symbols are as following
 You only need to supply the species that are in your system.
 
 Now I will go through the files and the format they must be in.
+We start by defining some notation, the model uses K,L,M shells to specify electronic states. So we specify states with 3 integers. The groundstate of hydrogen would for example be `1 0 0` and so on.
+I will denote a general initial state as `a b c` and a general final state as `a' b' c'`.
 
 ### `energy_levels_X.txt`
-This 
+This file simply contains the energy level for different states. Each state has its own row and the format is the state `a b c` followed by the energy, thus `a b c E` with a single space as delimiter.
+So for hydrogen two rows of the file might look like this:
+```
+0 0 0 0.0
+1 0 0 13.5984
+```
+
+### `rate_transitions_to_gromacs.txt`
+This file contains all possible transitions for an atomic species. Each transition has its own row and has the format `initial state ; final state transition_rate`, or `a b c ; a' b' c' transition_rate`.
+Here a `;` is used to separate the initial and final states. 
+We look at hydrogen again, the transitions `1 0 0` -> `0 0 0` and `0 1 0` -> `0 0 0` could look like this:
+```
+1 0 0 ;0 0 0 6.230054227114906e-23 ;
+0 1 0 ;0 0 0 1.8994473708741955e-24 ;1 0 0 0.008360485299247617 ;
+```
 
 
 
@@ -101,7 +117,7 @@ Along with the normal MD output that a GROMACS sim would give, when the userint5
 then additional output will be given in `/path_to_sim-directory/simulation_output` in the form of 4 `.txt` files.
 If you do not need any of the data, it is highly recommended to turn off this output as it cuts into the performance.
 
-### electron_data.txt 
+### `electron_data.txt`
 
 Contains information about electrons and other ionization goodies for each timestep.
 
@@ -116,7 +132,7 @@ Column 4: debye length in nm.
 Column 5: volume expansion (current radius of gyration / initial radius of gyration)
 
 
-### mean_charge_vs_time.txt 
+### `mean_charge_vs_time.txt`
 
 Contains information about the mean charge of the systems for each timestep.
 
@@ -125,7 +141,7 @@ Column 1: time in picoseconds.
 Column 2: mean charge of the system in elementary charge units e.
 
 
-### pulse_profile.txt
+### `pulse_profile.txt`
 
 Contains information about the intensity of the laser pulse at each timestep.
 
@@ -134,7 +150,7 @@ Column 1: time in picoseconds.
 Column 2: X-ray intensity [unit?].
 
 
-### electronic_transitions_log.txt
+### `electronic_transitions_log.txt`
 
 This file logs all electronic transitions and at what time they occur in ps, as well as the current Monte Carlo timestep.
 
