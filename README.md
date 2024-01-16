@@ -21,7 +21,7 @@ Basic knowledge of GROMACS is assumed, check out [GROMACS webpage](https://www.g
 The installation process is the exact same as for a normal GROMACS installation.
 
 1. Download the contents of the repository
-2. Place the > gromacs-4.5.4-MCMD folder somewhere appropriate.
+2. Place the `gromacs-4.5.4-MCMD` folder somewhere appropriate.
    This is only the installation files, you will choose later on where you want to install the software.
 3. 
 
