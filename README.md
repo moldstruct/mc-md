@@ -1,8 +1,16 @@
 # Hybrid Monte Carlo / Molecular Dynamics
-This is a Hybrid Monte Carlo / Molecular Dynamics (MC/MD) model that is part of the MOLDSTRUCT toolbox. It can be used to simulate photon-matter interaction for smaller systems like single proteins. '
+This is a Hybrid Monte Carlo / Molecular Dynamics (MC/MD) model that is part of the **MOLDSTRUCT** toolbox. It can be used to simulate photon-matter interaction for smaller systems like single proteins. '
 The code is based on a modified version of GROMACS [webpage](https://www.gromacs.org/).
 With functionality close to the normal GROMACS but with some additional parameters to control ionization. Running the code requires that atomic data (more details later) is supplied for the appropriate energy.
 The model is developed by the Biophysics group at Uppsala University and is published here [link to article](PUT URL HERE WHEN PUBLISHED).
+
+# Todo 
+- Write something about atomic data
+- Guide to running sims
+- example
+   - Write guide
+   - upload exampel files
+
 
 # Manual
 This is a brief manual that will cover how to install, use the model and evaluate output.
@@ -15,6 +23,7 @@ Basic knowledge of GROMACS is assumed, check out [GROMACS webpage](https://www.g
 - Running a simulation
 - Output
 - Example(s)
+- Limitations
 
 ## Installation 
 The installation process is the exact same as for a normal GROMACS installation.
@@ -33,7 +42,7 @@ If running into problems, try to search the issue as there are many GROMACS reas
 
 ## List of input parameters
 The parameters of the model can be set like any other MD parameters in the `.mdp`-file and can be accesed through the userints and userreals.
-Userints are used to enable/disable ceratin features while the userreals are used for the simulation parameters.
+Userints are used to enable/disable certain features while the userreals are used for the simulation parameters.
 ```
 userint1 - (default = 1)Alter forcefield. If set to zero the everything should run as unmodifed gromacs 4.5.4 (hopefully)
 userint2 - (default = 1)Do charge transfer. Enables the charge transfer module 
@@ -51,14 +60,18 @@ userreal5 - Photon energy [eV]
 If you want to use even more parameters for whatever reason, everything up to userint8/userreal8 is implemented and available.
 
 ## Supplying atomic data
-
+To run the model we must supply it with atomic data, this includes 
 
 
 ## Running a simulation
 
 ## Output
+### MD output
+
+### Additional output
 Along with the normal MD output that a GROMACS sim would give, when the userint5 is set to 1, 
 then additional output will be given in /path_to_sim-directory/simulation_output in the form of 4 .txt files.
+If you do not need any of the data, it is highly recommended to turn off this output as it cuts into the performance.
 
 ### electron_data.txt 
 
@@ -101,3 +114,24 @@ All observables are in the same units as the other files.
 
 ## Examples
 ### Example 1
+
+## Limitations
+### Systems blowing up (Too much!)
+For high ionization we get huge forces, this can make the numerical integration unstable. 
+If you suspect this check the kinetic and potential energy of the system. As long as they look relativly smooth it should be okay.
+The work around is usually to lower the stepsize. The simulations in the publication are done at 1as timestep.
+
+### Atomic species
+In the way that the code is written it currently can only handle a few atomic species.
+At the moment the list consists of
+- Hydrogen
+- Carbon
+- Nitrogen
+- Oxygen
+- Phosphorus
+- Iron.
+
+With a bit of programming knowledge this can easily be extended, look in the `md.c` file in `gromacs-4.5.4-MCMD/src/kernel`.
+
+
+
