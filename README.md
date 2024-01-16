@@ -1,12 +1,11 @@
 # Hybrid Monte Carlo / Molecular Dynamics
-This is a Hybrid Monte Carlo / Molecular Dynamics (MC/MD) code to simulate photon-matter interaction based on a modified version of GROMACS [webpage](https://www.gromacs.org/).
+This is a Hybrid Monte Carlo / Molecular Dynamics (MC/MD) model that is part of the MOLDSTRUCT toolbox. It can be used to simulate photon-matter interaction for smaller systems like single proteins. '
+The code is based on a modified version of GROMACS [webpage](https://www.gromacs.org/).
 With functionality close to the normal GROMACS but with some additional parameters to control ionization. Running the code requires that atomic data (more details later) is supplied for the appropriate energy.
 The model is developed by the Biophysics group at Uppsala University and is published here [link to article](PUT URL HERE WHEN PUBLISHED).
 
-
-
 # Manual
-This is a brief manual that will cover you how to install, use the model and evaluate output.
+This is a brief manual that will cover how to install, use the model and evaluate output.
 Basic knowledge of GROMACS is assumed, check out [GROMACS webpage](https://www.gromacs.org/) for more information.
 
 ## Contents 
@@ -42,9 +41,9 @@ userint3 - (default = 0)Use screened potential. Enables Debye shielding (Current
 userint4 - (default = 0)Read electronic states from file. Reads electronic states from file. Useful for continued sims (Not well tested, only use if you can confirm validity)
 userint5 - (default = 0)Enable logging of electronic dynamics. Big performance drop due to I/O. Do not use on distributed systems.
     
-userreal1 - Peak of the gaussian pulse in ps
+userreal1 - Peak of the gaussian [ps]
 userreal2 - Total number of photons in the pulse
-userreal3 - Width of the peak in ps. This is the sigma value of the guassian.
+userreal3 - Width of the peak (sigma values of gaussian) [ps]
 userreal4 - Diameter of the focal spot [nm]
 userreal5 - Photon energy [eV]
 ```
