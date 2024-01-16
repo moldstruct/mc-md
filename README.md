@@ -10,6 +10,7 @@ The model is developed by the Biophysics group at Uppsala University and is publ
 - example
    - Write guide
    - upload example files
+- Make tests 
 
 
 # Manual
@@ -35,13 +36,13 @@ The installation process is the exact same as for a normal GROMACS installation.
 5. Go into the newly created directoy. 
 6. Run `cmake ../ -DCMAKE_INSTALL_PREFIX=/path/to/install/location`, where `/path/to/install/location` is replaced to where the software will be installed.
 7. Run `make install`
-8. Congratualtions! If everything worked out, the software should now be installed at your specified location.
+8. ==Congratualtions!== If everything worked out, the software should now be installed at your specified location.
 
 If running into problems, try to search the issue as there are many GROMACS reasources out there that can help with the install process.
 
 
 ## List of input parameters
-The parameters of the model can be set like any other MD parameters in the `.mdp`-file and can be accesed through the userints and userreals.
+The parameters of the model can be set like any other MD parameters in the `.mdp` file and can be accesed through the userints and userreals.
 Userints are used to enable/disable certain features while the userreals are used for the simulation parameters.
 ```
 userint1 - (default = 1)Alter forcefield. If set to zero the everything should run as unmodifed gromacs 4.5.4 (hopefully)
@@ -60,7 +61,34 @@ userreal5 - Photon energy [eV]
 If you want to use even more parameters for whatever reason, everything up to userint8/userreal8 is implemented and available.
 
 ## Supplying atomic data
-To run the model we must supply it with atomic data, this includes 
+To run the model we must supply it with atomic data, this includes energy levels, collisional parameters, transition rates between states, and statistical weights.
+This data can be generated in any way you see fit as there are multiple softwares with this capabiities. 
+Formatting this data is probably the most cumbersome part of getting started with the model, but here I will do my best to guide you. 
+I suggest you write a script that transforms the data you generate onto this format such that itt can be recreated as some of these parameters are depedant on the choice of energy.
+
+For each atomic species present in the system we require 4 files. They are
+- `energy_levels_X.txt`
+- `collisional_parameters_X.txt`
+- `rate_transitions_to_gromacs_X.txt`
+- `statistical_weight_X.txt`
+
+where `X` is replaced with a symbol corresponding to the atomic species.
+The symbols are as following 
+- `H` - Hydrogen
+- `C` - Coal
+- `N` - Nitrogen
+- `O` - Oxygen
+- `P` - Phosphorus
+- `F` - Iron (yes it should be F).
+
+You only need to supply the species that are in your system.
+
+Now I will go through the files and the format they must be in.
+
+### `energy_levels_X.txt`
+This 
+
+
 
 
 ## Running a simulation
@@ -70,7 +98,7 @@ To run the model we must supply it with atomic data, this includes
 
 ### Additional output
 Along with the normal MD output that a GROMACS sim would give, when the userint5 is set to 1, 
-then additional output will be given in /path_to_sim-directory/simulation_output in the form of 4 .txt files.
+then additional output will be given in `/path_to_sim-directory/simulation_output` in the form of 4 `.txt` files.
 If you do not need any of the data, it is highly recommended to turn off this output as it cuts into the performance.
 
 ### electron_data.txt 
@@ -129,8 +157,8 @@ At the moment the list consists of
 With a bit of programming knowledge this can easily be extended, look in the `md.c` file in `gromacs-4.5.4-MCMD/src/kernel`.
 
 ### Only serial simulations
-Currently a simulation can only utilize one core. One can however run many simulations in parallel, as one might want enough simulations to evaluate statistics.
-
+Currently the simulation can only utilize one core. One can of course run many simulations in parallel, as one might want enough simulations to evaluate statistics.
+§
 ### Systems blowing up (Too much!)
 For high ionization we get huge forces, this can make the numerical integration unstable. 
 If you suspect this check the kinetic and potential energy of the system. As long as they look relativly smooth it should be okay.
