@@ -96,9 +96,9 @@ So for hydrogen two rows of the file might look like this:
 ```
 
 ### `rate_transitions_to_gromacs.txt`
-This file contains all possible transitions for an atomic species. Each transition has its own row and has the format `initial state ; final state transition_rate`, or `a b c ; a' b' c' transition_rate`.
-Here a `;` is used to separate the initial and final states. 
-We look at hydrogen again, the transitions `1 0 0` -> `0 0 0` and `0 1 0` -> `0 0 0` could look like this:
+This file contains all possible transitions for an atomic species. Each initial state has its own row and has the format `initial state ; final state transition_rate`, or `a b c ; a' b' c' transition_rate ;`.
+Here a `;` is used to separate the initial and final states. In the case of multiple possible final states, we add one more final state and rate after the first one like `a b c ; a' b' c' transition_rate' ; a'' b'' c'' transition_rate''`.
+We look at hydrogen again, the transitions `1 0 0` -> `0 0 0` and `0 1 0` -> `0 0 0`/`1 0 0`  could look like this:
 ```
 1 0 0 ;0 0 0 6.230054227114906e-23 ;
 0 1 0 ;0 0 0 1.8994473708741955e-24 ;1 0 0 0.008360485299247617 ;
