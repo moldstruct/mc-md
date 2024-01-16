@@ -3964,7 +3964,7 @@ void shuffle(int arr[], int size) {
                 free(possible_transitions);
 
                 
-            } // THIS IS THE DT WHILE LOOP 
+            } // THIS IS THE DT WHILE LOOP p
         } // THIS IS THE FOR LOOP
      
     
