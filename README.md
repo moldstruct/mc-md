@@ -190,7 +190,7 @@ All observables are in the same units as the other files.
 
 ## Limitations
 ### Atomic species
-In the way that the code is written it currently can only handle a few atomic species.
+In the way that the code is written it is limited to selection of atomic species.
 At the moment the list consists of
 - Hydrogen
 - Carbon
@@ -203,7 +203,8 @@ With a bit of programming knowledge this can easily be extended, look in the `md
 
 ### Only serial simulations
 Currently the simulation can only utilize one core. One can of course run many simulations in parallel, as one might want enough simulations to evaluate statistics.
-§
+
+
 ### Systems blowing up (Too much!)
 For high ionization we get huge forces, this can make the numerical integration unstable. 
 If you suspect this check the kinetic and potential energy of the system. As long as they look relativly smooth it should be okay.
