@@ -75,7 +75,7 @@ For each atomic species present in the system we require 4 files. They are
 where `X` is replaced with a symbol corresponding to the atomic species.
 The symbols are as following 
 - `H` - Hydrogen
-- `C` - Coal
+- `C` - Carbon
 - `N` - Nitrogen
 - `O` - Oxygen
 - `P` - Phosphorus
