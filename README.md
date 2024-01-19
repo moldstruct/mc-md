@@ -50,6 +50,7 @@ userint2 - (default = 1)Do charge transfer. Enables the charge transfer module
 userint3 - (default = 0)Use screened potential. Enables Debye shielding (Currently not implemented)
 userint4 - (default = 0)Read electronic states from file. Reads electronic states from file. Useful for continued sims (Not well tested, only use if you can confirm validity)
 userint5 - (default = 0)Enable logging of electronic dynamics. Big performance drop due to I/O. Do not use on distributed systems.
+userint6 - (default = 0)Enable collisional ionization. (Not implemented yet). Requires collisional data.
     
 userreal1 - Peak of the gaussian [ps]
 userreal2 - Total number of photons in the pulse
@@ -66,13 +67,12 @@ This data can be generated in any way you see fit as there are multiple software
 Formatting this data is probably the most cumbersome part of getting started with the model, but here I will do my best to guide you. 
 I suggest you write a script that transforms the data you generate onto this format such that itt can be recreated as some of these parameters are depedant on the choice of energy.
 
-For each atomic species present in the system we require 4 files. They are
+For each atomic species present in the system we require 2 files. They are
 - `energy_levels_X.txt`
-- `collisional_parameters_X.txt`
 - `rate_transitions_to_gromacs_X.txt`
-- `statistical_weight_X.txt`
 
 where `X` is replaced with a symbol corresponding to the atomic species.
+
 The symbols are as following 
 - `H` - Hydrogen
 - `C` - Carbon
@@ -82,6 +82,7 @@ The symbols are as following
 - `F` - Iron (yes it should be F).
 
 You only need to supply the species that are in your system.
+The files must be placed in a folder called `Atomic_data` which is in the same location from where a simulation is run from.
 
 Now I will go through the files and the format they must be in.
 We start by defining some notation, the model uses K,L,M shells to specify electronic states. So we specify states with 3 integers. The groundstate of hydrogen would for example be `1 0 0` and so on.
@@ -106,29 +107,6 @@ We look at hydrogen again, the transitions `1 0 0` -> `0 0 0` and `0 1 0` -> `0 
 ```
 1 0 0 ;0 0 0 6.230054227114906e-23 ;
 0 1 0 ;0 0 0 1.8994473708741955e-24 ;1 0 0 0.008360485299247617 ;
-```
-
-### `collosional_parameters_X.txt`
-This file is very similar to the previous one, but we have 5 parameters `c0`,`c1`,`c2`,`c3`, and `c4` instead of the one for transition rate.
-These parameters correspond to... [fill in this]
-So the format would be 
-`initial state ; final state c0 c1 c2 c3 c4 ;` or 
-`a b c ; a' b' c' c0 c1 c2 c3 c4 ;`.
-For multiple possible final states we do the same as for transition rates and simply append them at the end of the line. Two possible final states would look like:
-`a b c ; a' b' c' c0' c1' c2' c3' c4'; a'' b'' c'' c0'' c1'' c2'' c3'' c4'' ;`.
-So in the case of Hydrogen, some transitions might look like this:
-```
-0 1 0 ; 0 0 0 6.137 -11.4766 5.3396 0.0 1.82698 ; 
-1 0 0 ; 0 0 0 3.8256 -7.3391 3.5135 0.0 3.40109 ; 0 1 0 3.40698 -6.17434 36.1298 -26.325 2.5358 ; 
-```
-
-### `statistical_weight_X.txt`
-[How do we generate this number? What is the statistical weight?]
-This is very similar to the energy level, each row is a state `a b c` followed by the states statistical weight. 
-An example from the Hydrogen again:
-```
-0 0 0 1.0
-1 0 0 2.0
 ```
 
 And that is that!
@@ -210,7 +188,31 @@ For high ionization we get huge forces, this can make the numerical integration 
 If you suspect this check the kinetic and potential energy of the system. As long as they look relativly smooth it should be okay.
 The work around is usually to lower the stepsize. The simulations in the publication are done at 1as timestep.
 
+### Collsional Ionizations (Not implemented yet)
+If you have access to collsional data, it can be supplied in the `Atomic_data` folder like this 
 
+#### `collosional_parameters_X.txt`
+This file is very similar to the previous one, but we have 5 parameters `c0`,`c1`,`c2`,`c3`, and `c4` instead of the one for transition rate.
+These parameters correspond to... [fill in this]
+So the format would be 
+`initial state ; final state c0 c1 c2 c3 c4 ;` or 
+`a b c ; a' b' c' c0 c1 c2 c3 c4 ;`.
+For multiple possible final states we do the same as for transition rates and simply append them at the end of the line. Two possible final states would look like:
+`a b c ; a' b' c' c0' c1' c2' c3' c4'; a'' b'' c'' c0'' c1'' c2'' c3'' c4'' ;`.
+So in the case of Hydrogen, some transitions might look like this:
+```
+0 1 0 ; 0 0 0 6.137 -11.4766 5.3396 0.0 1.82698 ; 
+1 0 0 ; 0 0 0 3.8256 -7.3391 3.5135 0.0 3.40109 ; 0 1 0 3.40698 -6.17434 36.1298 -26.325 2.5358 ; 
+```
+
+#### `statistical_weight_X.txt`
+[How do we generate this number? What is the statistical weight?]
+This is very similar to the energy level, each row is a state `a b c` followed by the states statistical weight. 
+An example from the Hydrogen again:
+```
+0 0 0 1.0
+1 0 0 2.0
+```
 
 
 
