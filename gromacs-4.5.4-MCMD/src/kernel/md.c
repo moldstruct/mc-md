@@ -113,6 +113,106 @@ double debye_length;
 #include <stdlib.h>
 #include <string.h>
 
+//////////////////////////////////////////////////////////////////////////
+
+// Energy levels
+#define ENERGY "./Atomic_data/energy_levels_X.txt"
+// Transition rates
+#define RATES "./Atomic_data/rate_transitions_X.txt" 
+// Collisional parameters
+#define COLL "./Atomic_data/collisional_parameters_X.txt"
+// Statistical weight 
+#define WEIGHT "./Atomic_data/statistical_weight_X.txt"
+
+// (approximative) Masses, used as atomic species identifiers
+// If you want more atomic species you need to update this mass-list and the three functions mass2idx,idx2mass,mass2char accordingly
+#define MASS_H 1   
+#define MASS_C 12  
+#define MASS_N 14
+#define MASS_O 16
+#define MASS_P 31
+#define MASS_S 32
+#define MASS_FE 56
+
+int mass2idx(int mass) {
+    switch(mass) {
+        case MASS_H: // Hydrogen
+            return 0;
+
+        case MASS_C:
+            return 1;
+            
+        case MASS_N:
+            return 2;
+
+        case MASS_O:
+            return 3;
+
+        case MASS_P:
+            return 4;
+
+        case MASS_S:
+            return 5;
+
+        case MASS_FE:
+            return 6;
+    }
+    return -1;
+}
+
+int idx2mass(int idx) {
+    switch(idx) {
+        case 0: // Hydrogen
+            return MASS_H;
+
+        case 1:
+            return MASS_C;
+            
+                    
+        case 2:
+            return MASS_N;
+
+        case 3:
+            return MASS_O;
+
+        case 4:
+            return MASS_P;
+
+        case 5:
+            return MASS_S;
+
+        case 6:
+            return MASS_FE;
+    }
+    return -1;
+}
+
+char mass2char(int mass) {
+    switch(mass) {
+        case MASS_H: // Hydrogen
+            return 'H';
+
+        case MASS_C:
+            return 'C';
+            
+        case MASS_N:
+            return 'N';
+
+        case MASS_O:
+            return 'O';
+
+        case MASS_P:
+            return 'P';
+
+        case MASS_S:
+            return 'S';
+
+        case MASS_FE:
+            return 'F';
+    }
+    return 'X';
+}
+
 
 //////////////////////////////////////////////////////////////////////////////////////
 ////////////                                                            //////////////
@@ -384,6 +484,7 @@ static struct Coll initializeCollFromFile(FILE* file, int mass) {
 
 //initialze an array of struct Rate from a file
 static struct Coll* initializeCollArrayFromFile(const char* filePath,int mass) {
+
     FILE* file = fopen(filePath, "r");
     if (file == NULL) {
         fprintf(stderr, "Error opening the file '%s' in 'initializeCollArrayFromFile'.\n",filePath);
@@ -393,8 +494,8 @@ static struct Coll* initializeCollArrayFromFile(const char* filePath,int mass) {
     // Determine the number of Rate instances based on the number of lines in the file
     int numColl = countLinesInFile(filePath);
 
-    // Create an array of struct Rate
-    struct Coll* coll = (struct Coll*)malloc(numColl * sizeof(struct Rate));
+    // Create an array of struct Coll
+    struct Coll* coll = (struct Coll*)malloc(numColl * sizeof(struct Coll));
 
     // Initialize each Rate instance from the file
     int i;
@@ -511,6 +612,7 @@ static double getWeightForState(struct Weights weights, int state[3]) {
 
 
 
+
 ///// DICTIONARIES FOR ENERGIES
 
 
@@ -585,7 +687,7 @@ static void printDictionary(struct Dictionary* dict) {
 }
 
 // Function to read the file and populate the dictionary
-static struct Dictionary* readFileAndCreateEnergyDictionary(const char* filename) {
+struct Dictionary* readFileAndCreateEnergyDictionary(char* filename) {
     FILE *file = fopen(filename, "r");
     if (file == NULL) {
         printf("Failed to open the file '%s' in 'readFileAndCreateEnergyDictionary'.\n",filename);
@@ -621,6 +723,55 @@ static void freeDictionary(struct Dictionary* dict) {
     }
     free(dict);
 }
+
+
+// Collects all relevant atomic data
+struct Atomic_data {
+    int mass;
+    struct Dictionary* energyLevels;
+    struct Rate* transitionRates;
+    int numRates;
+    struct Coll* collisions;
+    int numColl;                    
+    struct Weights weights;
+};
+
+char* get_data_path(char* basePath, int mass) {
+    char newChar = mass2char(mass);
+
+    // Allocate memory for path
+    char* path = (char*)malloc(strlen(basePath) + 1); // +1 for null terminator
+
+    strcpy(path, basePath);
+    path[strlen(path) - 5] = newChar;
+
+    return path;
+}
+
+
+static struct Atomic_data initAtomicData(int atom_idx) {
+    struct Atomic_data atomData; 
+    atomData.mass = idx2mass(atom_idx);
+
+    char* energyPath = (char*)get_data_path(ENERGY,atomData.mass);
+
+    atomData.energyLevels = readFileAndCreateEnergyDictionary(energyPath);
+
+    char* ratesPath           = get_data_path(RATES,atomData.mass);
+    atomData.transitionRates = initializeRatesArrayFromFile(ratesPath,atomData.mass);
+    atomData.numRates      = countLinesInFile(ratesPath);
+
+    char* collPath = get_data_path(COLL,atomData.mass);
+    atomData.collisions = initializeCollArrayFromFile(collPath,atomData.mass);
+    atomData.numColl = countLinesInFile(collPath);
+
+    char* weightPath = get_data_path(WEIGHT,atomData.mass);
+    atomData.weights = InitializeWeightsFromFile(weightPath,atomData.mass);  
+
+    free(energyPath);
+    free(collPath);
+    free(weightPath);         
+} 
 
 
 
@@ -2002,6 +2153,9 @@ double do_md(FILE *fplog,t_commrec *cr,int nfile,const t_filenm fnm[],
     int chkpt_ret;
 #endif
 
+
+printf("Starting @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n\n\n");
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 /////////                                                                                     /////////
 /////////                                                                                     /////////
@@ -2009,106 +2163,8 @@ double do_md(FILE *fplog,t_commrec *cr,int nfile,const t_filenm fnm[],
 /////////                                                                                     /////////
 /////////                                                                                     /////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////////    
-// (approximative) Masses, used as atomic species identifiers 
-#define MASS_H 1
-#define MASS_C 12
-#define MASS_N 14
-#define MASS_O 16
-#define MASS_P 31
-#define MASS_S 32
-#define MASS_FE 56
 
-// Energy levels
-#define ENERGY_H "./Atomic_data/energy_levels_H.txt"
-#define ENERGY_C "./Atomic_data/energy_levels_C.txt"
-#define ENERGY_N "./Atomic_data/energy_levels_N.txt"
-#define ENERGY_O "./Atomic_data/energy_levels_O.txt"
-#define ENERGY_P "./Atomic_data/energy_levels_P.txt"
-#define ENERGY_S "./Atomic_data/energy_levels_S.txt"
-#define ENERGY_FE "./Atomic_data/energy_levels_F.txt"  
-
-// Transition rates
-#define RATES_H "./Atomic_data/rate_transitions_to_gromacs_H.txt"
-#define RATES_C "./Atomic_data/rate_transitions_to_gromacs_C.txt"
-#define RATES_N "./Atomic_data/rate_transitions_to_gromacs_N.txt"
-#define RATES_O "./Atomic_data/rate_transitions_to_gromacs_O.txt"
-#define RATES_P "./Atomic_data/rate_transitions_to_gromacs_P.txt"
-#define RATES_S "./Atomic_data/rate_transitions_to_gromacs_S.txt"
-#define RATES_FE "./Atomic_data/rate_transitions_to_gromacs_F.txt"   
-
-// Collisional parameters
-#define COLL_H "./Atomic_data/collisional_parameters_H.txt"
-#define COLL_C "./Atomic_data/collisional_parameters_C.txt"
-#define COLL_N "./Atomic_data/collisional_parameters_N.txt"
-#define COLL_O "./Atomic_data/collisional_parameters_O.txt"
-#define COLL_P "./Atomic_data/collisional_parameters_P.txt"
-#define COLL_S "./Atomic_data/collisional_parameters_S.txt"
-#define COLL_FE "./Atomic_data/collisional_parameters_F.txt"
-
-// Statistical weight 
-#define WEIGHT_H "./Atomic_data/statistical_weight_H.txt"
-#define WEIGHT_C "./Atomic_data/statistical_weight_C.txt"
-#define WEIGHT_N "./Atomic_data/statistical_weight_N.txt"
-#define WEIGHT_O "./Atomic_data/statistical_weight_O.txt"
-#define WEIGHT_P "./Atomic_data/statistical_weight_P.txt"
-#define WEIGHT_S "./Atomic_data/statistical_weight_S.txt"
-#define WEIGHT_FE "./Atomic_data/statistical_weight_F.txt"
-
-
-
-// Create dictionaries for energy levels
-struct Dictionary* Energylevels_H;
-struct Dictionary* Energylevels_C;
-struct Dictionary* Energylevels_N;
-struct Dictionary* Energylevels_O;
-struct Dictionary* Energylevels_P;
-struct Dictionary* Energylevels_S;
-struct Dictionary* Energylevels_FE;
-
-// Construct "rate arrays" 
-// These consists of each initial states and all possible final states together with the rate
-struct Rate* transitionRates_H;
-struct Rate* transitionRates_C;
-struct Rate* transitionRates_N;
-struct Rate* transitionRates_O;
-struct Rate* transitionRates_P;
-struct Rate* transitionRates_S;
-struct Rate* transitionRates_FE;;
-
-// Construct "coll arrays" 
-// These consists of each initial states and all possible final states together with their parameters
-struct Coll* collisions_H;
-struct Coll* collisions_C;
-struct Coll* collisions_N;
-struct Coll* collisions_O;
-struct Coll* collisions_P;
-struct Coll* collisions_S;
-struct Coll* collisions_FE;
-
-// Construct weights
-struct Weights Weigths_H;
-struct Weights Weigths_C;
-struct Weights Weigths_N;
-struct Weights Weigths_O;
-struct Weights Weigths_P;
-struct Weights Weigths_S;
-struct Weights Weigths_FE;
-
-int numColl_H;
-int numColl_C;
-int numColl_N;
-int numColl_O;
-int numColl_P;
-int numColl_S;
-int numColl_FE;
-
-int numRates_H;
-int numRates_C;
-int numRates_N;
-int numRates_O;
-int numRates_P;
-int numRates_S;
-int numRates_FE;
+int do_coll = ir->userint6;
 
 
 int** atom_configurations;
@@ -2121,7 +2177,6 @@ const double elementary_charge = 1.60217663e-19;
 const double ev_to_joule = 1.60218e-19;
 const double kelvin_to_ev = 8.61732814974493e-5;
 const double pi_const = 3.1415;
-
 
 
     /* Check for special mdrun options */
@@ -2553,113 +2608,27 @@ const double pi_const = 3.1415;
       }
    }
 
-
-
-int count_H = 0;
-int count_C = 0;
-int count_N = 0;
-int count_O = 0;
-int count_P = 0;
-int count_S = 0;
-int count_FE = 0;
+#define ATOM_TABLE_SIZE 10  // Make sure it is bigger than number of atomic species
+int* counts = (int*)calloc(ATOM_TABLE_SIZE,sizeof(int));
+int idx;
 int approx_mass;
 
 
 // Count atoms
 for(i=mdatoms->start; (i<mdatoms->nr); i++) {
     approx_mass = (int)(round(mdatoms->massT[i]));
-    switch(approx_mass) {
-        case MASS_H: // Hydrogen
-            count_H +=1;
-            break;
+    idx = mass2idx(approx_mass);
+    counts[idx] +=1;
+}
 
-        case MASS_C:
-            count_C +=1;
-            break;
-            
-                    
-        case MASS_N:
-            count_N +=1;
-            break;
+struct Atomic_data* atomData = (struct Atomic_data*)malloc(ATOM_TABLE_SIZE*sizeof(struct Atomic_data));
 
-        case MASS_O:
-            count_O +=1;
-            break;
-
-        case MASS_P:
-            count_P +=1;
-            break;
-
-        case MASS_S:
-            count_S +=1;
-            break;
-
-        case MASS_FE:
-            count_FE +=1;
-            break;
+for (i=0;i<ATOM_TABLE_SIZE;i++) {                     
+    if (counts[i]>0) {
+        atomData[i] = initAtomicData(i);
     }
 }
-if (count_H) {
-    Energylevels_H    = readFileAndCreateEnergyDictionary(ENERGY_H);
-    transitionRates_H = initializeRatesArrayFromFile(RATES_H,MASS_H);
-    numRates_H        = countLinesInFile(RATES_H);
-    collisions_H      = initializeCollArrayFromFile(COLL_H,MASS_H);
-    numColl_H         = countLinesInFile(COLL_H);
-    Weigths_H         = InitializeWeightsFromFile(WEIGHT_H,MASS_H);          
-}
-if (count_C) {
-    Energylevels_C    = readFileAndCreateEnergyDictionary(ENERGY_C);
-    transitionRates_C = initializeRatesArrayFromFile(RATES_C,MASS_C);
-    numRates_C        = countLinesInFile(RATES_C);
-    collisions_C      = initializeCollArrayFromFile(COLL_C,MASS_C);
-    numColl_C         = countLinesInFile(COLL_C);
-    Weigths_C         = InitializeWeightsFromFile(WEIGHT_C,MASS_C);         
-}
 
-if (count_N) {
-    Energylevels_N    = readFileAndCreateEnergyDictionary(ENERGY_N);
-    transitionRates_N = initializeRatesArrayFromFile(RATES_N,MASS_N);
-    numRates_N        = countLinesInFile(RATES_N);
-    collisions_N      = initializeCollArrayFromFile(COLL_N,MASS_N);
-    numColl_N         = countLinesInFile(COLL_N);
-    Weigths_N         = InitializeWeightsFromFile(WEIGHT_N,MASS_N);
-}
-
-if (count_O) {
-    Energylevels_O    = readFileAndCreateEnergyDictionary(ENERGY_O);
-    transitionRates_O = initializeRatesArrayFromFile(RATES_O,MASS_O);
-    numRates_O        = countLinesInFile(RATES_O);
-    collisions_O      = initializeCollArrayFromFile(COLL_O,MASS_O);
-    numColl_O         = countLinesInFile(COLL_O);
-    Weigths_O         = InitializeWeightsFromFile(WEIGHT_O,MASS_O);
-}
-
-if (count_P) {
-    Energylevels_P    = readFileAndCreateEnergyDictionary(ENERGY_P);
-    transitionRates_P = initializeRatesArrayFromFile(RATES_P,MASS_P);
-    numRates_P        = countLinesInFile(RATES_P);
-    collisions_P      = initializeCollArrayFromFile(COLL_P,MASS_P);
-    numColl_P         = countLinesInFile(COLL_P);
-    Weigths_P         = InitializeWeightsFromFile(WEIGHT_P,MASS_P);
-}
-
-if (count_S) {
-    Energylevels_S    = readFileAndCreateEnergyDictionary(ENERGY_S);
-    transitionRates_S = initializeRatesArrayFromFile(RATES_S,MASS_S);
-    numRates_S        = countLinesInFile(RATES_S);
-    collisions_S      = initializeCollArrayFromFile(COLL_S,MASS_S);
-    numColl_S         = countLinesInFile(COLL_S);
-    Weigths_S         = InitializeWeightsFromFile(WEIGHT_S,MASS_S);            
-}
-
-if (count_FE) {
-    Energylevels_FE    = readFileAndCreateEnergyDictionary(ENERGY_FE);
-    transitionRates_FE = initializeRatesArrayFromFile(RATES_FE,MASS_FE);
-    numRates_FE        = countLinesInFile(RATES_FE);
-    collisions_FE      = initializeCollArrayFromFile(COLL_FE,MASS_FE);
-    numColl_FE         = countLinesInFile(COLL_FE);
-    Weigths_FE         = InitializeWeightsFromFile(WEIGHT_FE,MASS_FE);
-}
 
 
     /***********************************************************
@@ -3025,8 +2994,8 @@ if (count_FE) {
       double max_x = 0;
       double max_y = 0;
       double max_z = 0;
-      int logging = ir->userint5;
       int read_states = ir->userint4; 
+      int logging = ir->userint5;
       /* if 0 the simulation will initiate all charges and electronic states 
       in the ground state configuration. If 1 it will try to read 
       states and charges from ___. and ___.
@@ -3038,6 +3007,7 @@ if (count_FE) {
     userint3 - Use screened potential. Enables Debye shielding (default = 1)
     userint4 - Read electronic states from file. Reads electronic states from file. Useful for continued sims (default = 0)
     userint5 - Enable logging of electronic dynamics,writes a bunch of useful information, big performance drop due to I/O. (default = 0)
+    userint6 - Enable collisions (Currently not implemented) (default = 0)
 
     The userreal are mostly the FEL parameters
     userreal1 - Peak of the gaussian pulse in ps
@@ -3064,6 +3034,9 @@ if (count_FE) {
     }
 
     INTENSITY = imax*exp(-0.5*sqr((t*1e-12-T_MEAN)/width));
+
+
+
 
 
             if (t==0) {
@@ -3397,51 +3370,27 @@ void shuffle(int arr[], int size) {
                      acceptor_idx = i;
 
                   }
-                  else {
+                else {
                      Q_D = mdatoms->chargeA[i];
                      Q_A = mdatoms->chargeA[j]; 
                      // i donor
                      donor_idx = i;
                      acceptor_idx = j;
-                  }
+                }
 
-                              // Find state of donor 
-                                 char state_str[20];
-                                 switch((int)round(mdatoms->massT[donor_idx])) { // Match the mass and lookup the energy of the state.
-                                    case MASS_H: // Hydrogen
-                                       sprintf(state_str,"%d %d %d",atom_configurations[donor_idx][0],atom_configurations[donor_idx][1],atom_configurations[donor_idx][2]);
-                                       E_donor = get(Energylevels_H,state_str);
-                                       break;
-                                    case MASS_C: // Carbon
-                                       sprintf(state_str,"%d %d %d",atom_configurations[donor_idx][0],atom_configurations[donor_idx][1],atom_configurations[donor_idx][2]);
-                                       E_donor = get(Energylevels_C,state_str);
-                                       break;
-                                    case MASS_N: // Nitrogen
-                                       sprintf(state_str,"%d %d %d",atom_configurations[donor_idx][0],atom_configurations[donor_idx][1],atom_configurations[donor_idx][2]);
-                                       E_donor = get(Energylevels_N,state_str);
-                                       break;
-                                    case MASS_O: // Oxygen
-                                       sprintf(state_str,"%d %d %d",atom_configurations[donor_idx][0],atom_configurations[donor_idx][1],atom_configurations[donor_idx][2]);
-                                       E_donor = get(Energylevels_O,state_str);
-                                       break;
-                                    case MASS_P: // Phosphor
-                                       sprintf(state_str,"%d %d %d",atom_configurations[donor_idx][0],atom_configurations[donor_idx][1],atom_configurations[donor_idx][2]);
-                                       E_donor = get(Energylevels_P,state_str);
-                                       break;
-                                    case MASS_S: // Sulfur
-                                       sprintf(state_str,"%d %d %d",atom_configurations[donor_idx][0],atom_configurations[donor_idx][1],atom_configurations[donor_idx][2]);
-                                       E_donor = get(Energylevels_S,state_str);
-                                       break;
-                                    case MASS_FE: // IRON
-                                       sprintf(state_str,"%d %d %d",atom_configurations[donor_idx][0],atom_configurations[donor_idx][1],atom_configurations[donor_idx][2]);
-                                       E_donor = get(Energylevels_FE,state_str);
-                                       break;
-                                                                                }
+                // Find state of donor 
+                char state_str[20];
+                approx_mass = (int)round(mdatoms->massT[donor_idx]);
+                idx = mass2idx(approx_mass);
+                sprintf(state_str,"%d %d %d",atom_configurations[donor_idx][0],atom_configurations[donor_idx][1],atom_configurations[donor_idx][2]);
+                E_donor = get(atomData[idx].energyLevels,state_str);         
 
-                               if ((int)E_donor ==-1) {
-                                        printf("No matching state for atom %d with mass: %lf \n",donor_idx,round(mdatoms->massT[donor_idx]));
-                                        exit(0);
-                                       }
+                if ((int)E_donor ==-1) { // "get" function returns -1.0 if no state is found.
+                    printf("No matching state for atom %d with mass: %lf \n",donor_idx,round(mdatoms->massT[donor_idx]));
+                    exit(0);
+                }
+
+
 
                               R_crit = (Q_D + 1 + 2*sqrt((Q_D+1)*Q_A))/E_donor;
 
@@ -3595,74 +3544,19 @@ void shuffle(int arr[], int size) {
              CURRENT_VOLUME = sample_volume*rg_factor*rg_factor*rg_factor; // multiply by rg_factor^3 since sample volume is the volume of a sphere
 
          int k;
+         int atomIdx;
          for(k=mdatoms->start; (k<mdatoms->nr); k++) { // This is the big loop which handles the electronic states for each atom in the system  
             DT_current = 0.0;
-            //printf("Current atom %d \n\n\n\n\n",(int)round(mdatoms->massT[k]));
-            // Crude way to handle the different atom species.
-            switch ((int)round(mdatoms->massT[k])) {
-               case MASS_H:
-                  currentDict = Energylevels_H;
-                  currentRate = transitionRates_H;
-                  currentNumRates = numRates_H;
-                  currentColl = collisions_H;
-                  currentNumColl = numColl_H;
-                  currentWeights = Weigths_H;
-                  break;
 
-               case MASS_C:
-                  currentDict = Energylevels_C;
-                  currentRate = transitionRates_C;
-                  currentNumRates = numRates_C;
-                  currentColl = collisions_C;
-                  currentNumColl = numColl_C;
-                  currentWeights = Weigths_C;
-                  break;
+            atomIdx = mass2idx((int)round(mdatoms->massT[k]));
 
-               case MASS_N:
-                  currentDict = Energylevels_N;
-                  currentRate = transitionRates_N;
-                  currentNumRates = numRates_N;
-                  currentColl = collisions_N;
-                  currentNumColl = numColl_N;
-                  currentWeights = Weigths_N;
-                  break;
+            currentDict     = atomData[atomIdx].energyLevels;
+            currentRate     = atomData[atomIdx].transitionRates;
+            currentNumRates = atomData[atomIdx].numRates;
+            currentColl     = atomData[atomIdx].collisions;
+            currentNumColl  = atomData[atomIdx].numColl;
+            currentWeights  = atomData[atomIdx].weights;
 
-               case MASS_O:
-                  currentDict = Energylevels_O;
-                  currentRate = transitionRates_O;
-                  currentNumRates = numRates_O;
-                  currentColl = collisions_O;
-                  currentNumColl = numColl_O;
-                  currentWeights = Weigths_O;
-                  break;
-
-               case MASS_P:
-                  currentDict = Energylevels_P;
-                  currentRate = transitionRates_P;
-                  currentNumRates = numRates_P;
-                  currentColl = collisions_P;
-                  currentNumColl = numColl_P;
-                  currentWeights = Weigths_P;
-                  break;
-
-               case MASS_S:
-                  currentDict = Energylevels_S;
-                  currentRate = transitionRates_S;
-                  currentNumRates = numRates_S;
-                  currentColl = collisions_S;
-                  currentNumColl = numColl_S;
-                  currentWeights = Weigths_S;
-                  break;
-
-               case MASS_FE:
-                  currentDict = Energylevels_FE;
-                  currentRate = transitionRates_FE;
-                  currentNumRates = numRates_FE;
-                  currentColl = collisions_FE;
-                  currentNumColl = numColl_FE;
-                  currentWeights = Weigths_FE;
-                  break;
-               }
 
             double DT_scale=0.0;
             // do electronic stuff untill we reach timescales bigger than MD timestep
@@ -3686,10 +3580,9 @@ void shuffle(int arr[], int size) {
 
             int match_index = RatesStateIndex(currentRate, currentNumRates, match);
             if (match_index != -1) found_match = 1;
+
             int match_index_coll = CollStateIndex(currentColl, currentNumColl, match);
             if (match_index_coll != -1) found_match_collisional = 1;
-
-
 
             
             // If there is any match
@@ -3820,6 +3713,7 @@ void shuffle(int arr[], int size) {
                     }
 
             } // For-loop ends here
+        
             free(final_state);
             // Now read collisional ionization data ///
 
@@ -5031,43 +4925,19 @@ void shuffle(int arr[], int size) {
     
     runtime->nsteps_done = step_rel;
 
+
     // FREE STUFF
     free(hydrogen_idx);
-
-
-    // FREE DICTIONARIES 
-    freeDictionary(Energylevels_H);
-    freeDictionary(Energylevels_C);
-    freeDictionary(Energylevels_N);
-    freeDictionary(Energylevels_O);
-    freeDictionary(Energylevels_S);
-    freeDictionary(Energylevels_FE);
-
-    // FREE RATE ARRAYS
-    freeRatesArray(transitionRates_H,numRates_H);
-    freeRatesArray(transitionRates_C,numRates_C);
-    freeRatesArray(transitionRates_N,numRates_N);
-    freeRatesArray(transitionRates_O,numRates_O);
-    freeRatesArray(transitionRates_S,numRates_S);
-    freeRatesArray(transitionRates_FE,numRates_FE);
-
-    // Free Coll_rates
-    freeCollArray(collisions_H,numColl_H);
-    freeCollArray(collisions_C,numColl_C);
-    freeCollArray(collisions_N,numColl_N);
-    freeCollArray(collisions_O,numColl_O);
-    freeCollArray(collisions_S,numColl_S);
-    freeCollArray(collisions_FE,numColl_FE);
-
-
-    // Free Weights
-    freeWeights(Weigths_H);
-    freeWeights(Weigths_C);
-    freeWeights(Weigths_N);
-    freeWeights(Weigths_O);
-    freeWeights(Weigths_S);
-    freeWeights(Weigths_FE);
-
+/*
+    for (i=0;i<ATOM_TABLE_SIZE;i++) {
+        if (counts[i]>0) {
+            freeDictionary(atomData[i].energyLevels);
+            freeRatesArray(atomData[i].transitionRates,atomData[i].numRates);
+            freeCollArray(atomData[i].collisions,atomData[i].numColl);
+            freeWeights(atomData[i].weights);
+        } 
+    }
+    */
 
     return 0;
 }
