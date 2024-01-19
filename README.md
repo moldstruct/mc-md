@@ -115,9 +115,14 @@ How we supply these files to the simulation is covered in the next section.
 
 
 ## Running a simulation
+To run a simulation we follow the exact same steps as for a normal GROMACS simulation up we call `mdrun`.
+We need to run it with the `-ionize` flag, and make sure that we have a the folder `Atomic_data` containing the `energy_levels_X.txt` and `rate_transitions_to_gromacs_X.txt`.
+The folder must be present in the same directory from where we run the simulation.
+
 
 ## Output
 ### MD output
+All standard GROMACS output like the .trr and .edr files are still given as output.
 
 ### Additional output
 Along with the normal MD output that a GROMACS sim would give, when the userint5 is set to 1, 
@@ -188,7 +193,7 @@ For high ionization we get huge forces, this can make the numerical integration 
 If you suspect this check the kinetic and potential energy of the system. As long as they look relativly smooth it should be okay.
 The work around is usually to lower the stepsize. The simulations in the publication are done at 1as timestep.
 
-### Collsional Ionizations (Not implemented yet)
+### Collisional Ionizations (Not implemented yet)
 If you have access to collsional data, it can be supplied in the `Atomic_data` folder like this 
 
 #### `collosional_parameters_X.txt`
