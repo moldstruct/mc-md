@@ -115,14 +115,14 @@ double debye_length;
 
 //////////////////////////////////////////////////////////////////////////
 
-// Energy levels
-#define ENERGY "./Atomic_data/energy_levels_X.txt"
-// Transition rates
-#define RATES "./Atomic_data/rate_transitions_X.txt" 
-// Collisional parameters
-#define COLL "./Atomic_data/collisional_parameters_X.txt"
-// Statistical weight 
-#define WEIGHT "./Atomic_data/statistical_weight_X.txt"
+// Energy levels path
+#define ENERGY "./Atomic_data/energy_levels_"
+// Transition rates path
+#define RATES "./Atomic_data/rate_transitions_" 
+// Collisional parameters path
+#define COLL "./Atomic_data/collisional_parameters_"
+// Statistical weight path
+#define WEIGHT "./Atomic_data/statistical_weight_"
 
 // (approximative) Masses, used as atomic species identifiers
 // If you want more atomic species you need to update this mass-list and the three functions mass2idx,idx2mass,mass2char accordingly
@@ -187,30 +187,30 @@ int idx2mass(int idx) {
     return -1;
 }
 
-char mass2char(int mass) {
+char* mass2char(int mass) {
     switch(mass) {
         case MASS_H: // Hydrogen
-            return 'H';
+            return "H";
 
         case MASS_C:
-            return 'C';
+            return "C";
             
         case MASS_N:
-            return 'N';
+            return "N";
 
         case MASS_O:
-            return 'O';
+            return "O";
 
         case MASS_P:
-            return 'P';
+            return "P";
 
         case MASS_S:
-            return 'S';
+            return "S";
 
         case MASS_FE:
-            return 'F';
+            return "FE";
     }
-    return 'X';
+    return "X";
 }
 
 
@@ -250,7 +250,7 @@ void print_rates(struct Rate* rates,int numRates) {
     printf("Printing rates");
     int mass = rates[0].mass;
     int idx = mass2idx(mass);
-    char sym = mass2char(mass);
+    char* sym = mass2char(mass);
     printf("Possible transitions for %c with mass %d and idx %d\n\n",sym,mass,idx);
 
     int i;
@@ -761,16 +761,20 @@ struct Atomic_data {
     struct Weights weights;
 };
 
-char* get_data_path(char* basePath, int mass) {
-    char newChar = mass2char(mass);
+char* get_data_path(const char* original,int mass) {
 
-    // Allocate memory for path
-    char* path = (char*)malloc(strlen(basePath) + 1); // +1 for null terminator
+    char* toAppend = mass2char(mass);
+    char* extension = ".txt";
 
-    strcpy(path, basePath);
-    path[strlen(path) - 5] = newChar;
+    int newLength = strlen(original) + strlen(toAppend) + strlen(extension) + 1;
+    char* newPath = (char*)malloc(newLength * sizeof(char));
 
-    return path;
+    // Copy and concatenate strings
+    strcpy(newPath, original);
+    strcat(newPath, toAppend);
+    strcat(newPath, extension);
+
+    return newPath;
 }
 
 
@@ -779,12 +783,12 @@ static struct Atomic_data initAtomicData(int atom_idx,int do_coll) {
     atomData.mass = idx2mass(atom_idx);
 
     char* energyPath = (char*)get_data_path(ENERGY,atomData.mass);
-    //printf("path to energy levels for %c is %s\n",mass2char(atomData.mass),energyPath);
+    //printf("path to energy levels for %s is %s\n",mass2char(atomData.mass),energyPath);
     atomData.energyLevels = readFileAndCreateEnergyDictionary(energyPath);
     free(energyPath);
 
     char* ratesPath           = get_data_path(RATES,atomData.mass);
-    //printf("path to rates for %c is %s\n",mass2char(atomData.mass),ratesPath);
+    //printf("path to rates for %s is %s\n",mass2char(atomData.mass),ratesPath);
     atomData.transitionRates = initializeRatesArrayFromFile(ratesPath,atomData.mass);
     atomData.numRates      = countLinesInFile(ratesPath);
     free(ratesPath);
@@ -792,13 +796,13 @@ static struct Atomic_data initAtomicData(int atom_idx,int do_coll) {
     if (do_coll) {
 
     char* collPath = get_data_path(COLL,atomData.mass);
-    //printf("path to colls for %c is %s\n",mass2char(atomData.mass),collPath);
+    //printf("path to colls for %s is %s\n",mass2char(atomData.mass),collPath);
     atomData.collisions = initializeCollArrayFromFile(collPath,atomData.mass);
     atomData.numColl = countLinesInFile(collPath);
     free(collPath);
 
     char* weightPath = get_data_path(WEIGHT,atomData.mass);
-    //printf("path to weights for %c is %s\n",mass2char(atomData.mass),weightPath);
+    //printf("path to weights for %s is %s\n",mass2char(atomData.mass),weightPath);
     atomData.weights = InitializeWeightsFromFile(weightPath,atomData.mass);  
     free(weightPath);       
 
