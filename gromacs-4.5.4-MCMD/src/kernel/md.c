@@ -246,6 +246,29 @@ int** final_states;
 double* rates;          
 };
 
+void print_rates(struct Rate* rates,int numRates) {
+    printf("Printing rates");
+    int mass = rates[0].mass;
+    int idx = mass2idx(mass);
+    char sym = mass2char(mass);
+    printf("Possible transitions for %c with mass %d and idx %d\n\n",sym,mass,idx);
+
+    int i;
+    for (i=0;i<numRates;i++) {
+        print_rate(rates[i]);
+    }                                        
+}
+
+void print_rate(struct Rate rate) {
+    int i;
+    printf("Initial state [%d,%d,%d] has %d possible transitions:\n",rate.initial_state[0],rate.initial_state[1],rate.initial_state[2],rate.num_transitions);
+    for (i=0;i<rate.num_transitions;i++) {
+        printf("[%d,%d,%d] -> [%d,%d,%d]\n",rate.initial_state[0],rate.initial_state[1],rate.initial_state[2],rate.final_states[i][0],rate.final_states[i][1],rate.final_states[i][2]);
+
+    }                                                                   
+}
+
+
 
 // Function to count the number of lines in a file
 static int countLinesInFile(const char* filePath) {
@@ -421,6 +444,8 @@ double** coll_rates;         // 5 rates for each transition
 
 // Function to initialize a struct Coll from file data
 static struct Coll initializeCollFromFile(FILE* file, int mass) {
+
+
     struct Coll coll;
     coll.mass = mass;
 
@@ -749,28 +774,37 @@ char* get_data_path(char* basePath, int mass) {
 }
 
 
-static struct Atomic_data initAtomicData(int atom_idx) {
+static struct Atomic_data initAtomicData(int atom_idx,int do_coll) {
     struct Atomic_data atomData; 
     atomData.mass = idx2mass(atom_idx);
 
     char* energyPath = (char*)get_data_path(ENERGY,atomData.mass);
-
+    //printf("path to energy levels for %c is %s\n",mass2char(atomData.mass),energyPath);
     atomData.energyLevels = readFileAndCreateEnergyDictionary(energyPath);
+    free(energyPath);
 
     char* ratesPath           = get_data_path(RATES,atomData.mass);
+    //printf("path to rates for %c is %s\n",mass2char(atomData.mass),ratesPath);
     atomData.transitionRates = initializeRatesArrayFromFile(ratesPath,atomData.mass);
     atomData.numRates      = countLinesInFile(ratesPath);
+    free(ratesPath);
+
+    if (do_coll) {
 
     char* collPath = get_data_path(COLL,atomData.mass);
+    //printf("path to colls for %c is %s\n",mass2char(atomData.mass),collPath);
     atomData.collisions = initializeCollArrayFromFile(collPath,atomData.mass);
     atomData.numColl = countLinesInFile(collPath);
+    free(collPath);
 
     char* weightPath = get_data_path(WEIGHT,atomData.mass);
+    //printf("path to weights for %c is %s\n",mass2char(atomData.mass),weightPath);
     atomData.weights = InitializeWeightsFromFile(weightPath,atomData.mass);  
+    free(weightPath);       
 
-    free(energyPath);
-    free(collPath);
-    free(weightPath);         
+    } 
+
+    return atomData;
 } 
 
 
@@ -2154,7 +2188,6 @@ double do_md(FILE *fplog,t_commrec *cr,int nfile,const t_filenm fnm[],
 #endif
 
 
-printf("Starting @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n\n\n");
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 /////////                                                                                     /////////
@@ -2608,11 +2641,11 @@ const double pi_const = 3.1415;
       }
    }
 
-#define ATOM_TABLE_SIZE 10  // Make sure it is bigger than number of atomic species
+#define ATOM_TABLE_SIZE 20  // Make sure it is bigger than number of atomic species
 int* counts = (int*)calloc(ATOM_TABLE_SIZE,sizeof(int));
 int idx;
 int approx_mass;
-
+int non_zero_counts = 0;
 
 // Count atoms
 for(i=mdatoms->start; (i<mdatoms->nr); i++) {
@@ -2620,16 +2653,21 @@ for(i=mdatoms->start; (i<mdatoms->nr); i++) {
     idx = mass2idx(approx_mass);
     counts[idx] +=1;
 }
+for (i=0;i<ATOM_TABLE_SIZE;i++) { 
+    if (counts[i]) {
+        non_zero_counts+=1;
+    }
+} 
+
 
 struct Atomic_data* atomData = (struct Atomic_data*)malloc(ATOM_TABLE_SIZE*sizeof(struct Atomic_data));
 
-for (i=0;i<ATOM_TABLE_SIZE;i++) {                     
+
+for (i=0;i<ATOM_TABLE_SIZE;i++) {        
     if (counts[i]>0) {
-        atomData[i] = initAtomicData(i);
+        atomData[i] = initAtomicData(i,do_coll);
     }
 }
-
-
 
     /***********************************************************
      *
@@ -2965,9 +3003,9 @@ for (i=0;i<ATOM_TABLE_SIZE;i++) {
 ////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////
 
+
         /* Ionize the atoms if necessary */
         if (bIonize){       
-            
 
                         
         int j;
@@ -3007,7 +3045,7 @@ for (i=0;i<ATOM_TABLE_SIZE;i++) {
     userint3 - Use screened potential. Enables Debye shielding (default = 1)
     userint4 - Read electronic states from file. Reads electronic states from file. Useful for continued sims (default = 0)
     userint5 - Enable logging of electronic dynamics,writes a bunch of useful information, big performance drop due to I/O. (default = 0)
-    userint6 - Enable collisions (Currently not implemented) (default = 0)
+    userint6 - Enable collisional ionization (Currently not implemented) (default = 0)
 
     The userreal are mostly the FEL parameters
     userreal1 - Peak of the gaussian pulse in ps
@@ -3557,7 +3595,6 @@ void shuffle(int arr[], int size) {
             currentNumColl  = atomData[atomIdx].numColl;
             currentWeights  = atomData[atomIdx].weights;
 
-
             double DT_scale=0.0;
             // do electronic stuff untill we reach timescales bigger than MD timestep
             while (DT_current<ir->delta_t*1e-12) {
@@ -3577,18 +3614,26 @@ void shuffle(int arr[], int size) {
             struct transition* possible_transitions;
             int total_transitions;
             int b;
+            int match_index,match_index_coll;
 
-            int match_index = RatesStateIndex(currentRate, currentNumRates, match);
+            match_index = RatesStateIndex(currentRate, currentNumRates, match);
             if (match_index != -1) found_match = 1;
 
-            int match_index_coll = CollStateIndex(currentColl, currentNumColl, match);
-            if (match_index_coll != -1) found_match_collisional = 1;
+            if (do_coll) {
+                match_index_coll = CollStateIndex(currentColl, currentNumColl, match);
+                if (match_index_coll != -1) found_match_collisional = 1;
+            } else {
+                found_match_collisional = 1;
+            }
 
             
             // If there is any match
             if (found_match && found_match_collisional) {  // we could change this to a && and not do 3 checks
-
-                total_transitions = (currentRate[match_index].num_transitions + currentColl[match_index_coll].num_transitions);
+                if (do_coll) {
+                    total_transitions = (currentRate[match_index].num_transitions + currentColl[match_index_coll].num_transitions);
+                } else {
+                    total_transitions = currentRate[match_index].num_transitions;
+                }
                 possible_transitions = (struct transition*)malloc(total_transitions*sizeof(struct transition)); 
                 for (i = 0; i<total_transitions; i++) {
                     possible_transitions[i].final_state = (int*)malloc(3*sizeof(int));
