@@ -71,15 +71,12 @@ For each atomic species present in the system we require 2 files. They are
 - `energy_levels_X.txt`
 - `rate_transitions_to_gromacs_X.txt`
 
-where `X` is replaced with a symbol corresponding to the atomic species.
-
-The symbols are as following 
+where `X` is replaced with a the periodic table symbol in upper case,
+Ex. 
 - `H` - Hydrogen
 - `C` - Carbon
-- `N` - Nitrogen
 - `O` - Oxygen
-- `P` - Phosphorus
-- `F` - Iron (yes it should be F).
+- `FE` - Iron.
 
 You only need to supply the species that are in your system.
 The files must be placed in a folder called `Atomic_data` which is in the same location from where a simulation is run from.
@@ -179,10 +176,17 @@ At the moment the list consists of
 - Carbon
 - Nitrogen
 - Oxygen
+- Flourine
+- Magnesium
 - Phosphorus
-- Iron.
+- Sulfur
+- Chlorine
+- Calcium
+- Iron
 
 With a bit of programming knowledge this can easily be extended, look in the `md.c` file in `gromacs-4.5.4-MCMD/src/kernel`.
+Almost at the top of the file you will find a list of masses, where you must add the mass of whatever you want to add. 
+Then accordingly update the `Elements` array and the `elementConfigs` array.
 
 ### Only serial simulations
 Currently the simulation can only utilize one core. One can of course run many simulations in parallel, as one might want enough simulations to evaluate statistics.
