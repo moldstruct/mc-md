@@ -145,7 +145,7 @@ typedef struct {
 } Element;
 
 #define NUM_ELEMENTS 11
-
+// The digit is simply an index to uniquely identify elements
 Element elements[NUM_ELEMENTS] = {
     {MASS_H, 0, "H"},
     {MASS_C, 1, "C"},
