@@ -114,7 +114,7 @@ double debye_length;
 #include <string.h>
 
 //////////////////////////////////////////////////////////////////////////
-
+// Path to Atomic data ./ is the simulation folder.
 // Energy levels path
 #define ENERGY "./Atomic_data/energy_levels_"
 // Transition rates path
@@ -125,92 +125,83 @@ double debye_length;
 #define WEIGHT "./Atomic_data/statistical_weight_"
 
 // (approximative) Masses, used as atomic species identifiers
-// If you want more atomic species you need to update this mass-list and the three functions mass2idx,idx2mass,mass2char accordingly
+// If you want more atomic species you need to update this mass-list, the "Element list" and "Element config"
 #define MASS_H 1   
 #define MASS_C 12  
 #define MASS_N 14
 #define MASS_O 16
+#define MASS_F 19
+#define MASS_MG 24
 #define MASS_P 31
 #define MASS_S 32
+#define MASS_CL 35
+#define MASS_CA 40
 #define MASS_FE 56
 
+typedef struct {
+    int mass;
+    int index;
+    char symbol[3];
+} Element;
+
+#define NUM_ELEMENTS 11
+
+Element elements[NUM_ELEMENTS] = {
+    {MASS_H, 0, "H"},
+    {MASS_C, 1, "C"},
+    {MASS_N, 2, "N"},
+    {MASS_O, 3, "O"},
+    {MASS_F, 4, "F"},
+    {MASS_MG, 5, "MG"},
+    {MASS_P, 6, "P"},
+    {MASS_S, 7, "S"},
+    {MASS_CL, 8, "CL"},
+    {MASS_CA, 9, "CA"},
+    {MASS_FE, 10, "FE"}
+};
+
+typedef struct {
+    int mass;
+    int config[3]; // One configuration array for both atom_config and GS_config
+} ElementConfig;
+
+ElementConfig elementConfigs[] = {
+    {MASS_H, {1, 0, 0}},    // Hydrogen
+    {MASS_C, {2, 4, 0}},    // Carbon
+    {MASS_N, {2, 5, 0}},    // Nitrogen
+    {MASS_O, {2, 6, 0}},    // Oxygen
+    {MASS_F, {2, 7, 0}},    // Fluorine
+    {MASS_MG, {2, 8, 2}},   // Magnesium
+    {MASS_P, {2, 8, 5}},    // Phosphorus
+    {MASS_S, {2, 8, 6}},    // Sulfur
+    {MASS_CL, {2, 8, 7}},   // Chlorine
+    {MASS_CA, {2, 8, 10}},   // Calcium
+    {MASS_FE, {2, 8, 16}}    // Iron
+};
+
 int mass2idx(int mass) {
-    switch(mass) {
-        case MASS_H: // Hydrogen
-            return 0;
-
-        case MASS_C:
-            return 1;
-            
-        case MASS_N:
-            return 2;
-
-        case MASS_O:
-            return 3;
-
-        case MASS_P:
-            return 4;
-
-        case MASS_S:
-            return 5;
-
-        case MASS_FE:
-            return 6;
+    for (int i = 0; i < NUM_ELEMENTS; i++) {
+        if (elements[i].mass == mass) {
+            return elements[i].index;
+        }
     }
     return -1;
 }
 
 int idx2mass(int idx) {
-    switch(idx) {
-        case 0: // Hydrogen
-            return MASS_H;
-
-        case 1:
-            return MASS_C;
-            
-                    
-        case 2:
-            return MASS_N;
-
-        case 3:
-            return MASS_O;
-
-        case 4:
-            return MASS_P;
-
-        case 5:
-            return MASS_S;
-
-        case 6:
-            return MASS_FE;
+    if (idx >= 0 && idx < NUM_ELEMENTS) {
+        return elements[idx].mass;
     }
     return -1;
 }
 
 char* mass2char(int mass) {
-    switch(mass) {
-        case MASS_H: // Hydrogen
-            return "H";
-
-        case MASS_C:
-            return "C";
-            
-        case MASS_N:
-            return "N";
-
-        case MASS_O:
-            return "O";
-
-        case MASS_P:
-            return "P";
-
-        case MASS_S:
-            return "S";
-
-        case MASS_FE:
-            return "FE";
+    for (int i = 0; i < NUM_ELEMENTS; i++) {
+        if (elements[i].mass == mass) {
+            return elements[i].symbol;
+        }
     }
-    return "X";
+    return "_";
 }
 
 
@@ -2649,7 +2640,7 @@ const double pi_const = 3.1415;
 int* counts = (int*)calloc(ATOM_TABLE_SIZE,sizeof(int));
 int idx;
 int approx_mass;
-int non_zero_counts = 0;
+
 
 // Count atoms
 for(i=mdatoms->start; (i<mdatoms->nr); i++) {
@@ -2657,11 +2648,7 @@ for(i=mdatoms->start; (i<mdatoms->nr); i++) {
     idx = mass2idx(approx_mass);
     counts[idx] +=1;
 }
-for (i=0;i<ATOM_TABLE_SIZE;i++) { 
-    if (counts[i]) {
-        non_zero_counts+=1;
-    }
-} 
+
 
 
 struct Atomic_data* atomData = (struct Atomic_data*)malloc(ATOM_TABLE_SIZE*sizeof(struct Atomic_data));
@@ -3196,75 +3183,18 @@ for (i=0;i<ATOM_TABLE_SIZE;i++) {
             }
 
 
-            // TODO Initialize groundstates outside MD loop
-            for(i=mdatoms->start; (i<mdatoms->nr); i++) {
-
-                switch((int)round(mdatoms->massT[i])) {
-                    case MASS_H: // Hydrogen
-                        atom_configurations[i][0] = 1;// Hydrogen
-                        atom_configurations[i][1] = 0;
-                        atom_configurations[i][2] = 0;
-                        GS_configurations[i][0] = 1;
-                        GS_configurations[i][1] = 0;
-                        GS_configurations[i][2] = 0; 
-                        break;
-
-                    case MASS_C:
-                        atom_configurations[i][0] = 2;// Carbon
-                        atom_configurations[i][1] = 4;
-                        atom_configurations[i][2] = 0;
-                        GS_configurations[i][0] = 2;
-                        GS_configurations[i][1] = 4;
-                        GS_configurations[i][2] = 0; 
-                        break;
-  
-                    
-                    case MASS_N:
-                        atom_configurations[i][0] = 2;// Nitrogen
-                        atom_configurations[i][1] = 5;
-                        atom_configurations[i][2] = 0;
-                        GS_configurations[i][0] = 2;
-                        GS_configurations[i][1] = 5;
-                        GS_configurations[i][2] = 0; 
-                        break;
-
-                    case MASS_O:
-                        atom_configurations[i][0] = 2;// Oxygen
-                        atom_configurations[i][1] = 6;
-                        atom_configurations[i][2] = 0;
-                        GS_configurations[i][0] = 2;
-                        GS_configurations[i][1] = 6;
-                        GS_configurations[i][2] = 0; 
-                        break;
-
-                    case MASS_P:
-                        atom_configurations[i][0] = 2;// Phosphorus
-                        atom_configurations[i][1] = 8;
-                        atom_configurations[i][2] = 5;
-                        GS_configurations[i][0] = 2;
-                        GS_configurations[i][1] = 8;
-                        GS_configurations[i][2] = 5; 
-                        break;
-
-                    case MASS_S:
-                        atom_configurations[i][0] = 2;// sulfur
-                        atom_configurations[i][1] = 8;
-                        atom_configurations[i][2] = 6;
-                        GS_configurations[i][0] = 2;
-                        GS_configurations[i][1] = 8;
-                        GS_configurations[i][2] = 6; 
-                        break;
-
-                    case MASS_FE:
-                        atom_configurations[i][0] = 2;// iron
-                        atom_configurations[i][1] = 8;
-                        atom_configurations[i][2] = 16; 
-                        GS_configurations[i][0] = 2;
-                        GS_configurations[i][1] = 8;
-                        GS_configurations[i][2] = 16; 
-                        break;
+            //Initialize groundstates
+        for (i = mdatoms->start; i < mdatoms->nr; i++) {
+            int mass = (int)round(mdatoms->massT[i]);
+            for (int j = 0; j < NUM_ELEMENTS; j++) {
+                if (elementConfigs[j].mass == mass) {
+                    memcpy(atom_configurations[i], elementConfigs[j].config, sizeof(elementConfigs[j].config));
+                    memcpy(GS_configurations[i], elementConfigs[j].config, sizeof(elementConfigs[j].config));
+                    break;
                 }
             }
+        }
+
             // We read charges and electronic states from a previous simulation.
             if (read_states) {
                 int n = top_global->natoms; 
