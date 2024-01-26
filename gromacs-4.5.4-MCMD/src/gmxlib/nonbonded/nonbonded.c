@@ -67,7 +67,7 @@
 #include "nb_free_energy.h"
 #include "nb_generic.h"
 #include "nb_generic_cg.h"
-
+#include "nb_kernel_c/nb_kernel110.h"
 
 /* 1,4 interactions uses kernel 330 directly */
 #include "nb_kernel_c/nb_kernel330.h" 
