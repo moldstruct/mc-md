@@ -4,14 +4,6 @@ The code is based on a modified version of GROMACS ([webpage](https://www.gromac
 With functionality close to the normal GROMACS but with some additional parameters to control ionization. Running the code requires that atomic data (more details later) is supplied for the appropriate energy.
 The model is developed by the Biophysics group at Uppsala University and is published here [link to article](PUT URL HERE WHEN PUBLISHED).
 
-# Todo 
-- Fill in detail in brackets in atomic data
-- Guide to running sims
-- example
-   - Write guide
-   - upload example files
-- Make tests 
-
 
 # Manual
 This is a brief manual that will cover how to install, use the model and evaluate output.
@@ -48,8 +40,8 @@ Userints are used to enable/disable certain features while the userreals are use
 userint1 - (default = 1)Alter forcefield. If set to zero the everything should run as unmodifed gromacs 4.5.4 (hopefully)
 userint2 - (default = 1)Do charge transfer. Enables the charge transfer module 
 userint3 - (default = 0)Use screened potential. Enables Debye shielding (Currently not implemented)
-userint4 - (default = 0)Read electronic states from file. Reads electronic states from file. Useful for continued sims (Not well tested, only use if you can confirm validity)
-userint5 - (default = 0)Enable logging of electronic dynamics. Big performance drop due to I/O. Do not use on distributed systems.
+userint4 - (default = 0)Read electronic states from file.  Useful for continued sims (Experimental)
+userint5 - (default = 0)Enable logging of electronic dynamics. Big performance drop due to I/O.
 userint6 - (default = 0)Enable collisional ionization. (Not implemented yet). Requires collisional data.
     
 userreal1 - Peak of the gaussian [ps]
@@ -165,8 +157,37 @@ This file logs all electronic transitions and at what time they occur in ps, as 
 
 All observables are in the same units as the other files.
 
-## Examples
-### Example 1
+## Example
+To help with getting started here is a simple example of running a simple explosion simulaiton, check the `example` folder.
+In this example we will blow up a lysozyme protein, the structure is given in `1aki.pdb`.
+To run the sim we must first make sure that we have all required atomic data, in this case the data is already provided in the `Atomic_data` folder this is generated for 600 eV photon energy. We also make sure that there exists an folder for the output `simulation_output`.
+
+With the prerequisite data present, the rest of the procedure is very similar to a normal Gromacs run.
+
+**Generate topology**
+To generate a topology we can run
+```
+path/to/gromacs/bin/pdb2gmx -f 1aki.pdb -ff "charmm27" -water "SPC"
+```
+
+Feel free to use any other suitable forcefield, in case of a system with water, try to avoid using models with dummy-particles.
+
+**Configure**
+We call the preprocessor on our parameter file, at the end of it you can see the new parameters, feel free to play around with them to see how it influences the system. However, changing the photon energy would require new atomic data.
+
+```
+path/to/gromacs/bin/grompp -f exp.mdp -c conf.gro -p topol.top -o explode.tpr 
+```
+**Run!**
+Finally we can run the simulation by calling the following command:
+```
+path/to/gromacs/bin/mdrun -deffnm explode -v -nt 1 -ionize
+```
+.
+
+
+Important to note that it only works for serial simulations `-nt 1` and that the `-ionize` flag must be given to enable ionization.
+
 
 ## Limitations
 ### Atomic species
