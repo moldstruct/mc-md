@@ -3233,7 +3233,7 @@ for (i=0;i<ATOM_TABLE_SIZE;i++) {
             int match[3];
             current_num_free_electrons  = num_free_electrons;
    
-            double photon_energy = ir->userreal5;  // in eV
+            double photon_energy = (double)ir->userreal5;  // in eV
             double critical_potential;
             double ionization_energy;
             int found_match, found_match_collisional;
