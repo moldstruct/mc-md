@@ -164,7 +164,7 @@ To run the sim we must first make sure that we have all required atomic data, in
 
 With the prerequisite data present, the rest of the procedure is very similar to a normal Gromacs run.
 
-**Generate topology**
+#### Generate topology
 To generate a topology we can run
 ```
 path/to/gromacs/bin/pdb2gmx -f 1aki.pdb -ff "charmm27" -water "SPC"
@@ -172,20 +172,17 @@ path/to/gromacs/bin/pdb2gmx -f 1aki.pdb -ff "charmm27" -water "SPC"
 
 Feel free to use any other suitable forcefield, in case of a system with water, try to avoid using models with dummy-particles.
 
-**Configure**
+#### Configure
 We call the preprocessor on our parameter file, at the end of it you can see the new parameters, feel free to play around with them to see how it influences the system. However, changing the photon energy would require new atomic data.
 
 ```
 path/to/gromacs/bin/grompp -f exp.mdp -c conf.gro -p topol.top -o explode.tpr 
 ```
-**Run!**
+#### Run!
 Finally we can run the simulation by calling the following command:
 ```
 path/to/gromacs/bin/mdrun -deffnm explode -v -nt 1 -ionize
 ```
-.
-
-
 Important to note that it only works for serial simulations `-nt 1` and that the `-ionize` flag must be given to enable ionization.
 
 
