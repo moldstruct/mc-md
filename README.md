@@ -185,6 +185,7 @@ path/to/gromacs/bin/mdrun -deffnm explode -v -nt 1 -ionize
 ```
 Important to note that it only works for serial simulations `-nt 1` and that the `-ionize` flag must be given to enable ionization.
 
+There is also a simple bash-script provided for running all commands.
 
 ## Limitations
 ### Atomic species
