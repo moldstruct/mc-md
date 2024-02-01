@@ -1,6 +1,8 @@
 # Path to gromacs bin (Change to install location)
 path='/path/to//gromacs/bin'
 
+mkdir simulation_output
+
 $path/pdb2gmx -f 1aki.pdb -ff "charmm27" -water "SPC"
 
 # Configure and run explosion sim
