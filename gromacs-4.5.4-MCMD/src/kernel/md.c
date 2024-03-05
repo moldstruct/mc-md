@@ -3277,7 +3277,7 @@ for (i=0;i<ATOM_TABLE_SIZE;i++) {
       int indx;
       int number_of_charge_transfers = 0;
       int donor_idx;
-      int acceptor_idx;f
+      int acceptor_idx;
       int j;
       double R_min = 1e7;
       double R_crit = 1e7;
