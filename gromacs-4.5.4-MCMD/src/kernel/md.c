@@ -145,7 +145,7 @@ typedef struct {
 } Element;
 
 #define NUM_ELEMENTS 11
-// The digit is simply an index to uniquely identify elements
+// The digit is simply an index to uniquely identify elements 
 Element elements[NUM_ELEMENTS] = {
     {MASS_H, 0, "H"},
     {MASS_C, 1, "C"},
@@ -162,7 +162,7 @@ Element elements[NUM_ELEMENTS] = {
 
 typedef struct {
     int mass;
-    int config[3]; // One configuration array for both atom_config and GS_config
+    int config[3]; // One configuration array for both atom groundstates
 } ElementConfig;
 
 ElementConfig elementConfigs[] = {
@@ -178,6 +178,8 @@ ElementConfig elementConfigs[] = {
     {MASS_CA, {2, 8, 10}},   // Calcium
     {MASS_FE, {2, 8, 16}}    // Iron
 };
+
+
 
 int mass2idx(int mass) {
     for (int i = 0; i < NUM_ELEMENTS; i++) {
@@ -3184,9 +3186,10 @@ for (i=0;i<ATOM_TABLE_SIZE;i++) {
 
 
             //Initialize groundstates
+        int j;
         for (i = mdatoms->start; i < mdatoms->nr; i++) {
             int mass = (int)round(mdatoms->massT[i]);
-            for (int j = 0; j < NUM_ELEMENTS; j++) {
+            for (j = 0; j < NUM_ELEMENTS; j++) {
                 if (elementConfigs[j].mass == mass) {
                     memcpy(atom_configurations[i], elementConfigs[j].config, sizeof(elementConfigs[j].config));
                     memcpy(GS_configurations[i], elementConfigs[j].config, sizeof(elementConfigs[j].config));
@@ -3274,7 +3277,7 @@ for (i=0;i<ATOM_TABLE_SIZE;i++) {
       int indx;
       int number_of_charge_transfers = 0;
       int donor_idx;
-      int acceptor_idx;
+      int acceptor_idx;f
       int j;
       double R_min = 1e7;
       double R_crit = 1e7;
