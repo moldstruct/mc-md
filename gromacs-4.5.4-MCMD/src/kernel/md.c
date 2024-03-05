@@ -182,7 +182,8 @@ ElementConfig elementConfigs[] = {
 
 
 int mass2idx(int mass) {
-    for (int i = 0; i < NUM_ELEMENTS; i++) {
+    int i;
+    for (i = 0; i < NUM_ELEMENTS; i++) {
         if (elements[i].mass == mass) {
             return elements[i].index;
         }
@@ -198,7 +199,8 @@ int idx2mass(int idx) {
 }
 
 char* mass2char(int mass) {
-    for (int i = 0; i < NUM_ELEMENTS; i++) {
+    int i;
+    for (i = 0; i < NUM_ELEMENTS; i++) {
         if (elements[i].mass == mass) {
             return elements[i].symbol;
         }
