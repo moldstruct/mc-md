@@ -2206,6 +2206,11 @@ const double ev_to_joule = 1.60218e-19;
 const double kelvin_to_ev = 8.61732814974493e-5;
 const double pi_const = 3.1415;
 
+static int charge_transfer_counter = 0;
+static int photo_ionization_counter = 0;
+static int flouresence_counter = 0;
+static int auger_counter = 0;
+
 
     /* Check for special mdrun options */
     bRerunMD = (Flags & MD_RERUN);
@@ -3109,6 +3114,13 @@ for (i=0;i<ATOM_TABLE_SIZE;i++) {
             }
             fclose(fp);  // close the file
 
+            fp = fopen("./simulation_output/transition_counter.txt", "w");  // open the file in write mode
+            if (fp == NULL) {
+                printf("Error: could not open file.\n");
+                return 1;
+            }
+            fclose(fp);  // close the file
+
 
             electron_temperature = 0.0;
             num_free_electrons = 0.0;
@@ -3459,6 +3471,8 @@ void shuffle(int arr[], int size) {
                             return 1;
                         }
                         fprintf(fp, "Charge transfer at t: %lf, Previous state: [%lf, %lf, %lf]. Charge init: %lf ", t,atom_configurations[R_min_idx][0], atom_configurations[R_min_idx][1],atom_configurations[R_min_idx][2], mdatoms->chargeA[R_min_idx]);  // write transition to file
+
+
                     }
 
                     // acceptor
@@ -3480,8 +3494,9 @@ void shuffle(int arr[], int size) {
                     if (logging) {
                         fprintf(fp, " New state: [%lf, %lf, %lf]. With %i charge transfers occuring. Charge after: %lf \n", atom_configurations[R_min_idx][0], atom_configurations[R_min_idx][1],atom_configurations[R_min_idx][2],number_of_charge_transfers, mdatoms->chargeA[R_min_idx]);
                         fclose(fp);  // close the file
-                    }
 
+                    }
+                    charge_transfer_counter +=1;
                 } else {
                 atom_configurations[R_min_idx][0] = atom_configurations[R_min_idx][0] + atomic_transitions[R_min_idx][0];
                 atom_configurations[R_min_idx][1] = atom_configurations[R_min_idx][1] + atomic_transitions[R_min_idx][1];
@@ -3896,7 +3911,25 @@ void shuffle(int arr[], int size) {
 
             fclose(fp);  // close the file
         }
+
+
+    if (step % 100 == 0 && logging) {
+
+        fp = fopen("./simulation_output/transition_counter.txt", "a");  // open the file in write mode
+        if (fp == NULL) {
+            printf("Error: could not open file.\n");
+            return 1;
+        }
+        fprintf(fp,"%d %d %d %d %d\n",step,charge_transfer_counter,photo_ionization_counter,flouresence_counter,auger_counter);
+        fclose(fp);
+    }
+
+
     } // IONIZE IF STATEMENT
+
+
+
+
 
 ///////////////////////////////////
 ////                           ////

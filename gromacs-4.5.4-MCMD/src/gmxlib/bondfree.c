@@ -820,7 +820,7 @@ real angles(int nbonds,
       rvec_inc(fshift[t2],f_k);
     }                                           /* 161 TOTAL	*/
   }
-  return vtot;
+  return 0.0*vtot;
 }
 
 real urey_bradley(int nbonds,
@@ -953,7 +953,7 @@ real urey_bradley(int nbonds,
     double eq_dist = -0.7;
 
     for (m=0; (m<DIM); m++) {	
-      fbond *= 0.5*(tanh(shape*(dr-eq_dist)-shape)+1);
+      fbond *= 0.5*(tanh(shape*(dr-eq_dist-1))+1);
       fik=fbond*r_ik[m]*urey_bradley_ionization_factor + (md->chargeA[ak]*md->chargeA[ai]*ONE_4PI_EPS0*r_ik[m]*urey_bradley_coulomb_factor*gmx_invsqrt(dr2)*gmx_invsqrt(dr2)*gmx_invsqrt(dr2)*exp(-dr/debye_length)*(debye_length + dr))/(debye_length);
       f[ai][m]+=fik; 
       f[ak][m]-=fik;
