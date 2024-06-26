@@ -675,6 +675,7 @@ void pr_inputrec(FILE *fp,int indent,const char *title,t_inputrec *ir,
     PI("userint6",ir->userint6);
     PI("userint7",ir->userint7);
     PI("userint8",ir->userint8);
+    PI("userint9",ir->userint9);
     PR("userreal1",ir->userreal1);
     PR("userreal2",ir->userreal2);
     PR("userreal3",ir->userreal3);

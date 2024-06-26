@@ -227,6 +227,7 @@ char* mass2char(int mass) {
 struct transition {
     int* final_state;
     double rate;
+    int type; // 0 for auger decay, 1 for flourecence, 2 for photoionization.
                    };
 
 
@@ -483,9 +484,9 @@ static struct Coll initializeCollFromFile(FILE* file, int mass) {
     int transitionIndex = 0;
     while (token != NULL) {
         sscanf(token, "%d %d %d %lf %lf %lf %lf %lf",
-                &coll.final_states[transitionIndex][0],
-                &coll.final_states[transitionIndex][1],
-                 &coll.final_states[transitionIndex][2],
+                  &coll.final_states[transitionIndex][0],
+                  &coll.final_states[transitionIndex][1],
+                  &coll.final_states[transitionIndex][2],
                   &coll.coll_rates[transitionIndex][0],
                   &coll.coll_rates[transitionIndex][1],
                   &coll.coll_rates[transitionIndex][2],
@@ -2187,7 +2188,6 @@ double do_md(FILE *fplog,t_commrec *cr,int nfile,const t_filenm fnm[],
 #endif
 
 
-
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 /////////                                                                                     /////////
 /////////                                                                                     /////////
@@ -2197,6 +2197,8 @@ double do_md(FILE *fplog,t_commrec *cr,int nfile,const t_filenm fnm[],
 ///////////////////////////////////////////////////////////////////////////////////////////////////////    
 
 int do_coll = ir->userint6;
+int init_charges = ir->userint9;
+
 
 
 int** atom_configurations;
@@ -2209,6 +2211,14 @@ const double elementary_charge = 1.60217663e-19;
 const double ev_to_joule = 1.60218e-19;
 const double kelvin_to_ev = 8.61732814974493e-5;
 const double pi_const = 3.1415;
+
+
+
+int count_auger = 0;
+int count_flourecence = 0;
+int count_photoionization = 0;
+int count_chargetransfer = 0;
+
 
 
     /* Check for special mdrun options */
@@ -2617,7 +2627,6 @@ const double pi_const = 3.1415;
 /////////                                                                                     /////////
 /////////                                                                                     /////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////////  
-
 
 
 // Work out the hydrogen index
@@ -3033,6 +3042,8 @@ for (i=0;i<ATOM_TABLE_SIZE;i++) {
       in the ground state configuration. If 1 it will try to read 
       states and charges from ___. and ___.
         */
+
+
     /*
     LIST OF USERINT AND USERREAL THAT ARE IMPORTANT
     userint1 - Alter forcefield. If set to zero the everything should run as unmodifed gromacs 4.5.4 (hopefully) (default = 1)
@@ -3067,9 +3078,6 @@ for (i=0;i<ATOM_TABLE_SIZE;i++) {
     }
 
     INTENSITY = imax*exp(-0.5*sqr((t*1e-12-T_MEAN)/width));
-
-
-
 
 
             if (t==0) {
@@ -3187,7 +3195,7 @@ for (i=0;i<ATOM_TABLE_SIZE;i++) {
             }
 
 
-            //Initialize groundstates
+            //Initialize groundstates 
         int j;
         for (i = mdatoms->start; i < mdatoms->nr; i++) {
             int mass = (int)round(mdatoms->massT[i]);
@@ -3199,6 +3207,79 @@ for (i=0;i<ATOM_TABLE_SIZE;i++) {
                 }
             }
         }
+
+        int charge_index;
+        int temp_charge;
+        char line[100];
+        int i = 0;
+        if (init_charges) {
+            fp = fopen("charges.txt", "r");
+                if (fp == NULL) {
+                    printf("Error: could not open charge file for reading.\n");
+                    exit(1);
+                }
+
+                while (fgets(line, sizeof(line), fp)) {
+                sscanf(line, "%d %d", &charge_index, &temp_charge) == 2;
+                mdatoms->chargeA[charge_index] = (float)temp_charge;
+
+                printf("Atom %d charge set to %f\n",charge_index,mdatoms->chargeA[i]);
+
+                // We need to add/remove the electrons from the electronic state
+                // Do it randomly? 
+                // Just one shell at a time?
+
+                // Not sure how to handle electronic states
+                /*
+                if (mdatoms->chargeA[i] > 0) {
+                    // Remove electrons
+                    for (j = 0; j<(int)mdatoms->chargeA[i]; j++) {
+                        if (!(atom_configurations[i][2] >= 0)) {
+                        // Remove from M shell
+                        atom_configurations[i][2] -= 1;
+                        }
+
+                        else if (!(atom_configurations[i][1] >= 0)) {
+                        // Remove from L shell
+                        atom_configurations[i][1] -= 1;
+                        } 
+
+                        else if (!(atom_configurations[i][0] >= 0)) {
+                        // Remove from K shell
+                        atom_configurations[i][0] -= 1;
+                        } else {
+                        printf("Oj då, för få elektroner.\n");
+                    }
+                    }
+
+                } else if (mdatoms->chargeA[i] < 0) {
+                    // Add electrons
+                    for (j = 0; j<(int)mdatoms->chargeA[i]; j++) {
+                        if (!(atom_configurations[i][0] >= GS_configurations[i][0])) {
+                        // add to the K shell
+                        atom_configurations[i][0] += 1;
+                        }
+                        else if (!(atom_configurations[i][1] >= GS_configurations[i][1])) {
+                        // add to the L shell
+                        atom_configurations[i][1] += 1;
+                        }
+                        else if (!(atom_configurations[i][2] >= GS_configurations[i][2])) {
+                        // add to the M shell
+                        atom_configurations[i][2] += 1;
+                        } else {
+                            printf("Oj då, för många elektroner.\n");
+                        }
+                    } 
+                }
+                */ 
+            i++;
+            // Do nothing
+            }
+            fclose(fp);
+            }
+
+
+
 
             // We read charges and electronic states from a previous simulation.
             if (read_states) {
@@ -3446,6 +3527,7 @@ void shuffle(int arr[], int size) {
                                         }
                                     }
                            number_of_charge_transfers+=1;
+                           count_chargetransfer+=1;
 
 
                 // update all atoms' configurations due to charge transfer
@@ -3604,6 +3686,8 @@ void shuffle(int arr[], int size) {
                         possible_transitions[i].final_state[1] = final_state[1];
                         possible_transitions[i].final_state[2] = final_state[2];
                         possible_transitions[i].rate = transition_rate;
+                        possible_transitions[i].type = 0; // auger is type 0
+                       
 
                     } // Check for fluoresence 
                     else if ((state_diff[0] + state_diff[1] + state_diff[2]) == 0) {
@@ -3612,15 +3696,18 @@ void shuffle(int arr[], int size) {
                         possible_transitions[i].final_state[1] = final_state[1];
                         possible_transitions[i].final_state[2] = final_state[2];
                         possible_transitions[i].rate = transition_rate;
+                        possible_transitions[i].type = 1; // flourecence is type 1
+                        
 
                     } // If none of fluoresence or auger decay it is photoionization
                     else {
-
                         // This is a photoionization transition, since the difference is 1 in netcharge, we scale the rate by the pulse 
                         possible_transitions[i].final_state[0] = final_state[0];
                         possible_transitions[i].final_state[1] = final_state[1];
                         possible_transitions[i].final_state[2] = final_state[2];
                         possible_transitions[i].rate = INTENSITY*transition_rate;
+                        possible_transitions[i].type = 2; // Photoionization is type 2
+                        
                     }
                 }
 
@@ -3634,7 +3721,6 @@ void shuffle(int arr[], int size) {
 
             int offset = currentRate[match_index].num_transitions;
             for (i = offset; i < total_transitions; i++) { // This loops over 
-
                     // Assign for ease of access
                     final_state[0] = currentColl[match_index_coll].final_states[i-offset][0];
                     final_state[1] = currentColl[match_index_coll].final_states[i-offset][1];
@@ -3827,6 +3913,19 @@ void shuffle(int arr[], int size) {
                 match[0] = possible_transitions[min_value_index].final_state[0];
                 match[1] = possible_transitions[min_value_index].final_state[1];
                 match[2] = possible_transitions[min_value_index].final_state[2];
+
+                //printf("TYPE????\n");
+                //printf("%d\n",possible_transitions[min_value_index].type);
+
+                if ((int)possible_transitions[min_value_index].type == 0) {
+                    count_auger+=1;
+                }
+                if ((int)possible_transitions[min_value_index].type == 1) {
+                    count_flourecence+=1;
+                }
+                if ((int)possible_transitions[min_value_index].type == 2) {
+                    count_photoionization+=1;
+                }
 
                 atom_configurations[k][0] = match[0];
                 atom_configurations[k][1] = match[1];
@@ -4825,11 +4924,41 @@ void shuffle(int arr[], int size) {
             printf("Error: could not open file for writing.\n");
             exit(1);
         }
-
         for (i = 0; i < n; i++) {
             fwrite(atom_configurations[i], sizeof(int), 3, fp);  // write each subarray
         }
         fclose(fp);
+
+
+        // Write process statistics
+
+        fp = fopen("./simulation_output/procces_statistics.txt", "a");  // open the file in write mode
+            if (fp == NULL) {
+                printf("Error: could not open file.\n");
+                return 1;
+            }
+
+        fprintf(fp,"Processes during the simulation \n| Auger decay | Flourecence | Photo-ionization | charge transfer |\n");
+        fprintf(fp,"%d %d %d %d",count_auger,count_flourecence,count_flourecence, count_chargetransfer);
+
+        fclose(fp);
+
+
+        fp = fopen("./simulation_output/charges.txt", "a");  // open the file in write mode
+            if (fp == NULL) {
+                printf("Error: could not open file.\n");
+                return 1;
+            }
+        for (i = 0; i < n; i++) {
+            fprintf(fp,"%d %d\n",i,(int)mdatoms->chargeA[i]);
+        }
+
+
+        fclose(fp);
+
+
+
+
 
         // Write the charges of the atoms
         fp = fopen("charges.bin", "wb");

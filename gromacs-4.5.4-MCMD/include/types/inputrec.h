@@ -277,6 +277,7 @@ typedef struct {
   int  userint6;
   int  userint7;
   int  userint8;
+  int  userint9;
   real userreal1;
   real userreal2;
   real userreal3;

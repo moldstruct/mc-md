@@ -1158,6 +1158,7 @@ void get_ir(const char *mdparin,const char *mdparout,
   ITYPE ("userint6",    ir->userint6,   0);
   ITYPE ("userint7",    ir->userint7,   0);
   ITYPE ("userint8",    ir->userint8,   0);
+  ITYPE ("userint9",    ir->userint9,   0);
   RTYPE ("userreal1",   ir->userreal1,  0);
   RTYPE ("userreal2",   ir->userreal2,  0);
   RTYPE ("userreal3",   ir->userreal3,  0);
