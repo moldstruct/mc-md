@@ -3221,9 +3221,9 @@ for (i=0;i<ATOM_TABLE_SIZE;i++) {
 
                 while (fgets(line, sizeof(line), fp)) {
                 sscanf(line, "%d %d", &charge_index, &temp_charge) == 2;
-                mdatoms->chargeA[charge_index] = (float)temp_charge;
+                mdatoms->chargeA[charge_index-1] = (float)temp_charge;
 
-                printf("Atom %d charge set to %f\n",charge_index,mdatoms->chargeA[i]);
+                printf("Atom %d charge set to %f\n",charge_index-1,mdatoms->chargeA[i]);
 
                 // We need to add/remove the electrons from the electronic state
                 // Do it randomly? 
@@ -4949,7 +4949,7 @@ void shuffle(int arr[], int size) {
                 printf("Error: could not open file.\n");
                 return 1;
             }
-        for (i = 0; i < n; i++) {
+        for (i = 1; i < n+1; i++) {
             fprintf(fp,"%d %d\n",i,(int)mdatoms->chargeA[i]);
         }
 
