@@ -426,7 +426,6 @@ static int RatesStateIndex(struct Rate* rates, int numRates, int* state) {
 
 ////  STRUCTURE FOR COLLISIONAL STUFF
 
-
 // Very similar to Rates but this has 5 rates per transition instead of 1
 struct Coll {
 int   mass;
@@ -3329,6 +3328,7 @@ for (i=0;i<ATOM_TABLE_SIZE;i++) {
             double Q_D, Q_A, V_B, V_D, R_cob,R_crit;
             double DT_current;
             int charge_transfer = ir->userint2; // 1;
+            printf(charge_transfer);
             double tev;
             double deltaE;
             double B;
@@ -3353,6 +3353,12 @@ for (i=0;i<ATOM_TABLE_SIZE;i++) {
                 atomic_transitions[i][1] = 0;
                 atomic_transitions[i][2] = 0;
             }
+
+
+        for (i=mdatoms->start; i<mdatoms->nr; j++) {
+            printf(i+1);
+            printf(mdatoms->chargeA[i]);
+        }
 
 
       // Charge transfer module
@@ -4950,7 +4956,7 @@ void shuffle(int arr[], int size) {
                 return 1;
             }
         for (i = 1; i < n+1; i++) {
-            fprintf(fp,"%d %d\n",i,(int)mdatoms->chargeA[i]);
+            fprintf(fp,"%d %d\n",i,(int)mdatoms->chargeA[i-1]);
         }
 
 
