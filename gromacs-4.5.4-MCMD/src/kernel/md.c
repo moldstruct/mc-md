@@ -3328,7 +3328,6 @@ for (i=0;i<ATOM_TABLE_SIZE;i++) {
             double Q_D, Q_A, V_B, V_D, R_cob,R_crit;
             double DT_current;
             int charge_transfer = ir->userint2; // 1;
-            printf(charge_transfer);
             double tev;
             double deltaE;
             double B;
@@ -3354,11 +3353,6 @@ for (i=0;i<ATOM_TABLE_SIZE;i++) {
                 atomic_transitions[i][2] = 0;
             }
 
-
-        for (i=mdatoms->start; i<mdatoms->nr; j++) {
-            printf(i+1);
-            printf(mdatoms->chargeA[i]);
-        }
 
 
       // Charge transfer module
