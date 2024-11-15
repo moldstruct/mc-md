@@ -92,6 +92,7 @@
 #include "string2.h"
 #include <time.h>
 #include <omp.h>
+#include <sys/stat.h>
 
 
 
@@ -3090,6 +3091,17 @@ for (i=0;i<ATOM_TABLE_SIZE;i++) {
                 exit(0);
             }
 
+   // Check if the "simulation_output" directory exists, create it if it doesn't
+    struct stat st = {0};
+    if (stat("./simulation_output", &st) == -1) {
+        // Create directory with appropriate permissions
+        if (mkdir("./simulation_output", 0700) != 0) {
+            printf("Error: could not create simulation_output directory.\n");
+            return 1;
+        }
+    }
+
+
             // init files
              fp = fopen("./simulation_output/mean_charge_vs_time.txt", "w");  // open the file in write mode
             if (fp == NULL) {
@@ -3221,61 +3233,39 @@ for (i=0;i<ATOM_TABLE_SIZE;i++) {
                 while (fgets(line, sizeof(line), fp)) {
                 sscanf(line, "%d %d", &charge_index, &temp_charge) == 2;
                 mdatoms->chargeA[charge_index-1] = (float)temp_charge;
-
                 printf("Atom %d charge set to %f\n",charge_index-1,mdatoms->chargeA[i]);
-
-                // We need to add/remove the electrons from the electronic state
-                // Do it randomly? 
-                // Just one shell at a time?
-
-                // Not sure how to handle electronic states
-                /*
-                if (mdatoms->chargeA[i] > 0) {
-                    // Remove electrons
-                    for (j = 0; j<(int)mdatoms->chargeA[i]; j++) {
-                        if (!(atom_configurations[i][2] >= 0)) {
-                        // Remove from M shell
-                        atom_configurations[i][2] -= 1;
-                        }
-
-                        else if (!(atom_configurations[i][1] >= 0)) {
-                        // Remove from L shell
-                        atom_configurations[i][1] -= 1;
-                        } 
-
-                        else if (!(atom_configurations[i][0] >= 0)) {
-                        // Remove from K shell
-                        atom_configurations[i][0] -= 1;
-                        } else {
-                        printf("Oj då, för få elektroner.\n");
-                    }
-                    }
-
-                } else if (mdatoms->chargeA[i] < 0) {
-                    // Add electrons
-                    for (j = 0; j<(int)mdatoms->chargeA[i]; j++) {
-                        if (!(atom_configurations[i][0] >= GS_configurations[i][0])) {
-                        // add to the K shell
-                        atom_configurations[i][0] += 1;
-                        }
-                        else if (!(atom_configurations[i][1] >= GS_configurations[i][1])) {
-                        // add to the L shell
-                        atom_configurations[i][1] += 1;
-                        }
-                        else if (!(atom_configurations[i][2] >= GS_configurations[i][2])) {
-                        // add to the M shell
-                        atom_configurations[i][2] += 1;
-                        } else {
-                            printf("Oj då, för många elektroner.\n");
-                        }
-                    } 
-                }
-                */ 
             i++;
-            // Do nothing
+
+            }
+
+            for (i = mdatoms->start; i < mdatoms->nr; i++) {
+                // Remove electrons
+                for (j = 0; j<(int)mdatoms->chargeA[i]; j++) {
+
+                    // Remove from M shell                                              
+                    if (atom_configurations[i][2] > 0) {
+                        atom_configurations[i][2] -= 1;
+                    }
+
+                    // Remove from L shell
+                    else if (atom_configurations[i][1] > 0) {
+                        atom_configurations[i][1] -= 1;
+                    } 
+
+                    // Remove from K shell
+                    else if (atom_configurations[i][0] > 0) {
+                        atom_configurations[i][0] -= 1;
+                    } 
+
+                    else {
+                        printf("Oj då, för få elektroner.\n");
+                        exit(1)
+                    }
+
+                }
             }
             fclose(fp);
-            }
+        }
 
 
 
