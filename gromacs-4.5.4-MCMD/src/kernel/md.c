@@ -3259,7 +3259,7 @@ for (i=0;i<ATOM_TABLE_SIZE;i++) {
 
                     else {
                         printf("Oj då, för få elektroner.\n");
-                        exit(1)
+                        exit(1);
                     }
 
                 }
