@@ -132,12 +132,18 @@ double debye_length;
 #define MASS_N 14
 #define MASS_O 16
 #define MASS_F 19
+#define MASS_NA 23
 #define MASS_MG 24
+#define MASS_SI 28
 #define MASS_P 31
 #define MASS_S 32
 #define MASS_CL 35
 #define MASS_CA 40
 #define MASS_FE 56
+#define MASS_NI 59
+#define MASS_I 127
+
+
 
 typedef struct {
     int mass;
@@ -145,7 +151,7 @@ typedef struct {
     char symbol[3];
 } Element;
 
-#define NUM_ELEMENTS 11
+#define NUM_ELEMENTS 15
 // The digit is simply an index to uniquely identify elements 
 Element elements[NUM_ELEMENTS] = {
     {MASS_H, 0, "H"},
@@ -158,7 +164,11 @@ Element elements[NUM_ELEMENTS] = {
     {MASS_S, 7, "S"},
     {MASS_CL, 8, "CL"},
     {MASS_CA, 9, "CA"},
-    {MASS_FE, 10, "FE"}
+    {MASS_FE, 10, "FE"},
+    {MASS_NI, 11, "NI"},
+    {MASS_SI, 12, "SI"},
+    {MASS_NA, 13, "NA"},
+    {MASS_I, 14, "I"}
 };
 
 typedef struct {
@@ -178,6 +188,13 @@ ElementConfig elementConfigs[] = {
     {MASS_CL, {2, 8, 7}},   // Chlorine
     {MASS_CA, {2, 8, 10}},   // Calcium
     {MASS_FE, {2, 8, 16}}    // Iron
+    {MASS_NI, {2, 8, 18}}    // Nickel
+    {MASS_NA, {2, 8, 1}}    // Sodium
+    {MASS_SI, {2, 8, 4}}    // Silicon
+    {MASS_I, {2, 8, 18}}    // IODINE # Dummy same as NICKEL
+
+
+
 };
 
 
