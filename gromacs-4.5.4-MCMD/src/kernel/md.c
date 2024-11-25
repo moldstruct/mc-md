@@ -187,10 +187,10 @@ ElementConfig elementConfigs[] = {
     {MASS_S, {2, 8, 6}},    // Sulfur
     {MASS_CL, {2, 8, 7}},   // Chlorine
     {MASS_CA, {2, 8, 10}},   // Calcium
-    {MASS_FE, {2, 8, 16}}    // Iron
-    {MASS_NI, {2, 8, 18}}    // Nickel
-    {MASS_NA, {2, 8, 1}}    // Sodium
-    {MASS_SI, {2, 8, 4}}    // Silicon
+    {MASS_FE, {2, 8, 16}} ,   // Iron
+    {MASS_NI, {2, 8, 18}},    // Nickel
+    {MASS_NA, {2, 8, 1}},   // Sodium
+    {MASS_SI, {2, 8, 4}},    // Silicon
     {MASS_I, {2, 8, 18}}    // IODINE # Dummy same as NICKEL
 
 
