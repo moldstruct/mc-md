@@ -1,0 +1,65 @@
+Processes during the simulation 
+| Auger decay | Flourecence | Photo-ionization | charge transfer |
+0 0 0 0Processes during the simulation 
+| Auger decay | Flourecence | Photo-ionization | charge transfer |
+0 0 0 0Processes during the simulation 
+| Auger decay | Flourecence | Photo-ionization | charge transfer |
+0 0 0 0Processes during the simulation 
+| Auger decay | Flourecence | Photo-ionization | charge transfer |
+0 0 0 0Processes during the simulation 
+| Auger decay | Flourecence | Photo-ionization | charge transfer |
+0 0 0 0Processes during the simulation 
+| Auger decay | Flourecence | Photo-ionization | charge transfer |
+0 0 0 0Processes during the simulation 
+| Auger decay | Flourecence | Photo-ionization | charge transfer |
+0 0 0 85Processes during the simulation 
+| Auger decay | Flourecence | Photo-ionization | charge transfer |
+0 0 0 6Processes during the simulation 
+| Auger decay | Flourecence | Photo-ionization | charge transfer |
+0 0 0 0Processes during the simulation 
+| Auger decay | Flourecence | Photo-ionization | charge transfer |
+0 0 0 1Processes during the simulation 
+| Auger decay | Flourecence | Photo-ionization | charge transfer |
+0 0 0 87Processes during the simulation 
+| Auger decay | Flourecence | Photo-ionization | charge transfer |
+0 0 0 0Processes during the simulation 
+| Auger decay | Flourecence | Photo-ionization | charge transfer |
+0 0 0 0Processes during the simulation 
+| Auger decay | Flourecence | Photo-ionization | charge transfer |
+0 0 0 0Processes during the simulation 
+| Auger decay | Flourecence | Photo-ionization | charge transfer |
+0 0 0 0Processes during the simulation 
+| Auger decay | Flourecence | Photo-ionization | charge transfer |
+0 0 0 0Processes during the simulation 
+| Auger decay | Flourecence | Photo-ionization | charge transfer |
+0 0 0 0Processes during the simulation 
+| Auger decay | Flourecence | Photo-ionization | charge transfer |
+0 0 0 0Processes during the simulation 
+| Auger decay | Flourecence | Photo-ionization | charge transfer |
+0 0 0 0Processes during the simulation 
+| Auger decay | Flourecence | Photo-ionization | charge transfer |
+0 0 0 0Processes during the simulation 
+| Auger decay | Flourecence | Photo-ionization | charge transfer |
+0 0 0 0Processes during the simulation 
+| Auger decay | Flourecence | Photo-ionization | charge transfer |
+0 0 0 0Processes during the simulation 
+| Auger decay | Flourecence | Photo-ionization | charge transfer |
+0 0 0 0Processes during the simulation 
+| Auger decay | Flourecence | Photo-ionization | charge transfer |
+0 0 0 0Processes during the simulation 
+| Auger decay | Flourecence | Photo-ionization | charge transfer |
+0 0 0 0Processes during the simulation 
+| Auger decay | Flourecence | Photo-ionization | charge transfer |
+0 0 0 0Processes during the simulation 
+| Auger decay | Flourecence | Photo-ionization | charge transfer |
+0 0 0 943Processes during the simulation 
+| Auger decay | Flourecence | Photo-ionization | charge transfer |
+0 0 0 938Processes during the simulation 
+| Auger decay | Flourecence | Photo-ionization | charge transfer |
+0 0 0 959Processes during the simulation 
+| Auger decay | Flourecence | Photo-ionization | charge transfer |
+0 0 0 459Processes during the simulation 
+| Auger decay | Flourecence | Photo-ionization | charge transfer |
+0 0 0 484Processes during the simulation 
+| Auger decay | Flourecence | Photo-ionization | charge transfer |
+0 0 0 491

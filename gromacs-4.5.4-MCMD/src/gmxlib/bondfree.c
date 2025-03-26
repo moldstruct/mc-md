@@ -80,7 +80,9 @@ const int cmap_coeff_matrix[] = {
 };
 
 
-
+double ionization_factor(double x) {
+  return min(1,max(1-x,0));
+}
 
 int glatnr(int *global_atom_index,int i)
 {
@@ -128,6 +130,9 @@ real morse_bonds(int nbonds,
 		 int *global_atom_index)
 {
 
+  double morse_term;
+  double coulomb_term;
+  double debye_factor;
 
   const real one=1.0;
   const real two=2.0;
@@ -136,8 +141,6 @@ real morse_bonds(int nbonds,
   int   i,m,ki,type,ai,aj;
   ivec  dt;
   double morse_ionization_factor; // For deciding if we should have screened Coulomb force also or not.
-  //double debye_length = 10000; // debye length, temporary. 
-
 
    if (USERINT1 == 1) {
     morse_ionization_factor = 1.0;
@@ -169,7 +172,14 @@ real morse_bonds(int nbonds,
     omtemp   = one-temp;                               /*   1          */
     cbomtemp = cb*omtemp;                              /*   1          */
     vbond    = cbomtemp*omtemp;                        /*   1          */
-    fbond    = -two*be*temp*cbomtemp*gmx_invsqrt(dr2) + (md->chargeA[aj]*md->chargeA[ai]*ONE_4PI_EPS0*gmx_invsqrt(dr2)*gmx_invsqrt(dr2)*gmx_invsqrt(dr2)*morse_ionization_factor*exp(-dr/debye_length)*(debye_length + dr))/(debye_length);      /*   9          */
+
+    morse_term = -two*be*temp*cbomtemp*gmx_invsqrt(dr2);
+    coulomb_term = md->chargeA[aj]*md->chargeA[ai]*ONE_4PI_EPS0*gmx_invsqrt(dr2)*gmx_invsqrt(dr2)*gmx_invsqrt(dr2)*morse_ionization_factor;
+    debye_factor = exp(-dr/debye_length)*(debye_length + dr)/(debye_length);
+
+    //printf("\n\nMorse term: %f \nCoulomb term: %f \nDebye factor: %f\n\n",morse_term,coulomb_term,debye_factor);
+
+    fbond    =  morse_term + coulomb_term*debye_factor;      /*   9          */
     vtot    += vbond;       /* 1 */
     
     if (g) {
@@ -312,6 +322,7 @@ real FENE_bonds(int nbonds,
 real harmonic(real kA,real kB,real xA,real xB,real x,real lambda,
 	      real *V,real *F)
 {
+  
   const real half=0.5;
   real  L1,kk,x0,dx,dx2;
   real  v,f,dvdl;
@@ -840,8 +851,6 @@ real urey_bradley(int nbonds,
   double urey_bradley_coulomb_factor;
   double average_charge_of_molecule;
 
-  //double debye_length = 10000; // debye length, temporary. 
-
   vtot = 0.0;
   for(i=0; (i<nbonds); ) {
     type = forceatoms[i++];
@@ -854,31 +863,12 @@ real urey_bradley(int nbonds,
     kUB  = forceparams[type].u_b.kUB;
 
   if (USERINT1 == 1) {
-    // adapt FF based on net charge
     average_charge_of_molecule = (md->chargeA[ai] + md->chargeA[aj] + md->chargeA[ak])/3.0;
-    //urey_bradley_coulomb_factor = 1.0;
-
-     if (average_charge_of_molecule >=1.0) {
-         urey_bradley_ionization_factor  = 0.0;
-     }
-    else if ((0.65) <= average_charge_of_molecule  && average_charge_of_molecule <1.0) {
-         urey_bradley_ionization_factor  = 0.333;
-    }
-    else if ((0.3) <= average_charge_of_molecule && average_charge_of_molecule <0.65) {
-        urey_bradley_ionization_factor  = 0.66;
-    }
-    else {
-        urey_bradley_ionization_factor  = 1.0;
-    }
-  }
-    
-  else {
+    urey_bradley_ionization_factor = ionization_factor(average_charge_of_molecule);
+  } else {
       urey_bradley_ionization_factor  = 1.0;
       urey_bradley_coulomb_factor = 0.0; 
-
     }
-    urey_bradley_ionization_factor = 1.0;
-    //printf("urey_bradley_ionization_factor: %lf and average charge is: %lf \n", urey_bradley_ionization_factor, average_charge_of_molecule);
     
     theta  = bond_angle(x[ai],x[aj],x[ak],pbc,
 			r_ij,r_kj,&cos_theta,&t1,&t2);	/*  41		*/
@@ -889,9 +879,6 @@ real urey_bradley(int nbonds,
     ki   = pbc_rvec_sub(pbc,x[ai],x[ak],r_ik);	/*   3 		*/
     dr2  = iprod(r_ik,r_ik);			/*   5		*/
     dr   = dr2*gmx_invsqrt(dr2);		        /*  10		*/
-
-    //printf("Bradley r13: %lf, kUB: %lf, kth: %lf, dr: %lf \n", r13, kUB, kth, dr);
-
 
     *dvdlambda += harmonic(kUB,kUB,r13,r13,dr,lambda,&vbond,&fbond); /*  19  */
 
@@ -949,11 +936,8 @@ real urey_bradley(int nbonds,
       ki=IVEC2IS(dt_ik);
     } 
 
-    double shape = -17.0;
-    double eq_dist = -0.7;
 
     for (m=0; (m<DIM); m++) {	
-      fbond *= 0.5*(tanh(shape*(dr-eq_dist)-shape)+1);
       fik=fbond*r_ik[m]*urey_bradley_ionization_factor + (md->chargeA[ak]*md->chargeA[ai]*ONE_4PI_EPS0*r_ik[m]*urey_bradley_coulomb_factor*gmx_invsqrt(dr2)*gmx_invsqrt(dr2)*gmx_invsqrt(dr2)*exp(-dr/debye_length)*(debye_length + dr))/(debye_length);
       f[ai][m]+=fik; 
       f[ak][m]-=fik;
@@ -1106,10 +1090,6 @@ void do_dih_fup(int i,int j,int k,int l,real ddphi,
     rvec_sub(f_i,svec,f_j);	/*  3	*/
     rvec_add(f_l,svec,f_k);	/*  3	*/
 
-    //printf("fi[0] = %lf,fi[1] = %lf fi[2] = %lf, \n", f_i[0], f_i[1],f_i[2]);
-    //printf("fj[0] = %lf,fi[1] = %lf fi[2] = %lf, \n", f_j[0], f_j[1],f_j[2]);
-    //printf("fk[0] = %lf,fi[1] = %lf fi[2] = %lf, \n", f_k[0], f_k[1],f_k[2]);
-    //printf("fl[0] = %lf,fi[1] = %lf fi[2] = %lf, \n", f_l[0], f_l[1],f_l[2]);
     f_i[0] = f_i[0]*reduction_factor;
     f_i[1] = f_i[1]*reduction_factor;
     f_i[2] = f_i[2]*reduction_factor;
@@ -1144,16 +1124,7 @@ void do_dih_fup(int i,int j,int k,int l,real ddphi,
     } else {
       t3 = CENTRAL;
     }
-    //printf("fi[0] = %lf,fi[1] = %lf fi[2] = %lf, \n", f_i[0], f_i[1],f_i[2]);
-    //printf("fj[0] = %lf,fi[1] = %lf fi[2] = %lf, \n", f_j[0], f_j[1],f_j[2]);
-    //printf("fk[0] = %lf,fi[1] = %lf fi[2] = %lf, \n", f_k[0], f_k[1],f_k[2]);
-    //printf("fl[0] = %lf,fi[1] = %lf fi[2] = %lf, \n", f_l[0], f_l[1],f_l[2]);
-    //f_i[0] = f_i[0]*0.5;
-    //f_i[1] = f_i[1]*0.5;
-    //f_i[2] = f_i[2]*0.5;
-    //printf("fi[0] = %lf,fi[1] = %lf fi[2] = %lf, \n", f_i[0], f_i[1],f_i[2]);
-    //exit(0);
-
+ 
     rvec_inc(fshift[t1],f_i);
     rvec_dec(fshift[CENTRAL],f_j);
     rvec_dec(fshift[t2],f_k);
@@ -1243,25 +1214,8 @@ real pdihs(int nbonds,
     // adapt FF based on net charge
 
     average_charge_dihedral = (md->chargeA[ai] + md->chargeA[aj] + md->chargeA[ak] + md->chargeA[al])/4.0;
-
-     if (average_charge_dihedral >=1.0) {
-         proper_dihedral_ionization_factor  = 0.0;
-     }
-    else if ((0.74) <= average_charge_dihedral  && average_charge_dihedral <1.0) {
-         proper_dihedral_ionization_factor  = 0.25;
-    }
-    else if ((0.49) <= average_charge_dihedral && average_charge_dihedral <0.74) {
-        proper_dihedral_ionization_factor  = 0.5;
-    }
-    else if ((0.24) <= average_charge_dihedral && average_charge_dihedral <0.49) {
-        proper_dihedral_ionization_factor  = 0.75;
-    }
-    else {
-        proper_dihedral_ionization_factor  = 1.0;
-    }
-  }
-    
-  else {
+    proper_dihedral_ionization_factor = ionization_factor(average_charge_dihedral);
+    } else {
       proper_dihedral_ionization_factor  = 1.0;
     }
     
@@ -1318,30 +1272,12 @@ real idihs(int nbonds,
     ak   = forceatoms[i++];
     al   = forceatoms[i++];
 
-     if (USERINT1 == 1) {
+  if (USERINT1 == 1) {
       average_charge_improper_dihedral = (md->chargeA[ai] + md->chargeA[aj] + md->chargeA[ak] + md->chargeA[al])/4.0 ;
-
-     if (average_charge_improper_dihedral >=1.0) {
-         improper_dihedral_ionization_factor  = 0.0;
-     }
-    else if ((0.74) <= average_charge_improper_dihedral && average_charge_improper_dihedral <1.0) {
-         improper_dihedral_ionization_factor  = 0.25;
-    }
-    else if ((0.49) <= average_charge_improper_dihedral && average_charge_improper_dihedral <0.74) {
-        improper_dihedral_ionization_factor  = 0.5;
-    }
-    else if ((0.24) <= average_charge_improper_dihedral && average_charge_improper_dihedral <0.49) {
-        improper_dihedral_ionization_factor  = 0.75;
-    }
-    else {
-        improper_dihedral_ionization_factor  = 1.0;
-    }
-
-  }
-    
-  else {
+      improper_dihedral_ionization_factor = ionization_factor(average_charge_improper_dihedral);
+  } else {
       improper_dihedral_ionization_factor  = 1.0;
-    }
+  }
     
     phi=dih_angle(x[ai],x[aj],x[ak],x[al],pbc,r_ij,r_kj,r_kl,m,n,
                   &sign,&t1,&t2,&t3);			/*  84		*/

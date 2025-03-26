@@ -194,7 +194,6 @@ ElementConfig elementConfigs[] = {
     {MASS_I, {2, 8, 18}}    // IODINE # Dummy same as NICKEL
 
 
-
 };
 
 
@@ -4109,12 +4108,16 @@ void shuffle(int arr[], int size) {
              * Check comments in sim_util.c
              */
         
+            
+            
             do_force(fplog,cr,ir,step,nrnb,wcycle,top,top_global,groups,
                      state->box,state->x,&state->hist,
                      f,force_vir,mdatoms,enerd,fcd,
                      state->lambda,graph,
                      fr,vsite,mu_tot,t,outf->fp_field,ed,bBornRadii,
                      (bNS ? GMX_FORCE_NS : 0) | force_flags);
+
+
         }
     
         GMX_BARRIER(cr->mpi_comm_mygroup);
@@ -4759,6 +4762,21 @@ void shuffle(int arr[], int size) {
             enerd->term[F_EKIN] = last_ekin;
         }
         enerd->term[F_ETOT] = enerd->term[F_EPOT] + enerd->term[F_EKIN];
+
+        const double threshold = 0.99;
+        double E_kin = enerd->term[F_EKIN];
+        double E_tot = enerd->term[F_ETOT];
+
+        // Calculate the ratio
+        double ratio = E_kin / E_tot;
+
+        if (ratio > threshold && step > 20000 && USERINT1) {
+            // Signal that this is the last step
+            printf("\nSimulation terminated: Ratio %f is over threshold %f\n",ratio, threshold);
+            bLastStep = TRUE;
+        }
+
+
         
         if (bVV)
         {
@@ -4918,6 +4936,7 @@ void shuffle(int arr[], int size) {
             bResetCountersHalfMaxH = FALSE;
             gs.set[eglsRESETCOUNTERS] = 0;
         }
+
 
 
     }
