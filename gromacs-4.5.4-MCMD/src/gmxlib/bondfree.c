@@ -56,8 +56,7 @@
 #include "force.h"
 #include "nonbonded.h"
 #include "mdrun.h"
-int USERINT1=1;
-double debye_length;
+int USERINT1;
 
 /* Find a better place for this? */
 const int cmap_coeff_matrix[] = {
@@ -132,7 +131,7 @@ real morse_bonds(int nbonds,
 
   double morse_term;
   double coulomb_term;
-  double debye_factor;
+  
 
   const real one=1.0;
   const real two=2.0;
@@ -141,6 +140,7 @@ real morse_bonds(int nbonds,
   int   i,m,ki,type,ai,aj;
   ivec  dt;
   double morse_ionization_factor; // For deciding if we should have screened Coulomb force also or not.
+
 
    if (USERINT1 == 1) {
     morse_ionization_factor = 1.0;
@@ -175,11 +175,8 @@ real morse_bonds(int nbonds,
 
     morse_term = -two*be*temp*cbomtemp*gmx_invsqrt(dr2);
     coulomb_term = md->chargeA[aj]*md->chargeA[ai]*ONE_4PI_EPS0*gmx_invsqrt(dr2)*gmx_invsqrt(dr2)*gmx_invsqrt(dr2)*morse_ionization_factor;
-    debye_factor = exp(-dr/debye_length)*(debye_length + dr)/(debye_length);
 
-    //printf("\n\nMorse term: %f \nCoulomb term: %f \nDebye factor: %f\n\n",morse_term,coulomb_term,debye_factor);
-
-    fbond    =  morse_term + coulomb_term*debye_factor;      /*   9          */
+    fbond    =  morse_term + coulomb_term;      /*   9          */
     vtot    += vbond;       /* 1 */
     
     if (g) {
@@ -850,6 +847,8 @@ real urey_bradley(int nbonds,
   double urey_bradley_ionization_factor;
   double urey_bradley_coulomb_factor;
   double average_charge_of_molecule;
+  double angle_term;
+  double coulomb_term;
 
   vtot = 0.0;
   for(i=0; (i<nbonds); ) {
@@ -938,7 +937,9 @@ real urey_bradley(int nbonds,
 
 
     for (m=0; (m<DIM); m++) {	
-      fik=fbond*r_ik[m]*urey_bradley_ionization_factor + (md->chargeA[ak]*md->chargeA[ai]*ONE_4PI_EPS0*r_ik[m]*urey_bradley_coulomb_factor*gmx_invsqrt(dr2)*gmx_invsqrt(dr2)*gmx_invsqrt(dr2)*exp(-dr/debye_length)*(debye_length + dr))/(debye_length);
+      angle_term = fbond*r_ik[m]*urey_bradley_ionization_factor;
+      coulomb_term = md->chargeA[ak]*md->chargeA[ai]*ONE_4PI_EPS0*r_ik[m]*urey_bradley_coulomb_factor*gmx_invsqrt(dr2)*gmx_invsqrt(dr2)*gmx_invsqrt(dr2);
+      fik= angle_term + coulomb_term;
       f[ai][m]+=fik; 
       f[ak][m]-=fik;
       fshift[ki][m]+=fik;

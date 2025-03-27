@@ -2,7 +2,7 @@
 ;	File 'mdout.mdp' was generated
 ;	By user: tomas (1000)
 ;	On host: laptop-tomas
-;	At date: Wed Mar 26 15:26:30 2025
+;	At date: Thu Mar 27 09:46:34 2025
 ;
 
 ; VARIOUS PREPROCESSING OPTIONS
@@ -17,7 +17,7 @@ integrator               = md
 ; Start time and timestep in ps
 tinit                    = 0.0
 dt                       = 1e-06
-nsteps                   = 10
+nsteps                   = 30000
 ; For exact run continuation or redoing part of a run
 init_step                = 0
 ; Part index is updated automatically on checkpointing (keeps files separate)
@@ -306,7 +306,7 @@ user1-grps               =
 user2-grps               = 
 userint1                 = 1
 userint2                 = 1
-userint3                 = 0
+userint3                 = 1
 userint4                 = 0
 userint5                 = 0
 userint6                 = 0
@@ -318,6 +318,7 @@ userreal2                = 1e11
 userreal3                = 0.00125
 userreal4                = 100
 userreal5                = 600
-userreal6                = 0
+userreal6                = 0.55
 userreal7                = 0
 userreal8                = 0
+userreal9                = 0

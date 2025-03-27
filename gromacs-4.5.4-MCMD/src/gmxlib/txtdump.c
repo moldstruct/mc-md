@@ -667,6 +667,7 @@ void pr_inputrec(FILE *fp,int indent,const char *title,t_inputrec *ir,
     PI("ld_seed",ir->ld_seed);
     PR("cos_accel",ir->cos_accel);
     pr_matrix(fp,indent,"deform",ir->deform,bMDPformat);
+
     PI("userint1",ir->userint1);
     PI("userint2",ir->userint2);
     PI("userint3",ir->userint3);
@@ -676,6 +677,7 @@ void pr_inputrec(FILE *fp,int indent,const char *title,t_inputrec *ir,
     PI("userint7",ir->userint7);
     PI("userint8",ir->userint8);
     PI("userint9",ir->userint9);
+    
     PR("userreal1",ir->userreal1);
     PR("userreal2",ir->userreal2);
     PR("userreal3",ir->userreal3);
@@ -684,6 +686,8 @@ void pr_inputrec(FILE *fp,int indent,const char *title,t_inputrec *ir,
     PR("userreal6",ir->userreal6);
     PR("userreal7",ir->userreal7);
     PR("userreal8",ir->userreal8);
+    PR("userreal8",ir->userreal9);
+    
     pr_grp_opts(fp,indent,"grpopts",&(ir->opts),bMDPformat);
     pr_cosine(fp,indent,"efield-x",&(ir->ex[XX]),bMDPformat);
     pr_cosine(fp,indent,"efield-xt",&(ir->et[XX]),bMDPformat);

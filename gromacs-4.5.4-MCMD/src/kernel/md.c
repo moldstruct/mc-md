@@ -108,7 +108,6 @@
 #endif
 
 int USERINT1;
-double debye_length;
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -3064,10 +3063,11 @@ for (i=0;i<ATOM_TABLE_SIZE;i++) {
     LIST OF USERINT AND USERREAL THAT ARE IMPORTANT
     userint1 - Alter forcefield. If set to zero the everything should run as unmodifed gromacs 4.5.4 (hopefully) (default = 1)
     userint2 - Do charge transfer. Enables the charge transfer module (default = 1)
-    userint3 - Use screened potential. Enables Debye shielding (default = 1)
+    userint3 - Enable autostop of sim after threshold energy is reached (userreal6) 
     userint4 - Read electronic states from file. Reads electronic states from file. Useful for continued sims (default = 0)
     userint5 - Enable logging of electronic dynamics,writes a bunch of useful information, big performance drop due to I/O. (default = 0)
     userint6 - Enable collisional ionization (Currently not implemented) (default = 0)
+    userint9 - Enable reading charges from file.
 
     The userreal are mostly the FEL parameters
     userreal1 - Peak of the gaussian pulse in ps
@@ -3075,6 +3075,7 @@ for (i=0;i<ATOM_TABLE_SIZE;i++) {
     userreal3 - Width of the peak in ps. This is the sigma value of the guassian.
     userreal4 - Diameter of the focal spot [nm]
     userreal5 - Photon energy [eV]
+    userreal6 - threshold for stopping sim
     */
 
 
@@ -3960,19 +3961,6 @@ void shuffle(int arr[], int size) {
         N_atoms = (double)mdatoms->nr; 
         mean_charge = mean_charge/N_atoms; 
 
-        if (electron_density > 0 && electron_temperature >0) {
-            debye_length = 1e6*69*sqrt((11606*electron_temperature)/electron_density); // calculate debye length 
-        }
-        else {
-            debye_length = 100;
-        }
-
-        if (ir->userint3 == 0) { 
-            // dont use screened coulomb potentials, we get back regular coulomb by settting the debye length a very large number. exp(-x/debye) goes to 1
-            debye_length = 1e9;
-        }
-
-
         if (logging) {
             fp = fopen("./simulation_output/mean_charge_vs_time.txt", "a");  // open the file in write mode
             if (fp == NULL) {
@@ -3996,11 +3984,10 @@ void shuffle(int arr[], int size) {
                 return 1;
             }
 
-            fprintf(fp,"Time: %lf. e- density: %lf. e- temperature: %lf. debye_length: %lf. rg_factor: %lf.\n",
+            fprintf(fp,"Time: %lf. e- density: %lf. e- temperature: %lf.  rg_factor: %lf.\n",
                 t,
                 electron_density,
                 electron_temperature,
-                debye_length,
                 rg_factor
                 );  // write each element to the file
 
@@ -4763,14 +4750,14 @@ void shuffle(int arr[], int size) {
         }
         enerd->term[F_ETOT] = enerd->term[F_EPOT] + enerd->term[F_EKIN];
 
-        const double threshold = 0.99;
+        const double threshold = ir->userreal6;
         double E_kin = enerd->term[F_EKIN];
         double E_tot = enerd->term[F_ETOT];
 
         // Calculate the ratio
         double ratio = E_kin / E_tot;
 
-        if (ratio > threshold && step > 20000 && USERINT1) {
+        if (ratio > threshold && step > 10000 && USERINT1 && ir->userint3) {
             // Signal that this is the last step
             printf("\nSimulation terminated: Ratio %f is over threshold %f\n",ratio, threshold);
             bLastStep = TRUE;

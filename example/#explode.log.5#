@@ -1,12 +1,12 @@
-Log file opened on Wed Mar 26 15:04:01 2025
-Host: laptop-tomas  pid: 464174  nodeid: 0  nnodes:  1
+Log file opened on Thu Mar 27 09:44:07 2025
+Host: laptop-tomas  pid: 502585  nodeid: 0  nnodes:  1
 The Gromacs distribution was built tor  7 mar 2024 09:33:39 CET by
 tomas@laptop-tomas [CMAKE] (Linux 6.5.0-15-generic x86_64)
 
 
                          :-)  G  R  O  M  A  C  S  (-:
 
-                God Rules Over Mankind, Animals, Cosmos and Such
+                       GRowing Old MAkes el Chrono Sweat
 
                             :-)  VERSION 4.5.4  (-:
 
@@ -62,7 +62,7 @@ Comp. Phys. Comm. 91 (1995) pp. 43-56
 
 Input Parameters:
    integrator           = md
-   nsteps               = 10000
+   nsteps               = 30000
    init_step            = 0
    ns_type              = Grid
    nstlist              = 5
@@ -77,7 +77,7 @@ Input Parameters:
    nstenergy            = 100
    nstxtcout            = 0
    init_t               = 0
-   delta_t              = 1e-05
+   delta_t              = 1e-06
    xtcprec              = 100
    nkx                  = 0
    nky                  = 0
@@ -189,9 +189,9 @@ Input Parameters:
       deform[    0]={ 0.00000e+00,  0.00000e+00,  0.00000e+00}
       deform[    1]={ 0.00000e+00,  0.00000e+00,  0.00000e+00}
       deform[    2]={ 0.00000e+00,  0.00000e+00,  0.00000e+00}
-   userint1             = 1
+   userint1             = 0
    userint2             = 1
-   userint3             = 0
+   userint3             = 1
    userint4             = 0
    userint5             = 0
    userint6             = 0
@@ -199,12 +199,13 @@ Input Parameters:
    userint8             = 0
    userint9             = 0
    userreal1            = 0
-   userreal2            = 0
-   userreal3            = 0
-   userreal4            = 0
-   userreal5            = 0
-   userreal6            = 0
+   userreal2            = 1e+11
+   userreal3            = 0.00125
+   userreal4            = 100
+   userreal5            = 600
+   userreal6            = 0.55
    userreal7            = 0
+   userreal8            = 0
    userreal8            = 0
 grpopts:
    nrdf:        5877
@@ -254,7 +255,7 @@ We have the following groups for center of mass motion removal:
 There are: 1960 Atoms
 Initial temperature: 0 K
 
-Started mdrun on node 0 Wed Mar 26 15:04:01 2025
+Started mdrun on node 0 Thu Mar 27 09:44:08 2025
 
            Step           Time         Lambda
               0        0.00000        0.00000
@@ -264,68 +265,1906 @@ Grid: 9 x 6 x 5 cells
           Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
     1.30707e+04    2.15947e+03    2.68180e+03    3.46268e+02   -7.89799e+02
           LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
-    2.13864e+03    0.00000e+00   -3.18783e+03    0.00000e+00    1.64192e+04
+    2.13864e+03    5.68514e+03   -3.18783e+03    4.72808e+05    4.94913e+05
     Kinetic En.   Total Energy    Temperature Pressure (bar)
-    2.52189e-01    1.64195e+04    1.03220e-02    0.00000e+00
+    2.55893e-03    4.94913e+05    1.04736e-04    0.00000e+00
 
            Step           Time         Lambda
-            100        0.00100        0.00000
+            100        0.00010        0.00000
 
    Energies (kJ/mol)
           Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
-    8.82858e+03    2.12548e+03    2.67777e+03    3.38758e+02   -7.90635e+02
+    1.29269e+04    2.16101e+03    2.68151e+03    3.46316e+02   -7.89781e+02
           LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
-    2.09268e+03    0.00000e+00   -3.21751e+03    0.00000e+00    1.20551e+04
+    2.13310e+03    2.06086e+07   -3.19173e+03    1.01324e+09    1.03387e+09
     Kinetic En.   Total Energy    Temperature Pressure (bar)
-    4.36508e+03    1.64202e+04    1.78661e+02    0.00000e+00
+    9.83710e+04    1.03397e+09    4.02629e+03    0.00000e+00
 
            Step           Time         Lambda
-            200        0.00200        0.00000
+            200        0.00020        0.00000
 
    Energies (kJ/mol)
           Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
-    2.28752e+03    2.04442e+03    2.66635e+03    3.17152e+02   -7.93349e+02
+    1.24549e+04    2.18853e+03    2.68182e+03    3.48395e+02   -7.89289e+02
           LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
-    1.97985e+03    0.00000e+00   -3.26489e+03    0.00000e+00    5.23705e+03
+    2.09982e+03    2.49392e+07   -3.21546e+03    1.26236e+09    1.28732e+09
     Kinetic En.   Total Energy    Temperature Pressure (bar)
-    1.11830e+04    1.64201e+04    4.57717e+02    0.00000e+00
+    8.97676e+05    1.28822e+09    3.67415e+04    0.00000e+00
+
+           Step           Time         Lambda
+            300        0.00030        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    1.19824e+04    2.31874e+03    2.68737e+03    3.56100e+02   -7.87796e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+    2.03547e+03    2.54162e+07   -3.26040e+03    1.28709e+09    1.31252e+09
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    2.65451e+06    1.31517e+09    1.08648e+05    0.00000e+00
+
+           Step           Time         Lambda
+            400        0.00040        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    1.21704e+04    2.68967e+03    2.70754e+03    3.75112e+02   -7.85350e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+    1.94993e+03    2.59673e+07   -3.31761e+03    1.32589e+09    1.35187e+09
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    5.40048e+06    1.35727e+09    2.21040e+05    0.00000e+00
+
+           Step           Time         Lambda
+            500        0.00050        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    1.39429e+04    3.49622e+03    2.75548e+03    4.13803e+02   -7.81996e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+    1.85889e+03    2.64120e+07   -3.37345e+03    1.35871e+09    1.38514e+09
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    9.16082e+06    1.39430e+09    3.74949e+05    0.00000e+00
+
+           Step           Time         Lambda
+            600        0.00060        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    1.83847e+04    4.97666e+03    2.84700e+03    4.82918e+02   -7.77771e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+    1.78400e+03    2.65441e+07   -3.41103e+03    1.36474e+09    1.39131e+09
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    1.39228e+07    1.40523e+09    5.69854e+05    0.00000e+00
+
+           Step           Time         Lambda
+            700        0.00070        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    2.66097e+04    7.39052e+03    2.99866e+03    5.96115e+02   -7.72718e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+    1.75770e+03    2.66741e+07   -3.40949e+03    1.37052e+09    1.39722e+09
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    1.96512e+07    1.41688e+09    8.04315e+05    0.00000e+00
+
+           Step           Time         Lambda
+            800        0.00080        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    3.96776e+04    1.09978e+04    3.22718e+03    7.70726e+02   -7.66844e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+    1.83828e+03    2.65936e+07   -3.33929e+03    1.36292e+09    1.38957e+09
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    2.63035e+07    1.41587e+09    1.07659e+06    0.00000e+00
+
+           Step           Time         Lambda
+            900        0.00090        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    5.84709e+04    1.60439e+04    3.54695e+03    1.02783e+03   -7.60074e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+    2.15520e+03    2.64800e+07   -3.14741e+03    1.35270e+09    1.37926e+09
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    3.38361e+07    1.41310e+09    1.38490e+06    0.00000e+00
+
+           Step           Time         Lambda
+           1000        0.00100        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    8.34616e+04    2.27249e+04    3.96719e+03    1.39249e+03   -7.52311e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+    3.05525e+03    2.67400e+07   -2.71425e+03    1.36185e+09    1.38870e+09
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    4.22239e+07    1.43093e+09    1.72821e+06    0.00000e+00
+
+           Step           Time         Lambda
+           1100        0.00110        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    1.14253e+05    3.11347e+04    4.48757e+03    1.89439e+03   -7.43571e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+    5.53403e+03    2.65614e+07   -1.70888e+03    1.34624e+09    1.37295e+09
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    5.13903e+07    1.42434e+09    2.10339e+06    0.00000e+00
+
+           Step           Time         Lambda
+           1200        0.00120        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    1.49141e+05    4.12678e+04    5.11391e+03    2.57386e+03   -7.33832e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+    1.15100e+04    2.63319e+07    9.78545e+02    1.32758e+09    1.35412e+09
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    6.12440e+07    1.41536e+09    2.50669e+06    0.00000e+00
+
+           Step           Time         Lambda
+           1300        0.00130        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    1.84478e+05    5.27866e+04    5.82821e+03    3.50362e+03   -7.23098e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+    1.79957e+04    2.61665e+07    9.38840e+03    1.31193e+09    1.33837e+09
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    7.17386e+07    1.41011e+09    2.93623e+06    0.00000e+00
+
+           Step           Time         Lambda
+           1400        0.00140        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    2.16048e+05    6.52386e+04    6.55120e+03    4.77763e+03   -7.11261e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+    1.86425e+04    2.60387e+07    2.88174e+04    1.29751e+09    1.32389e+09
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    8.28038e+07    1.40669e+09    3.38913e+06    0.00000e+00
+
+           Step           Time         Lambda
+           1500        0.00150        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    2.42588e+05    7.83271e+04    7.13763e+03    6.51335e+03   -6.98277e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+    2.32346e+04    2.58303e+07    4.22655e+04    1.27816e+09    1.30439e+09
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    9.43839e+07    1.39877e+09    3.86309e+06    0.00000e+00
+
+           Step           Time         Lambda
+           1600        0.00160        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    2.66400e+05    9.17867e+04    7.73218e+03    8.75825e+03   -6.83907e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+    3.15427e+04    2.55760e+07    4.90325e+04    1.25605e+09    1.28209e+09
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    1.06408e+08    1.38849e+09    4.35522e+06    0.00000e+00
+
+           Step           Time         Lambda
+           1700        0.00170        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    2.89857e+05    1.05353e+05    8.28895e+03    1.23635e+04   -6.59860e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+    3.54216e+04    2.53072e+07    4.99214e+04    1.23279e+09    1.25860e+09
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    1.18800e+08    1.37740e+09    4.86243e+06    0.00000e+00
+
+           Step           Time         Lambda
+           1800        0.00180        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    3.13417e+05    1.18892e+05    8.77844e+03    1.68266e+04   -6.44201e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+    3.70742e+04    2.50026e+07    4.97988e+04    1.20770e+09    1.23324e+09
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    1.31475e+08    1.36472e+09    5.38120e+06    0.00000e+00
+
+           Step           Time         Lambda
+           1900        0.00190        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    3.36514e+05    1.32459e+05    9.20209e+03    2.08483e+04   -6.36251e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+    3.96678e+04    2.46979e+07    4.93718e+04    1.18247e+09    1.20776e+09
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    1.44367e+08    1.35212e+09    5.90888e+06    0.00000e+00
+
+           Step           Time         Lambda
+           2000        0.00200        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    3.58916e+05    1.45952e+05    9.59764e+03    2.48521e+04   -6.13365e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+    4.74427e+04    2.43684e+07    5.24829e+04    1.15555e+09    1.18056e+09
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    1.57400e+08    1.33796e+09    6.44233e+06    0.00000e+00
+
+           Step           Time         Lambda
+           2100        0.00210        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    3.80973e+05    1.59153e+05    9.89668e+03    2.88482e+04   -5.86112e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+    5.74653e+04    2.40301e+07    6.12067e+04    1.12852e+09    1.15325e+09
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    1.70515e+08    1.32377e+09    6.97912e+06    0.00000e+00
+
+           Step           Time         Lambda
+           2200        0.00220        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    4.03088e+05    1.72098e+05    1.01918e+04    3.34939e+04   -5.54237e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+    5.77946e+04    2.36964e+07    6.44886e+04    1.10188e+09    1.12632e+09
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    1.83682e+08    1.31000e+09    7.51802e+06    0.00000e+00
+
+           Step           Time         Lambda
+           2300        0.00230        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    4.25156e+05    1.84674e+05    1.04605e+04    3.84756e+04   -5.27329e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+    4.49359e+04    2.33701e+07    6.78078e+04    1.07541e+09    1.09955e+09
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    1.96849e+08    1.29640e+09    8.05696e+06    0.00000e+00
+
+           Step           Time         Lambda
+           2400        0.00240        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    4.46614e+05    1.96869e+05    1.07641e+04    4.28885e+04   -5.06733e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+    3.77822e+04    2.30071e+07    7.66045e+04    1.04756e+09    1.07138e+09
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    2.09947e+08    1.28132e+09    8.59304e+06    0.00000e+00
+
+           Step           Time         Lambda
+           2500        0.00250        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    4.67217e+05    2.08701e+05    1.09560e+04    4.67826e+04   -4.90108e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+    3.56856e+04    2.26709e+07    6.77457e+04    1.02163e+09    1.04514e+09
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    2.22965e+08    1.26811e+09    9.12586e+06    0.00000e+00
+
+           Step           Time         Lambda
+           2600        0.00260        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    4.86839e+05    2.20057e+05    1.11228e+04    5.10957e+04   -4.76158e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+    3.39571e+04    2.23002e+07    6.21930e+04    9.93633e+08    1.01680e+09
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    2.35836e+08    1.25263e+09    9.65266e+06    0.00000e+00
+
+           Step           Time         Lambda
+           2700        0.00270        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    5.04796e+05    2.30896e+05    1.12989e+04    5.58284e+04   -4.61510e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+    2.97576e+04    2.19285e+07    7.69118e+04    9.66018e+08    9.88855e+08
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    2.48509e+08    1.23736e+09    1.01714e+07    0.00000e+00
+
+           Step           Time         Lambda
+           2800        0.00280        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    5.20372e+05    2.41293e+05    1.14941e+04    6.19143e+04   -4.36644e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+    2.48849e+04    2.15780e+07    1.04312e+05    9.39837e+08    9.62379e+08
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    2.60967e+08    1.22335e+09    1.06813e+07    0.00000e+00
+
+           Step           Time         Lambda
+           2900        0.00290        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    5.33430e+05    2.51261e+05    1.16660e+04    6.88172e+04   -4.28020e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+    2.31105e+04    2.12086e+07    1.65571e+05    9.12385e+08    9.34647e+08
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    2.73158e+08    1.20780e+09    1.11802e+07    0.00000e+00
+
+           Step           Time         Lambda
+           3000        0.00300        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    5.44398e+05    2.60854e+05    1.18418e+04    7.46620e+04   -4.19197e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+    2.60640e+04    2.08426e+07    2.21528e+05    8.85383e+08    9.07364e+08
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    2.85091e+08    1.19246e+09    1.16687e+07    0.00000e+00
+
+           Step           Time         Lambda
+           3100        0.00310        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    5.53900e+05    2.70124e+05    1.20051e+04    8.02993e+04   -4.19427e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+    3.30284e+04    2.04811e+07    1.72047e+05    8.58749e+08    8.80351e+08
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    2.96847e+08    1.17720e+09    1.21498e+07    0.00000e+00
+
+           Step           Time         Lambda
+           3200        0.00320        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    5.62453e+05    2.79060e+05    1.21573e+04    8.60035e+04   -4.10965e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+    4.10524e+04    2.01242e+07    1.42414e+05    8.32682e+08    8.53929e+08
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    3.08293e+08    1.16222e+09    1.26183e+07    0.00000e+00
+
+           Step           Time         Lambda
+           3300        0.00330        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    5.70342e+05    2.87716e+05    1.22967e+04    9.18892e+04   -3.87082e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+    4.90606e+04    1.97721e+07    1.40108e+05    8.06929e+08    8.27852e+08
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    3.19409e+08    1.14726e+09    1.30733e+07    0.00000e+00
+
+           Step           Time         Lambda
+           3400        0.00340        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    5.77654e+05    2.96063e+05    1.24294e+04    9.80756e+04   -3.60393e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+    5.03880e+04    1.94241e+07    1.21011e+05    7.82298e+08    8.02877e+08
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    3.30242e+08    1.13312e+09    1.35167e+07    0.00000e+00
+
+           Step           Time         Lambda
+           3500        0.00350        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    5.84484e+05    3.04029e+05    1.25567e+04    1.04653e+05   -3.37970e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+    4.49104e+04    1.90807e+07    9.27368e+04    7.57771e+08    7.77994e+08
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    3.40779e+08    1.11877e+09    1.39480e+07    0.00000e+00
+
+           Step           Time         Lambda
+           3600        0.00360        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    5.90889e+05    3.11579e+05    1.26733e+04    1.11960e+05   -3.18436e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+    4.21502e+04    1.87428e+07    7.38792e+04    7.33669e+08    7.53554e+08
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    3.50982e+08    1.10454e+09    1.43656e+07    0.00000e+00
+
+           Step           Time         Lambda
+           3700        0.00370        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    5.96986e+05    3.18773e+05    1.27934e+04    1.14864e+05   -3.04921e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+    4.02216e+04    1.84106e+07    5.88841e+04    7.10237e+08    7.29790e+08
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    3.60862e+08    1.09065e+09    1.47699e+07    0.00000e+00
+
+           Step           Time         Lambda
+           3800        0.00380        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    6.02983e+05    3.25551e+05    1.28538e+04    1.23700e+05   -3.08029e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+    4.25838e+04    1.80845e+07    4.40753e+04    6.87638e+08    7.06874e+08
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    3.70411e+08    1.07728e+09    1.51608e+07    0.00000e+00
+
+           Step           Time         Lambda
+           3900        0.00390        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    6.09059e+05    3.31927e+05    1.28985e+04    1.32756e+05   -3.12118e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+    3.63186e+04    1.77642e+07    3.31580e+04    6.65571e+08    6.84491e+08
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    3.79647e+08    1.06414e+09    1.55388e+07    0.00000e+00
+
+           Step           Time         Lambda
+           4000        0.00400        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    6.15300e+05    3.38032e+05    1.29453e+04    1.40562e+05   -3.10287e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+    2.34128e+04    1.74500e+07    2.68477e+04    6.44344e+08    6.62951e+08
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    3.88573e+08    1.05152e+09    1.59041e+07    0.00000e+00
+
+           Step           Time         Lambda
+           4100        0.00410        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    6.21696e+05    3.43890e+05    1.29894e+04    1.47391e+05   -3.06932e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+    1.69059e+04    1.71426e+07    2.49590e+04    6.23644e+08    6.41954e+08
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    3.97179e+08    1.03913e+09    1.62564e+07    0.00000e+00
+
+           Step           Time         Lambda
+           4200        0.00420        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    6.28193e+05    3.49549e+05    1.30300e+04    1.53919e+05   -3.01422e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+    1.38930e+04    1.68420e+07    2.70971e+04    6.03202e+08    6.21230e+08
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    4.05471e+08    1.02670e+09    1.65958e+07    0.00000e+00
+
+           Step           Time         Lambda
+           4300        0.00430        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    6.34706e+05    3.54997e+05    1.30646e+04    1.60242e+05   -2.93118e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+    1.27981e+04    1.65484e+07    3.32691e+04    5.83584e+08    6.01341e+08
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    4.13453e+08    1.01479e+09    1.69225e+07    0.00000e+00
+
+           Step           Time         Lambda
+           4400        0.00440        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    6.41163e+05    3.60239e+05    1.30915e+04    1.66399e+05   -2.79921e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+    1.32976e+04    1.62615e+07    4.86197e+04    5.64564e+08    5.82068e+08
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    4.21133e+08    1.00320e+09    1.72368e+07    0.00000e+00
+
+           Step           Time         Lambda
+           4500        0.00450        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    6.47498e+05    3.65284e+05    1.31138e+04    1.72419e+05   -2.68761e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+    1.44403e+04    1.59814e+07    4.95320e+04    5.46254e+08    5.63497e+08
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    4.28542e+08    9.92039e+08    1.75400e+07    0.00000e+00
+
+           Step           Time         Lambda
+           4600        0.00460        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    6.53661e+05    3.70132e+05    1.31268e+04    1.77848e+05   -2.63921e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+    1.41172e+04    1.57079e+07    4.89357e+04    5.28415e+08    5.45401e+08
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    4.35676e+08    9.81077e+08    1.78321e+07    0.00000e+00
+
+           Step           Time         Lambda
+           4700        0.00470        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    6.59616e+05    3.74792e+05    1.31190e+04    1.82828e+05   -2.75767e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+    1.22385e+04    1.54409e+07    4.87155e+04    5.11138e+08    5.27870e+08
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    4.42542e+08    9.70412e+08    1.81130e+07    0.00000e+00
+
+           Step           Time         Lambda
+           4800        0.00480        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    6.65341e+05    3.79287e+05    1.31076e+04    1.87633e+05   -2.76639e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+    1.05171e+04    1.51804e+07    4.97264e+04    4.94669e+08    5.11155e+08
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    4.49144e+08    9.60298e+08    1.83833e+07    0.00000e+00
+
+           Step           Time         Lambda
+           4900        0.00490        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    6.70822e+05    3.83629e+05    1.30988e+04    1.92277e+05   -2.79255e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+    9.37021e+03    1.49266e+07    5.26706e+04    4.78484e+08    4.94733e+08
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    4.55491e+08    9.50224e+08    1.86431e+07    0.00000e+00
+
+           Step           Time         Lambda
+           5000        0.00500        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    6.76054e+05    3.87823e+05    1.30971e+04    1.96765e+05   -2.81490e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+    8.47555e+03    1.46793e+07    4.62053e+04    4.62874e+08    4.78881e+08
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    4.61600e+08    9.40481e+08    1.88931e+07    0.00000e+00
+
+           Step           Time         Lambda
+           5100        0.00510        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    6.81036e+05    3.91874e+05    1.30981e+04    2.00809e+05   -2.82419e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+    7.63626e+03    1.44385e+07    4.16391e+04    4.47771e+08    4.63546e+08
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    4.67471e+08    9.31016e+08    1.91334e+07    0.00000e+00
+
+           Step           Time         Lambda
+           5200        0.00520        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    6.85770e+05    3.95789e+05    1.31018e+04    2.04668e+05   -2.84416e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+    6.89244e+03    1.42039e+07    4.52237e+04    4.33189e+08    4.48744e+08
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    4.73100e+08    9.21844e+08    1.93638e+07    0.00000e+00
+
+           Step           Time         Lambda
+           5300        0.00530        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    6.90257e+05    3.99563e+05    1.31121e+04    2.08418e+05   -2.90038e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+    6.73492e+03    1.39755e+07    5.10689e+04    4.19217e+08    4.34562e+08
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    4.78507e+08    9.13069e+08    1.95851e+07    0.00000e+00
+
+           Step           Time         Lambda
+           5400        0.00540        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    6.94506e+05    4.03208e+05    1.31247e+04    2.12090e+05   -2.97793e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+    8.84873e+03    1.37530e+07    4.87376e+04    4.05611e+08    4.20744e+08
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    4.83707e+08    9.04451e+08    1.97979e+07    0.00000e+00
+
+           Step           Time         Lambda
+           5500        0.00550        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    6.98522e+05    4.06718e+05    1.31383e+04    2.15706e+05   -3.04091e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+    1.03302e+04    1.35363e+07    4.52104e+04    3.92467e+08    4.07393e+08
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    4.88704e+08    8.96097e+08    2.00025e+07    0.00000e+00
+
+           Step           Time         Lambda
+           5600        0.00560        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    7.02316e+05    4.10076e+05    1.31421e+04    2.19252e+05   -3.04471e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+    6.25405e+03    1.33252e+07    4.01946e+04    3.79672e+08    3.94388e+08
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    4.93509e+08    8.87897e+08    2.01991e+07    0.00000e+00
+
+           Step           Time         Lambda
+           5700        0.00570        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    7.05894e+05    4.13307e+05    1.31378e+04    2.22674e+05   -3.05523e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+    4.44819e+03    1.31194e+07    3.81738e+04    3.67430e+08    3.81947e+08
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    4.98119e+08    8.80066e+08    2.03878e+07    0.00000e+00
+
+           Step           Time         Lambda
+           5800        0.00580        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    7.09270e+05    4.16419e+05    1.31267e+04    2.25897e+05   -2.99801e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+    3.99500e+03    1.29191e+07    3.95216e+04    3.55434e+08    3.69761e+08
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    5.02541e+08    8.72301e+08    2.05688e+07    0.00000e+00
+
+           Step           Time         Lambda
+           5900        0.00590        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    7.12454e+05    4.19412e+05    1.31138e+04    2.28879e+05   -2.89287e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+    3.85031e+03    1.27239e+07    4.08075e+04    3.43916e+08    3.58058e+08
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    5.06784e+08    8.64842e+08    2.07425e+07    0.00000e+00
+
+           Step           Time         Lambda
+           6000        0.00600        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    7.15453e+05    4.22289e+05    1.31017e+04    2.31494e+05   -2.80960e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+    3.75686e+03    1.25338e+07    4.00065e+04    3.32923e+08    3.46883e+08
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    5.10861e+08    8.57743e+08    2.09093e+07    0.00000e+00
+
+           Step           Time         Lambda
+           6100        0.00610        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    7.18279e+05    4.25050e+05    1.30914e+04    2.33881e+05   -2.75653e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+    3.64918e+03    1.23485e+07    3.73367e+04    3.22075e+08    3.35855e+08
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    5.14777e+08    8.50632e+08    2.10696e+07    0.00000e+00
+
+           Step           Time         Lambda
+           6200        0.00620        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    7.20944e+05    4.27704e+05    1.30826e+04    2.36139e+05   -2.72488e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+    3.51036e+03    1.21680e+07    3.45928e+04    3.11771e+08    3.25375e+08
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    5.18538e+08    8.43912e+08    2.12235e+07    0.00000e+00
+
+           Step           Time         Lambda
+           6300        0.00630        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    7.23457e+05    4.30258e+05    1.30754e+04    2.38597e+05   -2.71144e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+    3.34086e+03    1.19920e+07    3.43585e+04    3.02019e+08    3.15453e+08
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    5.22146e+08    8.37600e+08    2.13712e+07    0.00000e+00
+
+           Step           Time         Lambda
+           6400        0.00640        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    7.25833e+05    4.32714e+05    1.30695e+04    2.41237e+05   -2.71644e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+    3.14742e+03    1.18204e+07    4.19819e+04    2.92407e+08    3.05685e+08
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    5.25606e+08    8.31290e+08    2.15128e+07    0.00000e+00
+
+           Step           Time         Lambda
+           6500        0.00650        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    7.28085e+05    4.35082e+05    1.30647e+04    2.43246e+05   -2.73494e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+    2.93758e+03    1.16531e+07    3.53582e+04    2.83160e+08    2.96271e+08
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    5.28944e+08    8.25215e+08    2.16495e+07    0.00000e+00
+
+           Step           Time         Lambda
+           6600        0.00660        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    7.30225e+05    4.37355e+05    1.30608e+04    2.44817e+05   -2.75836e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+    2.71733e+03    1.14899e+07    3.55374e+04    2.74268e+08    2.87221e+08
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    5.32144e+08    8.19365e+08    2.17804e+07    0.00000e+00
+
+           Step           Time         Lambda
+           6700        0.00670        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    7.32264e+05    4.39536e+05    1.30580e+04    2.46096e+05   -2.77681e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+    2.49168e+03    1.13308e+07    3.53847e+04    2.65467e+08    2.78266e+08
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    5.35218e+08    8.13484e+08    2.19063e+07    0.00000e+00
+
+           Step           Time         Lambda
+           6800        0.00680        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    7.34210e+05    4.41629e+05    1.30566e+04    2.47192e+05   -2.77986e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+    2.26390e+03    1.11755e+07    3.46049e+04    2.57188e+08    2.69836e+08
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    5.38170e+08    8.08006e+08    2.20271e+07    0.00000e+00
+
+           Step           Time         Lambda
+           6900        0.00690        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    7.36074e+05    4.43640e+05    1.30573e+04    2.48161e+05   -2.74876e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+    2.03741e+03    1.10239e+07    3.12854e+04    2.49359e+08    2.61857e+08
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    5.41010e+08    8.02868e+08    2.21433e+07    0.00000e+00
+
+           Step           Time         Lambda
+           7000        0.00700        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    7.37863e+05    4.45570e+05    1.30618e+04    2.49010e+05   -2.67209e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+    1.81441e+03    1.08760e+07    2.68770e+04    2.41755e+08    2.54105e+08
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    5.43743e+08    7.97848e+08    2.22552e+07    0.00000e+00
+
+           Step           Time         Lambda
+           7100        0.00710        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    7.39584e+05    4.47426e+05    1.30734e+04    2.49776e+05   -2.65998e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+    1.59779e+03    1.07317e+07    2.47121e+04    2.34334e+08    2.46541e+08
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    5.46369e+08    7.92910e+08    2.23627e+07    0.00000e+00
+
+           Step           Time         Lambda
+           7200        0.00720        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    7.41241e+05    4.49206e+05    1.30899e+04    2.50493e+05   -2.66769e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+    1.39012e+03    1.05907e+07    2.43322e+04    2.27190e+08    2.39260e+08
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    5.48891e+08    7.88151e+08    2.24659e+07    0.00000e+00
+
+           Step           Time         Lambda
+           7300        0.00730        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    7.42840e+05    4.50920e+05    1.30989e+04    2.51167e+05   -2.68511e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+    1.19388e+03    1.04531e+07    2.51547e+04    2.20227e+08    2.32164e+08
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    5.51315e+08    7.83479e+08    2.25651e+07    0.00000e+00
+
+           Step           Time         Lambda
+           7400        0.00740        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    7.44384e+05    4.52566e+05    1.31007e+04    2.51767e+05   -2.78072e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+    1.01188e+03    1.03187e+07    2.75197e+04    2.13656e+08    2.25465e+08
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    5.53645e+08    7.79110e+08    2.26605e+07    0.00000e+00
+
+           Step           Time         Lambda
+           7500        0.00750        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    7.45877e+05    4.54152e+05    1.31018e+04    2.52277e+05   -2.77629e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+    8.45705e+02    1.01874e+07    3.24185e+04    2.07195e+08    2.18881e+08
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    5.55885e+08    7.74767e+08    2.27522e+07    0.00000e+00
+
+           Step           Time         Lambda
+           7600        0.00760        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    7.47322e+05    4.55678e+05    1.31040e+04    2.52704e+05   -2.78433e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+    6.97492e+02    1.00591e+07    3.97895e+04    2.00986e+08    2.12554e+08
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    5.58037e+08    7.70591e+08    2.28402e+07    0.00000e+00
+
+           Step           Time         Lambda
+           7700        0.00770        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    7.48720e+05    4.57152e+05    1.31075e+04    2.53066e+05   -2.79730e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+    5.67629e+02    9.93382e+06    4.41217e+04    1.94987e+08    2.06437e+08
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    5.60110e+08    7.66547e+08    2.29251e+07    0.00000e+00
+
+           Step           Time         Lambda
+           7800        0.00780        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    7.50073e+05    4.58574e+05    1.31129e+04    2.53363e+05   -2.81300e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+    4.56561e+02    9.81140e+06    4.09254e+04    1.89328e+08    2.00656e+08
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    5.62113e+08    7.62769e+08    2.30071e+07    0.00000e+00
+
+           Step           Time         Lambda
+           7900        0.00790        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    7.51383e+05    4.59947e+05    1.31222e+04    2.53594e+05   -2.83017e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+    3.62490e+02    9.69175e+06    3.53932e+04    1.83792e+08    1.94997e+08
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    5.64045e+08    7.59042e+08    2.30861e+07    0.00000e+00
+
+           Step           Time         Lambda
+           8000        0.00800        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    7.52652e+05    4.61273e+05    1.31333e+04    2.53772e+05   -2.84878e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+    2.84764e+02    9.57480e+06    2.71453e+04    1.78533e+08    1.89616e+08
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    5.65909e+08    7.55525e+08    2.31624e+07    0.00000e+00
+
+           Step           Time         Lambda
+           8100        0.00810        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    7.53883e+05    4.62548e+05    1.31401e+04    2.53905e+05   -2.86781e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+    2.21387e+02    9.46046e+06    2.11069e+04    1.73306e+08    1.84271e+08
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    5.67703e+08    7.51974e+08    2.32359e+07    0.00000e+00
+
+           Step           Time         Lambda
+           8200        0.00820        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    7.55078e+05    4.63777e+05    1.31456e+04    2.53996e+05   -2.88651e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+    1.70312e+02    9.34867e+06    1.81694e+04    1.68218e+08    1.79070e+08
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    5.69427e+08    7.48498e+08    2.33064e+07    0.00000e+00
+
+           Step           Time         Lambda
+           8300        0.00830        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    7.56237e+05    4.64962e+05    1.31501e+04    2.54040e+05   -2.90469e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+    1.29587e+02    9.23932e+06    1.68089e+04    1.63341e+08    1.74086e+08
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    5.71087e+08    7.45173e+08    2.33744e+07    0.00000e+00
+
+           Step           Time         Lambda
+           8400        0.00840        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    7.57362e+05    4.66104e+05    1.31544e+04    2.54044e+05   -2.92400e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+    9.73790e+01    9.13236e+06    1.61822e+04    1.58705e+08    1.69344e+08
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    5.72686e+08    7.42030e+08    2.34398e+07    0.00000e+00
+
+           Step           Time         Lambda
+           8500        0.00850        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    7.58456e+05    4.67203e+05    1.31589e+04    2.54008e+05   -2.94526e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+    7.20339e+01    9.02768e+06    1.58098e+04    1.54228e+08    1.64765e+08
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    5.74227e+08    7.38992e+08    2.35029e+07    0.00000e+00
+
+           Step           Time         Lambda
+           8600        0.00860        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    7.59520e+05    4.68263e+05    1.31638e+04    2.53932e+05   -2.96733e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+    5.23237e+01    8.92527e+06    1.53435e+04    1.49930e+08    1.60365e+08
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    5.75713e+08    7.36078e+08    2.35637e+07    0.00000e+00
+
+           Step           Time         Lambda
+           8700        0.00870        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    7.60553e+05    4.69281e+05    1.31693e+04    2.53815e+05   -2.98205e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+    3.70949e+01    8.82502e+06    1.45320e+04    1.45702e+08    1.56038e+08
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    5.77147e+08    7.33185e+08    2.36224e+07    0.00000e+00
+
+           Step           Time         Lambda
+           8800        0.00880        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    7.61560e+05    4.70261e+05    1.31758e+04    2.53654e+05   -3.00069e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+    2.53912e+01    8.72687e+06    1.32809e+04    1.41703e+08    1.51942e+08
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    5.78531e+08    7.30473e+08    2.36790e+07    0.00000e+00
+
+           Step           Time         Lambda
+           8900        0.00890        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    7.62541e+05    4.71201e+05    1.31842e+04    2.53453e+05   -3.07626e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+    1.64500e+01    8.63080e+06    1.16890e+04    1.37774e+08    1.47917e+08
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    5.79866e+08    7.27783e+08    2.37337e+07    0.00000e+00
+
+           Step           Time         Lambda
+           9000        0.00900        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    7.63497e+05    4.72100e+05    1.31936e+04    2.53235e+05   -3.20055e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+    9.68733e+00    8.53670e+06    9.98806e+03    1.33905e+08    1.43954e+08
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    5.81155e+08    7.25108e+08    2.37864e+07    0.00000e+00
+
+           Step           Time         Lambda
+           9100        0.00910        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    7.64427e+05    4.72959e+05    1.32011e+04    2.52909e+05   -3.30543e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+    4.58739e+00    8.44453e+06    8.42001e+03    1.30199e+08    1.40155e+08
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    5.82398e+08    7.22553e+08    2.38373e+07    0.00000e+00
+
+           Step           Time         Lambda
+           9200        0.00920        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    7.65335e+05    4.73780e+05    1.32062e+04    2.52484e+05   -3.33256e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+    7.66062e-01    8.35424e+06    7.14457e+03    1.26752e+08    1.36618e+08
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    5.83598e+08    7.20216e+08    2.38864e+07    0.00000e+00
+
+           Step           Time         Lambda
+           9300        0.00930        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    7.66221e+05    4.74565e+05    1.32137e+04    2.52005e+05   -3.40184e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+   -2.06929e+00    8.26578e+06    6.22249e+03    1.23356e+08    1.33134e+08
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    5.84758e+08    7.17892e+08    2.39339e+07    0.00000e+00
+
+           Step           Time         Lambda
+           9400        0.00940        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    7.67084e+05    4.75313e+05    1.32236e+04    2.51548e+05   -3.47026e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+   -4.14556e+00    8.17907e+06    5.64469e+03    1.20036e+08    1.29727e+08
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    5.85878e+08    7.15605e+08    2.39798e+07    0.00000e+00
+
+           Step           Time         Lambda
+           9500        0.00950        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    7.67926e+05    4.76032e+05    1.32308e+04    2.51145e+05   -3.53511e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+   -5.63789e+00    8.09412e+06    5.37335e+03    1.16853e+08    1.26461e+08
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    5.86959e+08    7.13420e+08    2.40240e+07    0.00000e+00
+
+           Step           Time         Lambda
+           9600        0.00960        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    7.68747e+05    4.76718e+05    1.32364e+04    2.50762e+05   -3.58491e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+   -6.68467e+00    8.01083e+06    5.37605e+03    1.13675e+08    1.23200e+08
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    5.88004e+08    7.11204e+08    2.40668e+07    0.00000e+00
+
+           Step           Time         Lambda
+           9700        0.00970        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    7.69547e+05    4.77376e+05    1.32417e+04    2.50379e+05   -3.58997e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+   -7.39273e+00    7.92917e+06    5.64374e+03    1.10642e+08    1.20087e+08
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    5.89013e+08    7.09100e+08    2.41081e+07    0.00000e+00
+
+           Step           Time         Lambda
+           9800        0.00980        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    7.70327e+05    4.78008e+05    1.32470e+04    2.49987e+05   -3.58247e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+   -7.84131e+00    7.84910e+06    6.19335e+03    1.07707e+08    1.17073e+08
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    5.89988e+08    7.07062e+08    2.41480e+07    0.00000e+00
+
+           Step           Time         Lambda
+           9900        0.00990        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    7.71087e+05    4.78614e+05    1.32527e+04    2.49582e+05   -3.58357e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+   -8.09271e+00    7.77056e+06    7.06327e+03    1.04828e+08    1.14118e+08
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    5.90930e+08    7.05047e+08    2.41865e+07    0.00000e+00
+
+           Step           Time         Lambda
+          10000        0.01000        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    7.71827e+05    4.79193e+05    1.32585e+04    2.49167e+05   -3.59247e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+   -8.19836e+00    7.69355e+06    8.28683e+03    1.02003e+08    1.11218e+08
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    5.91840e+08    7.03058e+08    2.42238e+07    0.00000e+00
+
+           Step           Time         Lambda
+          10100        0.01010        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    7.72548e+05    4.79751e+05    1.32643e+04    2.48739e+05   -3.60611e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+   -8.19517e+00    7.61797e+06    9.84593e+03    9.92433e+07    1.08385e+08
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    5.92719e+08    7.01104e+08    2.42598e+07    0.00000e+00
+
+           Step           Time         Lambda
+          10200        0.01020        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    7.73251e+05    4.80287e+05    1.32700e+04    2.48299e+05   -3.62310e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+   -8.11237e+00    7.54385e+06    1.15923e+04    9.66074e+07    1.05678e+08
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    5.93568e+08    6.99245e+08    2.42945e+07    0.00000e+00
+
+           Step           Time         Lambda
+          10300        0.01030        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    7.73933e+05    4.80799e+05    1.32754e+04    2.47844e+05   -3.64350e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+   -7.97127e+00    7.47109e+06    1.31815e+04    9.40641e+07    1.03064e+08
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    5.94389e+08    6.97453e+08    2.43281e+07    0.00000e+00
+
+           Step           Time         Lambda
+          10400        0.01040        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    7.74596e+05    4.81287e+05    1.32803e+04    2.47371e+05   -3.66767e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+   -7.78923e+00    7.39966e+06    1.41191e+04    9.15389e+07    1.00469e+08
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    5.95184e+08    6.95653e+08    2.43606e+07    0.00000e+00
+
+           Step           Time         Lambda
+          10500        0.01050        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    7.75241e+05    4.81757e+05    1.32849e+04    2.46875e+05   -3.69758e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+   -7.57851e+00    7.32957e+06    1.40006e+04    8.91648e+07    9.80251e+07
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    5.95954e+08    6.93979e+08    2.43921e+07    0.00000e+00
+
+           Step           Time         Lambda
+          10600        0.01060        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    7.75866e+05    4.82205e+05    1.32893e+04    2.46366e+05   -3.73396e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+   -7.34946e+00    7.26074e+06    1.27962e+04    8.68633e+07    9.56541e+07
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    5.96699e+08    6.92353e+08    2.44227e+07    0.00000e+00
+
+           Step           Time         Lambda
+          10700        0.01070        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    7.76473e+05    4.82633e+05    1.32935e+04    2.45838e+05   -3.77785e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+   -7.10978e+00    7.19315e+06    1.08807e+04    8.46427e+07    9.33646e+07
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    5.97422e+08    6.90787e+08    2.44523e+07    0.00000e+00
+
+           Step           Time         Lambda
+          10800        0.01080        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    7.77061e+05    4.83041e+05    1.32977e+04    2.45282e+05   -3.82713e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+   -6.86508e+00    7.12680e+06    8.77104e+03    8.23832e+07    9.10370e+07
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    5.98122e+08    6.89159e+08    2.44809e+07    0.00000e+00
+
+           Step           Time         Lambda
+          10900        0.01090        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    7.77632e+05    4.83432e+05    1.33018e+04    2.44718e+05   -3.87822e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+   -6.61948e+00    7.06164e+06    6.85379e+03    8.02638e+07    8.88510e+07
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    5.98799e+08    6.87650e+08    2.45086e+07    0.00000e+00
+
+           Step           Time         Lambda
+          11000        0.01100        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    7.78181e+05    4.83805e+05    1.33058e+04    2.44146e+05   -3.93364e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+   -6.37613e+00    6.99763e+06    5.30124e+03    7.82048e+07    8.67268e+07
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    5.99454e+08    6.86181e+08    2.45354e+07    0.00000e+00
+
+           Step           Time         Lambda
+          11100        0.01110        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    7.78713e+05    4.84162e+05    1.33094e+04    2.43567e+05   -3.99249e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+   -6.13730e+00    6.93472e+06    4.12322e+03    7.61697e+07    8.46279e+07
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    6.00088e+08    6.84716e+08    2.45614e+07    0.00000e+00
+
+           Step           Time         Lambda
+          11200        0.01120        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    7.79225e+05    4.84503e+05    1.33128e+04    2.42980e+05   -4.04457e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+   -5.90458e+00    6.87290e+06    3.25058e+03    7.41882e+07    8.25839e+07
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    6.00702e+08    6.83286e+08    2.45865e+07    0.00000e+00
+
+           Step           Time         Lambda
+          11300        0.01130        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    7.79718e+05    4.84828e+05    1.33158e+04    2.42386e+05   -4.08035e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+   -5.67910e+00    6.81216e+06    2.59450e+03    7.22413e+07    8.05759e+07
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    6.01295e+08    6.81871e+08    2.46108e+07    0.00000e+00
+
+           Step           Time         Lambda
+          11400        0.01140        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    7.80193e+05    4.85140e+05    1.33188e+04    2.41782e+05   -4.10401e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+   -5.46149e+00    6.75247e+06    2.08045e+03    7.03612e+07    7.86357e+07
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    6.01870e+08    6.80506e+08    2.46343e+07    0.00000e+00
+
+           Step           Time         Lambda
+          11500        0.01150        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    7.80648e+05    4.85439e+05    1.33216e+04    2.41172e+05   -4.12847e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+   -5.25221e+00    6.69379e+06    1.65961e+03    6.85365e+07    7.67521e+07
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    6.02427e+08    6.79179e+08    2.46571e+07    0.00000e+00
+
+           Step           Time         Lambda
+          11600        0.01160        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    7.81083e+05    4.85721e+05    1.33243e+04    2.40558e+05   -4.15890e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+   -5.05150e+00    6.63611e+06    1.30724e+03    6.68316e+07    7.49893e+07
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    6.02966e+08    6.77955e+08    2.46791e+07    0.00000e+00
+
+           Step           Time         Lambda
+          11700        0.01170        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    7.81499e+05    4.85995e+05    1.33270e+04    2.39939e+05   -4.19823e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+   -4.85936e+00    6.57939e+06    1.01329e+03    6.51808e+07    7.32816e+07
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    6.03489e+08    6.76770e+08    2.47005e+07    0.00000e+00
+
+           Step           Time         Lambda
+          11800        0.01180        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    7.81894e+05    4.86255e+05    1.33297e+04    2.39316e+05   -4.23810e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+   -4.67575e+00    6.52360e+06    7.72887e+02    6.35187e+07    7.15634e+07
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    6.03996e+08    6.75559e+08    2.47213e+07    0.00000e+00
+
+           Step           Time         Lambda
+          11900        0.01190        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    7.82270e+05    4.86503e+05    1.33324e+04    2.38690e+05   -4.28222e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+   -4.50047e+00    6.46875e+06    5.81573e+02    6.18605e+07    6.98502e+07
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    6.04487e+08    6.74337e+08    2.47414e+07    0.00000e+00
+
+           Step           Time         Lambda
+          12000        0.01200        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    7.82627e+05    4.86741e+05    1.33352e+04    2.38059e+05   -4.32407e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+   -4.33325e+00    6.41479e+06    4.32926e+02    6.03438e+07    6.82793e+07
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    6.04963e+08    6.73242e+08    2.47609e+07    0.00000e+00
+
+           Step           Time         Lambda
+          12100        0.01210        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    7.82966e+05    4.86968e+05    1.33378e+04    2.37425e+05   -4.36563e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+   -4.17378e+00    6.36171e+06    3.19805e+02    5.88322e+07    6.67145e+07
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    6.05425e+08    6.72139e+08    2.47798e+07    0.00000e+00
+
+           Step           Time         Lambda
+          12200        0.01220        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    7.83286e+05    4.87186e+05    1.33406e+04    2.36790e+05   -4.40989e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+   -4.02181e+00    6.30947e+06    2.34810e+02    5.73643e+07    6.51941e+07
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    6.05873e+08    6.71067e+08    2.47981e+07    0.00000e+00
+
+           Step           Time         Lambda
+          12300        0.01230        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    7.83588e+05    4.87393e+05    1.33433e+04    2.36154e+05   -4.45552e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+   -3.87696e+00    6.25809e+06    1.71550e+02    5.60681e+07    6.38464e+07
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    6.06307e+08    6.70154e+08    2.48159e+07    0.00000e+00
+
+           Step           Time         Lambda
+          12400        0.01240        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    7.83874e+05    4.87591e+05    1.33462e+04    2.35516e+05   -4.50176e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+   -3.73889e+00    6.20752e+06    1.24729e+02    5.46671e+07    6.23947e+07
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    6.06730e+08    6.69125e+08    2.48332e+07    0.00000e+00
+
+           Step           Time         Lambda
+          12500        0.01250        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    7.84145e+05    4.87780e+05    1.33491e+04    2.34876e+05   -4.54772e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+   -3.60733e+00    6.15776e+06    9.01269e+01    5.33596e+07    6.10371e+07
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    6.07140e+08    6.68177e+08    2.48500e+07    0.00000e+00
+
+           Step           Time         Lambda
+          12600        0.01260        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    7.84402e+05    4.87962e+05    1.33523e+04    2.34234e+05   -4.59463e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+   -3.48183e+00    6.10877e+06    6.44648e+01    5.21111e+07    5.97394e+07
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    6.07538e+08    6.67278e+08    2.48663e+07    0.00000e+00
+
+           Step           Time         Lambda
+          12700        0.01270        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    7.84645e+05    4.88134e+05    1.33555e+04    2.33592e+05   -4.64294e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+   -3.36218e+00    6.06054e+06    4.53601e+01    5.08911e+07    5.84709e+07
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    6.07925e+08    6.66396e+08    2.48821e+07    0.00000e+00
+
+           Step           Time         Lambda
+          12800        0.01280        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    7.84877e+05    4.88298e+05    1.33587e+04    2.32948e+05   -4.69129e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+   -3.24796e+00    6.01307e+06    3.10681e+01    4.96941e+07    5.72262e+07
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    6.08301e+08    6.65527e+08    2.48975e+07    0.00000e+00
+
+           Step           Time         Lambda
+          12900        0.01290        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    7.85099e+05    4.88453e+05    1.33620e+04    2.32304e+05   -4.73820e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+   -3.13889e+00    5.96631e+06    2.02880e+01    4.85292e+07    5.60143e+07
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    6.08666e+08    6.64680e+08    2.49125e+07    0.00000e+00
+
+           Step           Time         Lambda
+          13000        0.01300        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    7.85311e+05    4.88603e+05    1.33653e+04    2.31660e+05   -4.78177e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+   -3.03476e+00    5.92027e+06    1.21144e+01    4.73684e+07    5.48071e+07
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    6.09022e+08    6.63829e+08    2.49270e+07    0.00000e+00
+
+           Step           Time         Lambda
+          13100        0.01310        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    7.85517e+05    4.88743e+05    1.33687e+04    2.31015e+05   -4.82107e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+   -2.93529e+00    5.87492e+06    5.85322e+00    4.61850e+07    5.35781e+07
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    6.09367e+08    6.62945e+08    2.49411e+07    0.00000e+00
+
+           Step           Time         Lambda
+          13200        0.01320        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    7.85716e+05    4.88876e+05    1.33721e+04    2.30368e+05   -4.85693e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+   -2.84015e+00    5.83026e+06    1.01599e+00    4.50559e+07    5.24040e+07
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    6.09701e+08    6.62105e+08    2.49548e+07    0.00000e+00
+
+           Step           Time         Lambda
+          13300        0.01330        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    7.85909e+05    4.89003e+05    1.33755e+04    2.29724e+05   -4.89044e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+   -2.74916e+00    5.78625e+06   -2.73738e+00    4.39715e+07    5.12752e+07
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    6.10026e+08    6.61301e+08    2.49681e+07    0.00000e+00
+
+           Step           Time         Lambda
+          13400        0.01340        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    7.86099e+05    4.89122e+05    1.33789e+04    2.29081e+05   -4.92194e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+   -2.66207e+00    5.74290e+06   -5.66234e+00    4.29918e+07    5.02519e+07
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    6.10342e+08    6.60594e+08    2.49811e+07    0.00000e+00
+
+           Step           Time         Lambda
+          13500        0.01350        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    7.86286e+05    4.89234e+05    1.33822e+04    2.28435e+05   -4.95154e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+   -2.57864e+00    5.70019e+06   -7.94409e+00    4.19740e+07    4.91910e+07
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    6.10650e+08    6.59841e+08    2.49937e+07    0.00000e+00
+
+           Step           Time         Lambda
+          13600        0.01360        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    7.86471e+05    4.89339e+05    1.33855e+04    2.27789e+05   -4.97872e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+   -2.49861e+00    5.65811e+06   -9.73534e+00    4.10413e+07    4.82159e+07
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    6.10949e+08    6.59165e+08    2.50059e+07    0.00000e+00
+
+           Step           Time         Lambda
+          13700        0.01370        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    7.86653e+05    4.89436e+05    1.33887e+04    2.27143e+05   -5.00411e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+   -2.42186e+00    5.61664e+06   -1.11266e+01    4.01015e+07    4.72343e+07
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    6.11240e+08    6.58474e+08    2.50178e+07    0.00000e+00
+
+           Step           Time         Lambda
+          13800        0.01380        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    7.86836e+05    4.89527e+05    1.33920e+04    2.26499e+05   -5.02775e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+   -2.34822e+00    5.57575e+06   -1.21913e+01    3.91194e+07    4.62109e+07
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    6.11523e+08    6.57734e+08    2.50294e+07    0.00000e+00
+
+           Step           Time         Lambda
+          13900        0.01390        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    7.87017e+05    4.89611e+05    1.33952e+04    2.25856e+05   -5.04863e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+   -2.27750e+00    5.53546e+06   -1.29991e+01    3.82304e+07    4.52812e+07
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    6.11798e+08    6.57079e+08    2.50407e+07    0.00000e+00
+
+           Step           Time         Lambda
+          14000        0.01400        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    7.87200e+05    4.89688e+05    1.33983e+04    2.25211e+05   -5.06547e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+   -2.20955e+00    5.49571e+06   -1.35955e+01    3.73783e+07    4.43890e+07
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    6.12066e+08    6.56455e+08    2.50516e+07    0.00000e+00
+
+           Step           Time         Lambda
+          14100        0.01410        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    7.87382e+05    4.89760e+05    1.34015e+04    2.24569e+05   -5.07701e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+   -2.14420e+00    5.45656e+06   -1.40091e+01    3.65579e+07    4.35291e+07
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    6.12327e+08    6.55856e+08    2.50623e+07    0.00000e+00
+
+           Step           Time         Lambda
+          14200        0.01420        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    7.87565e+05    4.89824e+05    1.34046e+04    2.23928e+05   -5.08327e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+   -2.08133e+00    5.41795e+06   -1.42799e+01    3.57530e+07    4.26851e+07
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    6.12581e+08    6.55266e+08    2.50727e+07    0.00000e+00
+
+           Step           Time         Lambda
+          14300        0.01430        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    7.87748e+05    4.89881e+05    1.34078e+04    2.23289e+05   -5.08419e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+   -2.02083e+00    5.37988e+06   -1.44247e+01    3.49571e+07    4.18508e+07
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    6.12828e+08    6.54679e+08    2.50828e+07    0.00000e+00
+
+           Step           Time         Lambda
+          14400        0.01440        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    7.87933e+05    4.89933e+05    1.34109e+04    2.22651e+05   -5.07990e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+   -1.96256e+00    5.34233e+06   -1.44578e+01    3.41167e+07    4.09725e+07
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    6.13069e+08    6.54042e+08    2.50927e+07    0.00000e+00
+
+           Step           Time         Lambda
+          14500        0.01450        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    7.88118e+05    4.89979e+05    1.34142e+04    2.22014e+05   -5.07035e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+   -1.90642e+00    5.30528e+06   -1.44079e+01    3.33294e+07    4.01477e+07
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    6.13304e+08    6.53452e+08    2.51023e+07    0.00000e+00
+
+           Step           Time         Lambda
+          14600        0.01460        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    7.88304e+05    4.90018e+05    1.34174e+04    2.21379e+05   -5.05662e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+   -1.85229e+00    5.26876e+06   -1.42823e+01    3.26412e+07    3.94225e+07
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    6.13533e+08    6.52955e+08    2.51117e+07    0.00000e+00
+
+           Step           Time         Lambda
+          14700        0.01470        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    7.88490e+05    4.90050e+05    1.34207e+04    2.20746e+05   -5.04079e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+   -1.80004e+00    5.23273e+06   -1.40938e+01    3.18895e+07    3.86344e+07
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    6.13756e+08    6.52390e+08    2.51208e+07    0.00000e+00
+
+           Step           Time         Lambda
+          14800        0.01480        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    7.88674e+05    4.90078e+05    1.34240e+04    2.20114e+05   -5.02475e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+   -1.74963e+00    5.19716e+06   -1.38608e+01    3.11259e+07    3.78349e+07
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    6.13972e+08    6.51807e+08    2.51296e+07    0.00000e+00
+
+           Step           Time         Lambda
+          14900        0.01490        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    7.88858e+05    4.90099e+05    1.34274e+04    2.19485e+05   -5.01060e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+   -1.70099e+00    5.16210e+06   -1.35777e+01    3.04417e+07    3.71152e+07
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    6.14183e+08    6.51299e+08    2.51383e+07    0.00000e+00
+
+           Step           Time         Lambda
+          15000        0.01500        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    7.89039e+05    4.90115e+05    1.34308e+04    2.18859e+05   -4.99857e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+   -1.65402e+00    5.12749e+06   -1.32648e+01    2.97733e+07    3.64117e+07
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    6.14389e+08    6.50801e+08    2.51467e+07    0.00000e+00
+
+           Step           Time         Lambda
+          15100        0.01510        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    7.89219e+05    4.90125e+05    1.34344e+04    2.18237e+05   -4.98681e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+   -1.60860e+00    5.09334e+06   -1.29273e+01    2.91148e+07    3.57187e+07
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    6.14590e+08    6.50308e+08    2.51549e+07    0.00000e+00
+
+           Step           Time         Lambda
+          15200        0.01520        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    7.89396e+05    4.90131e+05    1.34383e+04    2.17616e+05   -4.97236e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+   -1.56469e+00    5.05963e+06   -1.25640e+01    2.84892e+07    3.50589e+07
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    6.14785e+08    6.49844e+08    2.51629e+07    0.00000e+00
+
+           Step           Time         Lambda
+          15300        0.01530        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    7.89569e+05    4.90131e+05    1.34422e+04    2.16999e+05   -4.95338e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+   -1.52226e+00    5.02637e+06   -1.21969e+01    2.77941e+07    3.43301e+07
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    6.14976e+08    6.49306e+08    2.51707e+07    0.00000e+00
+
+           Step           Time         Lambda
+          15400        0.01540        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    7.89739e+05    4.90127e+05    1.34462e+04    2.16384e+05   -4.93035e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+   -1.48127e+00    4.99354e+06   -1.18167e+01    2.71366e+07    3.36393e+07
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    6.15161e+08    6.48800e+08    2.51783e+07    0.00000e+00
+
+           Step           Time         Lambda
+          15500        0.01550        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    7.89905e+05    4.90117e+05    1.34503e+04    2.15772e+05   -4.90583e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+   -1.44160e+00    4.96112e+06   -1.14325e+01    2.65601e+07    3.30300e+07
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    6.15342e+08    6.48372e+08    2.51857e+07    0.00000e+00
+
+           Step           Time         Lambda
+          15600        0.01560        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    7.90069e+05    4.90104e+05    1.34544e+04    2.15163e+05   -4.88399e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+   -1.40312e+00    4.92914e+06   -1.10578e+01    2.60090e+07    3.24465e+07
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    6.15519e+08    6.47965e+08    2.51930e+07    0.00000e+00
+
+           Step           Time         Lambda
+          15700        0.01570        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    7.90228e+05    4.90088e+05    1.34586e+04    2.14556e+05   -4.86767e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+   -1.36586e+00    4.89755e+06   -1.06759e+01    2.54581e+07    3.18635e+07
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    6.15691e+08    6.47554e+08    2.52000e+07    0.00000e+00
+
+           Step           Time         Lambda
+          15800        0.01580        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    7.90382e+05    4.90069e+05    1.34628e+04    2.13951e+05   -4.85596e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+   -1.32978e+00    4.86635e+06   -1.03179e+01    2.49436e+07    3.13173e+07
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    6.15859e+08    6.47177e+08    2.52069e+07    0.00000e+00
+
+           Step           Time         Lambda
+          15900        0.01590        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    7.90535e+05    4.90047e+05    1.34670e+04    2.13350e+05   -4.84605e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+   -1.29484e+00    4.83556e+06   -9.96657e+00    2.43896e+07    3.07320e+07
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    6.16024e+08    6.46756e+08    2.52136e+07    0.00000e+00
+
+           Step           Time         Lambda
+          16000        0.01600        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    7.90683e+05    4.90021e+05    1.34711e+04    2.12753e+05   -4.83540e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+   -1.26096e+00    4.80515e+06   -9.62972e+00    2.38762e+07    3.01878e+07
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    6.16184e+08    6.46372e+08    2.52202e+07    0.00000e+00
+
+           Step           Time         Lambda
+          16100        0.01610        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    7.90830e+05    4.89994e+05    1.34754e+04    2.12159e+05   -4.82255e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+   -1.22813e+00    4.77512e+06   -9.31485e+00    2.33516e+07    2.96327e+07
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    6.16340e+08    6.45973e+08    2.52266e+07    0.00000e+00
+
+           Step           Time         Lambda
+          16200        0.01620        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    7.90975e+05    4.89963e+05    1.34795e+04    2.11567e+05   -4.80798e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+   -1.19622e+00    4.74545e+06   -9.01549e+00    2.28257e+07    2.90767e+07
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    6.16493e+08    6.45569e+08    2.52328e+07    0.00000e+00
+
+           Step           Time         Lambda
+          16300        0.01630        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    7.91119e+05    4.89929e+05    1.34835e+04    2.10980e+05   -4.79364e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+   -1.16527e+00    4.71615e+06   -8.73628e+00    2.23612e+07    2.85824e+07
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    6.16641e+08    6.45224e+08    2.52389e+07    0.00000e+00
+
+           Step           Time         Lambda
+          16400        0.01640        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    7.91261e+05    4.89894e+05    1.34873e+04    2.10395e+05   -4.78158e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+   -1.13525e+00    4.68722e+06   -8.47960e+00    2.18500e+07    2.80417e+07
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    6.16787e+08    6.44828e+08    2.52448e+07    0.00000e+00
+
+Grid: 8 x 8 x 9 cells
+           Step           Time         Lambda
+          16500        0.01650        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    7.91404e+05    4.89858e+05    1.34910e+04    2.09814e+05   -4.77263e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+   -1.10611e+00    4.65862e+06   -8.24731e+00    2.13652e+07    2.75279e+07
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    6.16929e+08    6.44457e+08    2.52507e+07    0.00000e+00
+
+           Step           Time         Lambda
+          16600        0.01660        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    7.91545e+05    4.89818e+05    1.34947e+04    2.09236e+05   -4.76657e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+   -1.07782e+00    4.63036e+06   -8.03331e+00    2.09212e+07    2.70551e+07
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    6.17068e+08    6.44123e+08    2.52563e+07    0.00000e+00
+
+           Step           Time         Lambda
+          16700        0.01670        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    7.91687e+05    4.89777e+05    1.34984e+04    2.08661e+05   -4.76241e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+   -1.05035e+00    4.60246e+06   -7.85236e+00    2.04818e+07    2.65874e+07
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    6.17203e+08    6.43790e+08    2.52619e+07    0.00000e+00
+
+           Step           Time         Lambda
+          16800        0.01680        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    7.91829e+05    4.89735e+05    1.35021e+04    2.08089e+05   -4.75866e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+   -1.02367e+00    4.57487e+06   -7.68181e+00    2.00573e+07    2.61348e+07
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    6.17335e+08    6.43470e+08    2.52673e+07    0.00000e+00
+
+           Step           Time         Lambda
+          16900        0.01690        0.00000
+
+   Energies (kJ/mol)
+          Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
+    7.91971e+05    4.89690e+05    1.35057e+04    2.07520e+05   -4.75447e+02
+          LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
+   -9.97766e-01    4.54762e+06   -7.54926e+00    1.96376e+07    2.56874e+07
+    Kinetic En.   Total Energy    Temperature Pressure (bar)
+    6.17464e+08    6.43152e+08    2.52726e+07    0.00000e+00
 
 
 
 Received the INT signal, stopping at the next NS step
 
            Step           Time         Lambda
-            245        0.00245        0.00000
+          16960        0.01696        0.00000
 
-Writing checkpoint, step 245 at Wed Mar 26 15:04:05 2025
+Writing checkpoint, step 16960 at Thu Mar 27 09:46:12 2025
 
 
    Energies (kJ/mol)
           Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
-    9.52430e+02    2.00219e+03    2.65911e+03    3.03485e+02   -7.95317e+02
+    7.92056e+05    4.89664e+05    1.35077e+04    2.07181e+05   -4.75140e+02
           LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
-    1.91995e+03    0.00000e+00   -3.27416e+03    0.00000e+00    3.76768e+03
+   -9.82568e-01    4.53142e+06   -7.47132e+00    1.94141e+07    2.54474e+07
     Kinetic En.   Total Energy    Temperature Pressure (bar)
-    1.26523e+04    1.64200e+04    5.17854e+02    0.00000e+00
+    6.17540e+08    6.42988e+08    2.52757e+07    0.00000e+00
 
 	<======  ###############  ==>
 	<====  A V E R A G E S  ====>
 	<==  ###############  ======>
 
-	Statistics over 246 steps using 50 frames
+	Statistics over 16961 steps using 3393 frames
 
    Energies (kJ/mol)
           Morse            U-B    Proper Dih.  Improper Dih.      CMAP Dih.
-    7.16361e+03    2.09987e+03    2.67395e+03    3.31510e+02   -7.91580e+02
+    6.55080e+05    3.88658e+05    1.20982e+04    1.85021e+05   -4.29521e+02
           LJ-14     Coulomb-14        LJ (SR)   Coulomb (SR)      Potential
-    2.05671e+03    0.00000e+00   -3.22975e+03    0.00000e+00    1.03043e+04
+    7.60806e+03    1.18540e+07    2.38331e+04    3.73586e+08    3.86712e+08
     Kinetic En.   Total Energy    Temperature Pressure (bar)
-    6.11584e+03    1.64202e+04    2.50319e+02    0.00000e+00
+    4.75659e+08    8.62371e+08    1.94685e+07    0.00000e+00
 
    Total Virial (kJ/mol)
-   -3.50520e+04    2.48540e+02   -1.73531e+03
-    2.48506e+02   -3.38895e+04   -2.57431e+02
-   -1.73535e+03   -2.57433e+02   -3.76916e+04
+   -6.92979e+07   -4.35058e+05   -1.79199e+05
+   -4.35057e+05   -6.23308e+07    2.00379e+05
+   -1.79199e+05    2.00378e+05   -6.12244e+07
 
    Pressure (bar)
     0.00000e+00    0.00000e+00    0.00000e+00
@@ -333,7 +2172,7 @@ Writing checkpoint, step 245 at Wed Mar 26 15:04:05 2025
     0.00000e+00    0.00000e+00    0.00000e+00
 
    Total Dipole (D)
-    0.00000e+00    0.00000e+00    0.00000e+00
+    7.70866e+05    7.76816e+05    7.75459e+05
 
 
 	M E G A - F L O P S   A C C O U N T I N G
@@ -344,20 +2183,21 @@ Writing checkpoint, step 245 at Wed Mar 26 15:04:05 2025
 
  Computing:                               M-Number         M-Flops  % Flops
 -----------------------------------------------------------------------------
- LJ                                     282.191191        9312.309    82.2
- Outer nonbonded loop                     0.482160           4.822     0.0
- 1,4 nonbonded interactions               1.256076         113.047     1.0
- NS-Pairs                                72.951935        1531.991    13.5
- CG-CoM                                   0.098000           0.294     0.0
- Propers                                  1.326186         303.697     2.7
- Impropers                                0.086346          17.960     0.2
- Morse Potent.                            0.488064          28.308     0.2
- Virial                                   0.100250           1.804     0.0
- Stop-CM                                  0.098000           0.980     0.0
- Calc-Ekin                                0.484120          13.071     0.1
- (null)                                   0.031242           0.000     0.0
+ LJ                                     243.698009        8042.034     3.2
+ Coulomb + LJ                          4628.322296      175876.247    69.4
+ Outer nonbonded loop                    36.668455         366.685     0.1
+ 1,4 nonbonded interactions              86.602866        7794.258     3.1
+ NS-Pairs                              1714.816207       36011.140    14.2
+ CG-CoM                                   6.650280          19.951     0.0
+ Propers                                 91.436751       20939.016     8.3
+ Impropers                                5.953311        1238.289     0.5
+ Morse Potent.                           33.650624        1951.736     0.8
+ Virial                                   6.802965         122.453     0.0
+ Stop-CM                                  6.650280          66.503     0.0
+ Calc-Ekin                               33.245520         897.629     0.4
+ (null)                                   2.154047           0.000     0.0
 -----------------------------------------------------------------------------
- Total                                                   11328.282   100.0
+ Total                                                  253325.941   100.0
 -----------------------------------------------------------------------------
 
 
@@ -365,17 +2205,18 @@ Writing checkpoint, step 245 at Wed Mar 26 15:04:05 2025
 
  Computing:         Nodes     Number     G-Cycles    Seconds     %
 -----------------------------------------------------------------------
- Neighbor search        1         50        1.570        0.6    14.2
- Force                  1        246        7.655        2.7    69.1
- Write traj.            1          4        0.106        0.0     1.0
- Update                 1        246        0.015        0.0     0.1
- Rest                   1                   1.734        0.6    15.6
+ Neighbor search        1       3393       45.981       16.4    13.2
+ Force                  1      16961      175.834       62.7    50.3
+ Write traj.            1        171        0.438        0.2     0.1
+ Update                 1      16961        1.063        0.4     0.3
+ Rest                   1                 126.061       45.0    36.1
 -----------------------------------------------------------------------
- Total                  1                  11.080        4.0   100.0
+ Total                  1                 349.376      124.6   100.0
 -----------------------------------------------------------------------
 
                NODE (s)   Real (s)      (%)
-       Time:      3.918      3.953     99.1
+       Time:    124.512    124.634     99.9
+                       2:04
                (Mnbf/s)   (GFlops)   (ns/day)  (hour/ns)
-Performance:     72.026      2.891      0.054    442.403
-Finished mdrun on node 0 Wed Mar 26 15:04:05 2025
+Performance:     39.129      2.035      0.012   2039.189
+Finished mdrun on node 0 Thu Mar 27 09:46:12 2025

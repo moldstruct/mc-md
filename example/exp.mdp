@@ -9,7 +9,7 @@ integrator               = md
 ; Start time and timestep in ps
 tinit                    = 0.0 ;0.005 ;0.035 ;0.03
 dt                       = 1e-06;
-nsteps                   = 10; 
+nsteps                   = 30000; 
 
 ; For exact run continuation or redoing part of a run
 init_step                = 0
@@ -240,9 +240,9 @@ E-z                      =
 E-zt                     = 
 
 ; User defined thingies
-userint1				  = 1; Alter forcefield. If set to zero the everything should run as unmodifed gromacs 4.5.4
+userint1				  = 1; Alter forcefield. If set to zero everything should run as unmodifed gromacs 4.5.4
 userint2				  = 1; Do charge transfer. Enables the charge transfer module 
-userint3				  = 0; Use screened potential. Enables Debye shielding (Currently not implemented)
+userint3				  = 1; Enable autostop of sim after threshold energy is reached (userreal6)
 userint4				  = 0; Read electronic states from file. Useful for continued sims (experimental)
 userint5				  = 0; Enable logging of electronic dynamics. Big performance drop due to I/O.
 userint6				  = 0; Enable collisional ionization. (Not implemented yet). Requires collisional data.
@@ -254,3 +254,4 @@ userreal2				  = 1e11; Total number of photons in the pulse
 userreal3				  = 0.00125; Width of the peak (sigma values of gaussian) [ps]
 userreal4				  = 100; Diameter of the focal spot [nm]
 userreal5                 = 600; Photon energy [eV]
+userreal6 				  = 0.99 ; Energy threshold for stopping (enable/disable userint3)

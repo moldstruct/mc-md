@@ -278,6 +278,7 @@ typedef struct {
   int  userint7;
   int  userint8;
   int  userint9;
+
   real userreal1;
   real userreal2;
   real userreal3;
@@ -286,6 +287,8 @@ typedef struct {
   real userreal6;
   real userreal7;
   real userreal8;
+  real userreal9;
+
   t_grpopts opts;	/* Group options				*/
   t_cosines ex[DIM];	/* Electric field stuff	(spatial part)		*/
   t_cosines et[DIM];	/* Electric field stuff	(time part)		*/

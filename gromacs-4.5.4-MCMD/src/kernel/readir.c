@@ -1150,23 +1150,29 @@ void get_ir(const char *mdparin,const char *mdparout,
   CCTYPE ("User defined thingies");
   STYPE ("user1-grps",  user1,          NULL);
   STYPE ("user2-grps",  user2,          NULL);
-  ITYPE ("userint1",    ir->userint1,   0);
-  ITYPE ("userint2",    ir->userint2,   0);
-  ITYPE ("userint3",    ir->userint3,   0);
-  ITYPE ("userint4",    ir->userint4,   0);
-  ITYPE ("userint5",    ir->userint5,   0);
-  ITYPE ("userint6",    ir->userint6,   0);
-  ITYPE ("userint7",    ir->userint7,   0);
-  ITYPE ("userint8",    ir->userint8,   0);
-  ITYPE ("userint9",    ir->userint9,   0);
-  RTYPE ("userreal1",   ir->userreal1,  0);
-  RTYPE ("userreal2",   ir->userreal2,  0);
-  RTYPE ("userreal3",   ir->userreal3,  0);
-  RTYPE ("userreal4",   ir->userreal4,  0);
-  RTYPE ("userreal5",   ir->userreal5,  0);
-  RTYPE ("userreal6",   ir->userreal6,  0);
+
+  ITYPE ("userint1",    ir->userint1,   1); // Enable altererd forcefields 
+  ITYPE ("userint2",    ir->userint2,   1); // Do charge transfer
+  ITYPE ("userint3",    ir->userint3,   0); // Enable stopping when threshgold is reached (userreal6)
+  ITYPE ("userint4",    ir->userint4,   0); // Read states from previous sim
+  ITYPE ("userint5",    ir->userint5,   0); // Enable logging
+  ITYPE ("userint6",    ir->userint6,   0); // Enable collsional ionization (Not implemented)
+  ITYPE ("userint7",    ir->userint7,   0); // FREE
+  ITYPE ("userint8",    ir->userint8,   0); // FREE
+  ITYPE ("userint9",    ir->userint9,   0); // Read charges from file
+
+
+  RTYPE ("userreal1",   ir->userreal1,  0); // Gaussian peak in ps
+  RTYPE ("userreal2",   ir->userreal2,  0); // Number of photons
+  RTYPE ("userreal3",   ir->userreal3,  0); // Sigma value of gaussian
+  RTYPE ("userreal4",   ir->userreal4,  0); // Focal diamater
+  RTYPE ("userreal5",   ir->userreal5,  0); // Photon energy
+  RTYPE ("userreal6",   ir->userreal6,  0.99); // Threshold for stopping sim. userint3 must be turned on.
   RTYPE ("userreal7",   ir->userreal7,  0);
   RTYPE ("userreal8",   ir->userreal8,  0);
+  RTYPE ("userreal9",   ir->userreal9,  0);
+
+
 #undef CTYPE
 
   write_inpfile(mdparout,ninp,inp,FALSE,wi);
