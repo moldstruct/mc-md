@@ -37,18 +37,20 @@ If running into problems, try to search the issue as there are many GROMACS reas
 The parameters of the model can be set like any other MD parameters in the `.mdp` file and can be accesed through the userints and userreals.
 Userints are used to enable/disable certain features while the userreals are used for the simulation parameters.
 ```
-userint1 - (default = 1)Alter forcefield. If set to zero the everything should run as unmodifed gromacs 4.5.4 (hopefully)
-userint2 - (default = 1)Do charge transfer. Enables the charge transfer module 
-userint3 - (default = 0)Use screened potential. Enables Debye shielding (Currently not implemented)
-userint4 - (default = 0)Read electronic states from file.  Useful for continued sims (Experimental)
-userint5 - (default = 0)Enable logging of electronic dynamics. Big performance drop due to I/O.
-userint6 - (default = 0)Enable collisional ionization. (Not implemented yet). Requires collisional data.
+userint1 - (default = 1) Alter forcefield. If set to zero the everything should run as unmodifed gromacs 4.5.4 (hopefully)
+userint2 - (default = 1) Do charge transfer. Enables the charge transfer module 
+userint3 - (default = 0) Autostop simulations after energy threshold is reached E_kin/E_tot > threshold. (Threshold set by userreal6)
+userint4 - (default = 0) Read electronic states from file.  Useful for continued sims (Experimental)
+userint5 - (default = 0) Enable logging of electronic dynamics. Big performance drop due to I/O.
+userint6 - (default = 0) Enable collisional ionization. (Not implemented yet). Requires collisional data.
+userint9 - (default = 0) Read charges from a file. File must be names "charges.txt" and be placed in the same directory from where mdrun is called. File consists of two rows, atom index and charge.
     
 userreal1 - Peak of the gaussian [ps]
-userreal2 - Total number of photons in the pulse
-userreal3 - Width of the peak (sigma values of gaussian) [ps]
-userreal4 - Diameter of the focal spot [nm]
-userreal5 - Photon energy [eV]
+userreal2 - (default = 0.0) Total number of photons in the pulse
+userreal3 - (default = 0.0) Width of the peak (sigma values of gaussian) [ps]
+userreal4 - (default = 0.0) Diameter of the focal spot [nm]
+userreal5 - (default = 0.0) Photon energy [eV]
+userreal6 - (default = 0.99) Threshold for energy autostop (userint3)
 ```
 
 If you want to use even more parameters for whatever reason, everything up to userint8/userreal8 is implemented and available.
@@ -215,32 +217,4 @@ Currently the simulation can only utilize one core. One can of course run many s
 For high ionization we get huge forces, this can make the numerical integration unstable. 
 If you suspect this check the kinetic and potential energy of the system. As long as they look relativly smooth it should be okay.
 The work around is usually to lower the stepsize. The simulations in the publication are done at 1as timestep.
-
-### Collisional Ionizations (Not implemented yet)
-If you have access to collsional data, it can be supplied in the `Atomic_data` folder like this 
-
-#### `collosional_parameters_X.txt`
-This file is very similar to the previous one, but we have 5 parameters `c0`,`c1`,`c2`,`c3`, and `c4` instead of the one for transition rate.
-These parameters correspond to... [fill in this]
-So the format would be 
-`initial state ; final state c0 c1 c2 c3 c4 ;` or 
-`a b c ; a' b' c' c0 c1 c2 c3 c4 ;`.
-For multiple possible final states we do the same as for transition rates and simply append them at the end of the line. Two possible final states would look like:
-`a b c ; a' b' c' c0' c1' c2' c3' c4'; a'' b'' c'' c0'' c1'' c2'' c3'' c4'' ;`.
-So in the case of Hydrogen, some transitions might look like this:
-```
-0 1 0 ; 0 0 0 6.137 -11.4766 5.3396 0.0 1.82698 ; 
-1 0 0 ; 0 0 0 3.8256 -7.3391 3.5135 0.0 3.40109 ; 0 1 0 3.40698 -6.17434 36.1298 -26.325 2.5358 ; 
-```
-
-#### `statistical_weight_X.txt`
-[How do we generate this number? What is the statistical weight?]
-This is very similar to the energy level, each row is a state `a b c` followed by the states statistical weight. 
-An example from the Hydrogen again:
-```
-0 0 0 1.0
-1 0 0 2.0
-```
-
-
 
