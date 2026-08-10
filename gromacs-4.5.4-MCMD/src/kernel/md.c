@@ -1,12 +1,12 @@
 /* -*- mode: c; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4; c-file-style: "stroustrup"; -*-
  *
- * 
+ *
  *                This source code is part of
- * 
+ *
  *                 G   R   O   M   A   C   S
- * 
+ *
  *          GROningen MAchine for Chemical Simulations
- * 
+ *
  *                        VERSION 3.2.0
  * Written by David van der Spoel, Erik Lindahl, Berk Hess, and others.
  * Copyright (c) 1991-2000, University of Groningen, The Netherlands.
@@ -17,19 +17,19 @@
  * modify it under the terms of the GNU General Public License
  * as published by the Free Software Foundation; either version 2
  * of the License, or (at your option) any later version.
- * 
+ *
  * If you want to redistribute modifications, please consider that
  * scientific software is very special. Version control is crucial -
  * bugs must be traceable. We will be happy to consider code for
  * inclusion in the official distribution, but derived work must not
  * be called official GROMACS. Details are found in the README & COPYING
  * files - if they are missing, get the official version at www.gromacs.org.
- * 
+ *
  * To help us fund GROMACS development, we humbly ask that you cite
  * the papers on the package - you can find them in the top README file.
- * 
+ *
  * For more info, check our website at http://www.gromacs.org
- * 
+ *
  * And Hey:
  * Gallium Rubidium Oxygen Manganese Argon Carbon Silicon
  */
@@ -39,6 +39,12 @@
 
 #include <signal.h>
 #include <stdlib.h>
+
+#if !((defined WIN32 || defined _WIN32 || defined WIN64 || defined _WIN64) && !defined __CYGWIN__ && !defined __CYGWIN32__)
+/* getpid(), used to decorrelate the RNG seed between jobs */
+#include <sys/types.h>
+#include <unistd.h>
+#endif
 
 #if ((defined WIN32 || defined _WIN32 || defined WIN64 || defined _WIN64) && !defined __CYGWIN__ && !defined __CYGWIN32__)
 /* _isnan() */
@@ -94,8 +100,6 @@
 #include <omp.h>
 #include <sys/stat.h>
 
-
-
 #ifdef GMX_LIB_MPI
 #include <mpi.h>
 #endif
@@ -118,7 +122,7 @@ int USERINT1;
 // Energy levels path
 #define ENERGY "./Atomic_data/energy_levels_"
 // Transition rates path
-#define RATES "./Atomic_data/rate_transitions_" 
+#define RATES "./Atomic_data/rate_transitions_"
 // Collisional parameters path
 #define COLL "./Atomic_data/collisional_parameters_"
 // Statistical weight path
@@ -126,8 +130,8 @@ int USERINT1;
 
 // (approximative) Masses, used as atomic species identifiers
 // If you want more atomic species you need to update this mass-list, the "Element list" and "Element config"
-#define MASS_H 1   
-#define MASS_C 12  
+#define MASS_H 1
+#define MASS_C 12
 #define MASS_N 14
 #define MASS_O 16
 #define MASS_F 19
@@ -142,16 +146,15 @@ int USERINT1;
 #define MASS_NI 59
 #define MASS_I 127
 
-
-
-typedef struct {
+typedef struct
+{
     int mass;
     int index;
     char symbol[3];
 } Element;
 
 #define NUM_ELEMENTS 15
-// The digit is simply an index to uniquely identify elements 
+// The digit is simply an index to uniquely identify elements
 Element elements[NUM_ELEMENTS] = {
     {MASS_H, 0, "H"},
     {MASS_C, 1, "C"},
@@ -167,63 +170,67 @@ Element elements[NUM_ELEMENTS] = {
     {MASS_NI, 11, "NI"},
     {MASS_SI, 12, "SI"},
     {MASS_NA, 13, "NA"},
-    {MASS_I, 14, "I"}
-};
+    {MASS_I, 14, "I"}};
 
-typedef struct {
+typedef struct
+{
     int mass;
     int config[3]; // One configuration array for both atom groundstates
 } ElementConfig;
 
 ElementConfig elementConfigs[] = {
-    {MASS_H, {1, 0, 0}},    // Hydrogen
-    {MASS_C, {2, 4, 0}},    // Carbon
-    {MASS_N, {2, 5, 0}},    // Nitrogen
-    {MASS_O, {2, 6, 0}},    // Oxygen
-    {MASS_F, {2, 7, 0}},    // Fluorine
-    {MASS_MG, {2, 8, 2}},   // Magnesium
-    {MASS_P, {2, 8, 5}},    // Phosphorus
-    {MASS_S, {2, 8, 6}},    // Sulfur
-    {MASS_CL, {2, 8, 7}},   // Chlorine
-    {MASS_CA, {2, 8, 10}},   // Calcium
-    {MASS_FE, {2, 8, 16}} ,   // Iron
-    {MASS_NI, {2, 8, 18}},    // Nickel
-    {MASS_NA, {2, 8, 1}},   // Sodium
-    {MASS_SI, {2, 8, 4}},    // Silicon
-    {MASS_I, {2, 8, 18}}    // IODINE # Dummy same as NICKEL
-
+    {MASS_H, {1, 0, 0}},   // Hydrogen
+    {MASS_C, {2, 4, 0}},   // Carbon
+    {MASS_N, {2, 5, 0}},   // Nitrogen
+    {MASS_O, {2, 6, 0}},   // Oxygen
+    {MASS_F, {2, 7, 0}},   // Fluorine
+    {MASS_MG, {2, 8, 2}},  // Magnesium
+    {MASS_P, {2, 8, 5}},   // Phosphorus
+    {MASS_S, {2, 8, 6}},   // Sulfur
+    {MASS_CL, {2, 8, 7}},  // Chlorine
+    {MASS_CA, {2, 8, 10}}, // Calcium
+    {MASS_FE, {2, 8, 16}}, // Iron
+    {MASS_NI, {2, 8, 18}}, // Nickel
+    {MASS_NA, {2, 8, 1}},  // Sodium
+    {MASS_SI, {2, 8, 4}},  // Silicon
+    {MASS_I, {2, 8, 18}}   // IODINE # Dummy same as NICKEL
 
 };
 
-
-
-int mass2idx(int mass) {
+int mass2idx(int mass)
+{
     int i;
-    for (i = 0; i < NUM_ELEMENTS; i++) {
-        if (elements[i].mass == mass) {
+    for (i = 0; i < NUM_ELEMENTS; i++)
+    {
+        if (elements[i].mass == mass)
+        {
             return elements[i].index;
         }
     }
     return -1;
 }
 
-int idx2mass(int idx) {
-    if (idx >= 0 && idx < NUM_ELEMENTS) {
+int idx2mass(int idx)
+{
+    if (idx >= 0 && idx < NUM_ELEMENTS)
+    {
         return elements[idx].mass;
     }
     return -1;
 }
 
-char* mass2char(int mass) {
+char *mass2char(int mass)
+{
     int i;
-    for (i = 0; i < NUM_ELEMENTS; i++) {
-        if (elements[i].mass == mass) {
+    for (i = 0; i < NUM_ELEMENTS; i++)
+    {
+        if (elements[i].mass == mass)
+        {
             return elements[i].symbol;
         }
     }
     return "_";
 }
-
 
 //////////////////////////////////////////////////////////////////////////////////////
 ////////////                                                            //////////////
@@ -240,71 +247,80 @@ char* mass2char(int mass) {
 //////////////////////////////////////////////////////////////////////////////////////
 // struct for transition
 
-struct transition {
-    int* final_state;
+struct transition
+{
+    int *final_state;
     double rate;
     int type; // 0 for auger decay, 1 for flourecence, 2 for photoionization.
-                   };
-
-
+};
 
 // STRUCTURE FOR RATES
 
-struct Rate {
-int   mass;
-int*  initial_state;
-int   num_transitions;
-int** final_states;
-double* rates;          
+struct Rate
+{
+    int mass;
+    int *initial_state;
+    int num_transitions;
+    int **final_states;
+    double *rates;
+    int *types;
 };
 
-void print_rates(struct Rate* rates,int numRates) {
+void print_rates(struct Rate *rates, int numRates)
+{
     printf("Printing rates");
     int mass = rates[0].mass;
     int idx = mass2idx(mass);
-    char* sym = mass2char(mass);
-    printf("Possible transitions for %c with mass %d and idx %d\n\n",sym,mass,idx);
+    char *sym = mass2char(mass);
+    printf("Possible transitions for %c with mass %d and idx %d\n\n", sym, mass, idx);
 
     int i;
-    for (i=0;i<numRates;i++) {
+    for (i = 0; i < numRates; i++)
+    {
         print_rate(rates[i]);
-    }                                        
+    }
 }
 
-void print_rate(struct Rate rate) {
+void print_rate(struct Rate rate)
+{
     int i;
-    printf("Initial state [%d,%d,%d] has %d possible transitions:\n",rate.initial_state[0],rate.initial_state[1],rate.initial_state[2],rate.num_transitions);
-    for (i=0;i<rate.num_transitions;i++) {
-        printf("[%d,%d,%d] -> [%d,%d,%d]\n",rate.initial_state[0],rate.initial_state[1],rate.initial_state[2],rate.final_states[i][0],rate.final_states[i][1],rate.final_states[i][2]);
-
-    }                                                                   
+    printf("Initial state [%d,%d,%d] has %d possible transitions:\n", rate.initial_state[0], rate.initial_state[1], rate.initial_state[2], rate.num_transitions);
+    for (i = 0; i < rate.num_transitions; i++)
+    {
+        printf("[%d,%d,%d] -> [%d,%d,%d]\n", rate.initial_state[0], rate.initial_state[1], rate.initial_state[2], rate.final_states[i][0], rate.final_states[i][1], rate.final_states[i][2]);
+    }
 }
-
-
 
 // Function to count the number of lines in a file
-static int countLinesInFile(const char* filePath) {
-    FILE* file = fopen(filePath, "r");
-    if (file == NULL) {
-        fprintf(stderr, "Error opening the file in '%s' in 'countLinesInFile'.\n",filePath);
+static int countLinesInFile(const char *filePath)
+{
+    FILE *file = fopen(filePath, "r");
+    if (file == NULL)
+    {
+        fprintf(stderr, "Error opening the file in '%s' in 'countLinesInFile'.\n", filePath);
         return -1;
     }
 
     int count = 0;
     char ch;
-    int lastCharWasNewline = 0;  // To track if the last character was a newline
+    int lastCharWasNewline = 0; // To track if the last character was a newline
 
-    while ((ch = fgetc(file)) != EOF) {
-        if (ch == '\n') {
+    while ((ch = fgetc(file)) != EOF)
+    {
+        if (ch == '\n')
+        {
             count++;
             lastCharWasNewline = 1;
-        } else {
+        }
+        else
+        {
             lastCharWasNewline = 0;
         }
     }
 
     // Check if the last character was not a newline
-    if (lastCharWasNewline == 0) {
+    if (lastCharWasNewline == 0)
+    {
         count++;
     }
 
@@ -316,20 +332,23 @@ static int countLinesInFile(const char* filePath) {
 }
 
 // Function to initialize a struct Rate from file data
-static struct Rate initializeRateFromFile(FILE* file, int mass) {
+static struct Rate initializeRateFromFile(FILE *file, int mass)
+{
     struct Rate rate;
     rate.mass = mass;
 
     // Read the line containing transitions
     char line[1024]; // Adjust the buffer size as needed
-    if (fgets(line, sizeof(line), file) == NULL) {
+    if (fgets(line, sizeof(line), file) == NULL)
+    {
         fprintf(stderr, "Error reading transitions from the file.\n");
         exit(1);
     }
 
     // Read the initial state
-    rate.initial_state = (int*)malloc(3 * sizeof(int));
-    if (sscanf(line, "%d %d %d;", &rate.initial_state[0], &rate.initial_state[1], &rate.initial_state[2]) != 3) {
+    rate.initial_state = (int *)malloc(3 * sizeof(int));
+    if (sscanf(line, "%d %d %d;", &rate.initial_state[0], &rate.initial_state[1], &rate.initial_state[2]) != 3)
+    {
         fprintf(stderr, "Error reading initial state from the file.\n");
         exit(1);
     }
@@ -338,43 +357,65 @@ static struct Rate initializeRateFromFile(FILE* file, int mass) {
     // Count the number of semicolons to calculate the number of transitions
     int num_transitions = 0;
     int i;
-    for (i = 0; line[i] != '\0'; i++) {
-        if (line[i] == ';') {
+    for (i = 0; line[i] != '\0'; i++)
+    {
+        if (line[i] == ';')
+        {
             num_transitions++;
         }
     }
 
-    rate.num_transitions = num_transitions-1;
+    rate.num_transitions = num_transitions - 1;
 
     // Allocate memory for final_states and rates
-    rate.final_states = (int**)malloc(rate.num_transitions * sizeof(int*));
-    rate.rates = (double*)malloc(rate.num_transitions * sizeof(double));
-    for (i = 0; i < rate.num_transitions; i++) {
-        rate.final_states[i] = (int*)malloc(3 * sizeof(int));
-    }
-    // Split the line into individual transitions and process them
-    char* token = strtok(line, ";");
-    token = strtok(NULL, ";");
-    int transitionIndex = 0;
-    while (token != NULL) {
-        sscanf(token, "%d %d %d %lf", &rate.final_states[transitionIndex][0], &rate.final_states[transitionIndex][1], &rate.final_states[transitionIndex][2], &rate.rates[transitionIndex]);
-        transitionIndex++;
+    rate.final_states = (int **)malloc(rate.num_transitions * sizeof(int *));
+    rate.rates = (double *)malloc(rate.num_transitions * sizeof(double));
+    rate.types = (int *)malloc(rate.num_transitions * sizeof(int));
 
-        if (transitionIndex == rate.num_transitions) {
-            break; 
+    for (i = 0; i < rate.num_transitions; i++)
+    {
+        rate.final_states[i] = (int *)malloc(3 * sizeof(int));
+    }
+
+    // Split the line into individual transitions and process them
+
+    char *saveptr;
+    char *token = strtok_r(line, ";", &saveptr);
+
+    // Skip the initial state token
+    token = strtok_r(NULL, ";", &saveptr);
+    int transitionIndex = 0;
+
+    while (token != NULL)
+    {
+        if (sscanf(token, "%d %d %d %lf %d",
+                   &rate.final_states[transitionIndex][0],
+                   &rate.final_states[transitionIndex][1],
+                   &rate.final_states[transitionIndex][2],
+                   &rate.rates[transitionIndex],
+                   &rate.types[transitionIndex]) != 5)
+        {
+            fprintf(stderr, "Error reading transition data from the file.\n");
+            exit(1);
         }
-        token = strtok(NULL, ";");
+
+        transitionIndex++;
+        if (transitionIndex == rate.num_transitions)
+        {
+            break;
+        }
+        token = strtok_r(NULL, ";", &saveptr);
     }
 
     return rate;
 }
 
-
-
-//initialze an array of struct Rate from a file
-static struct Rate* initializeRatesArrayFromFile(const char* filePath,int mass) {
-    FILE* file = fopen(filePath, "r");
-    if (file == NULL) {
+// initialze an array of struct Rate from a file
+static struct Rate *initializeRatesArrayFromFile(const char *filePath, int mass)
+{
+    FILE *file = fopen(filePath, "r");
+    if (file == NULL)
+    {
         fprintf(stderr, "Error opening the file in 'initializeRatesArrayFromFile'.\n");
         return NULL;
     }
@@ -383,20 +424,23 @@ static struct Rate* initializeRatesArrayFromFile(const char* filePath,int mass) 
     int numRates = countLinesInFile(filePath);
 
     // Create an array of struct Rate
-    struct Rate* rates = (struct Rate*)malloc(numRates * sizeof(struct Rate));
+    struct Rate *rates = (struct Rate *)malloc(numRates * sizeof(struct Rate));
 
     // Initialize each Rate instance from the file
     int i;
-    for (i = 0; i < numRates; i++) {
+    for (i = 0; i < numRates; i++)
+    {
         // Position the file pointer to the start of the current Rate data
-        if (i > 0) {
-            if (fscanf(file, "%*[\n]")) {
+        if (i > 0)
+        {
+            if (fscanf(file, "%*[\n]"))
+            {
                 fprintf(stderr, "Error reading newline character.\n");
                 exit(1);
             }
         }
 
-        rates[i] = initializeRateFromFile(file,mass);
+        rates[i] = initializeRateFromFile(file, mass);
     }
 
     // Close the file
@@ -405,17 +449,19 @@ static struct Rate* initializeRatesArrayFromFile(const char* filePath,int mass) 
     return rates;
 }
 
-
-
-static void freeRatesArray(struct Rate* rates, int numRates) {
-    if (rates == NULL) {
+static void freeRatesArray(struct Rate *rates, int numRates)
+{
+    if (rates == NULL)
+    {
         return; // Nothing to free
     }
-    int i,j;
-    for (i = 0; i < numRates; i++) {
+    int i, j;
+    for (i = 0; i < numRates; i++)
+    {
         // Free dynamically allocated memory for each Rate instance
         free(rates[i].initial_state);
-        for (j = 0; j < rates[i].num_transitions; j++) {
+        for (j = 0; j < rates[i].num_transitions; j++)
+        {
             free(rates[i].final_states[j]);
         }
         free(rates[i].final_states);
@@ -426,50 +472,53 @@ static void freeRatesArray(struct Rate* rates, int numRates) {
     free(rates);
 }
 
-
 // Function to check if a state is in an array of Rate
-static int RatesStateIndex(struct Rate* rates, int numRates, int* state) {
+static int RatesStateIndex(struct Rate *rates, int numRates, int *state)
+{
     int i;
-    for (i = 0; i < numRates; i++) {
+    for (i = 0; i < numRates; i++)
+    {
         if (rates[i].initial_state[0] == state[0] &&
             rates[i].initial_state[1] == state[1] &&
-            rates[i].initial_state[2] == state[2]) {
-            return i;  // return the index of matching state. Will always evaluate to true
+            rates[i].initial_state[2] == state[2])
+        {
+            return i; // return the index of matching state. Will always evaluate to true
         }
     }
-    return -1;  // The state is not found in the array, false
+    return -1; // The state is not found in the array, false
 }
 
 ////  STRUCTURE FOR COLLISIONAL STUFF
 
 // Very similar to Rates but this has 5 rates per transition instead of 1
-struct Coll {
-int   mass;
-int*  initial_state;
-int   num_transitions;
-int** final_states;
-double** coll_rates;         // 5 rates for each transition
-
+struct Coll
+{
+    int mass;
+    int *initial_state;
+    int num_transitions;
+    int **final_states;
+    double **coll_rates; // 5 rates for each transition
 };
 
-
 // Function to initialize a struct Coll from file data
-static struct Coll initializeCollFromFile(FILE* file, int mass) {
-
+static struct Coll initializeCollFromFile(FILE *file, int mass)
+{
 
     struct Coll coll;
     coll.mass = mass;
 
     // Read the line containing transitions
     char line[1024]; // Adjust the buffer size as needed
-    if (fgets(line, sizeof(line), file) == NULL) {
+    if (fgets(line, sizeof(line), file) == NULL)
+    {
         fprintf(stderr, "Error reading transitions from the file.\n");
         exit(1);
     }
 
     // Read the initial state
-    coll.initial_state = (int*)malloc(3 * sizeof(int));
-    if (sscanf(line, "%d %d %d;", &coll.initial_state[0], &coll.initial_state[1], &coll.initial_state[2]) != 3) {
+    coll.initial_state = (int *)malloc(3 * sizeof(int));
+    if (sscanf(line, "%d %d %d;", &coll.initial_state[0], &coll.initial_state[1], &coll.initial_state[2]) != 3)
+    {
         fprintf(stderr, "Error reading initial state from the file.\n");
         exit(1);
     }
@@ -478,39 +527,44 @@ static struct Coll initializeCollFromFile(FILE* file, int mass) {
     // Count the number of semicolons to calculate the number of transitions
     int num_transitions = 0;
     int i;
-    for (i = 0; line[i] != '\0'; i++) {
-        if (line[i] == ';') {
+    for (i = 0; line[i] != '\0'; i++)
+    {
+        if (line[i] == ';')
+        {
             num_transitions++;
         }
     }
 
-    coll.num_transitions = num_transitions-1;
+    coll.num_transitions = num_transitions - 1;
 
     // Allocate memory for final_states and rates
-    coll.final_states = (int**)malloc(coll.num_transitions * sizeof(int*));
-    coll.coll_rates = (double**)malloc(coll.num_transitions * sizeof(double*));
-    for (i = 0; i < coll.num_transitions; i++) {
-        coll.final_states[i] = (int*)malloc(3 * sizeof(int));
-        coll.coll_rates[i] = (double*)malloc(5 * sizeof(double));
+    coll.final_states = (int **)malloc(coll.num_transitions * sizeof(int *));
+    coll.coll_rates = (double **)malloc(coll.num_transitions * sizeof(double *));
+    for (i = 0; i < coll.num_transitions; i++)
+    {
+        coll.final_states[i] = (int *)malloc(3 * sizeof(int));
+        coll.coll_rates[i] = (double *)malloc(5 * sizeof(double));
     }
     // Split the line into individual transitions and process them
-    char* token = strtok(line, ";");
+    char *token = strtok(line, ";");
     token = strtok(NULL, ";"); // Skip the initial state
     int transitionIndex = 0;
-    while (token != NULL) {
+    while (token != NULL)
+    {
         sscanf(token, "%d %d %d %lf %lf %lf %lf %lf",
-                  &coll.final_states[transitionIndex][0],
-                  &coll.final_states[transitionIndex][1],
-                  &coll.final_states[transitionIndex][2],
-                  &coll.coll_rates[transitionIndex][0],
-                  &coll.coll_rates[transitionIndex][1],
-                  &coll.coll_rates[transitionIndex][2],
-                  &coll.coll_rates[transitionIndex][3],
-                  &coll.coll_rates[transitionIndex][4]);
+               &coll.final_states[transitionIndex][0],
+               &coll.final_states[transitionIndex][1],
+               &coll.final_states[transitionIndex][2],
+               &coll.coll_rates[transitionIndex][0],
+               &coll.coll_rates[transitionIndex][1],
+               &coll.coll_rates[transitionIndex][2],
+               &coll.coll_rates[transitionIndex][3],
+               &coll.coll_rates[transitionIndex][4]);
         transitionIndex++;
 
-        if (transitionIndex == coll.num_transitions) {
-            break; 
+        if (transitionIndex == coll.num_transitions)
+        {
+            break;
         }
         token = strtok(NULL, ";");
     }
@@ -518,12 +572,14 @@ static struct Coll initializeCollFromFile(FILE* file, int mass) {
     return coll;
 }
 
-//initialze an array of struct Rate from a file
-static struct Coll* initializeCollArrayFromFile(const char* filePath,int mass) {
+// initialze an array of struct Rate from a file
+static struct Coll *initializeCollArrayFromFile(const char *filePath, int mass)
+{
 
-    FILE* file = fopen(filePath, "r");
-    if (file == NULL) {
-        fprintf(stderr, "Error opening the file '%s' in 'initializeCollArrayFromFile'.\n",filePath);
+    FILE *file = fopen(filePath, "r");
+    if (file == NULL)
+    {
+        fprintf(stderr, "Error opening the file '%s' in 'initializeCollArrayFromFile'.\n", filePath);
         return NULL;
     }
 
@@ -531,19 +587,22 @@ static struct Coll* initializeCollArrayFromFile(const char* filePath,int mass) {
     int numColl = countLinesInFile(filePath);
 
     // Create an array of struct Coll
-    struct Coll* coll = (struct Coll*)malloc(numColl * sizeof(struct Coll));
+    struct Coll *coll = (struct Coll *)malloc(numColl * sizeof(struct Coll));
 
     // Initialize each Rate instance from the file
     int i;
-    for (i = 0; i < numColl; i++) {
+    for (i = 0; i < numColl; i++)
+    {
         // Position the file pointer to the start of the current Rate data
-        if (i > 0) {
-            if (fscanf(file, "%*[\n]")) {
+        if (i > 0)
+        {
+            if (fscanf(file, "%*[\n]"))
+            {
                 fprintf(stderr, "Error reading newline character.\n");
                 exit(1);
             }
         }
-        coll[i] = initializeCollFromFile(file,mass);
+        coll[i] = initializeCollFromFile(file, mass);
     }
 
     // Close the file
@@ -552,16 +611,19 @@ static struct Coll* initializeCollArrayFromFile(const char* filePath,int mass) {
     return coll;
 }
 
-
-static void freeCollArray(struct Coll* coll, int numColl) {
-    if (coll == NULL) {
+static void freeCollArray(struct Coll *coll, int numColl)
+{
+    if (coll == NULL)
+    {
         return; // Nothing to free
     }
-    int i,j;
-    for (i = 0; i < numColl; i++) {
+    int i, j;
+    for (i = 0; i < numColl; i++)
+    {
         // Free dynamically allocated memory for each Rate instance
         free(coll[i].initial_state);
-        for (j = 0; j < coll[i].num_transitions; j++) {
+        for (j = 0; j < coll[i].num_transitions; j++)
+        {
             free(coll[i].final_states[j]);
             free(coll[i].coll_rates[j]);
         }
@@ -574,45 +636,53 @@ static void freeCollArray(struct Coll* coll, int numColl) {
 }
 
 // Function to check if a state is in an array of Coll
-static int CollStateIndex(struct Coll* coll, int numColl, int* state) {
-    int i;                                           
-    for (i = 0; i < numColl; i++) {
+static int CollStateIndex(struct Coll *coll, int numColl, int *state)
+{
+    int i;
+    for (i = 0; i < numColl; i++)
+    {
         if (coll[i].initial_state[0] == state[0] &&
             coll[i].initial_state[1] == state[1] &&
-            coll[i].initial_state[2] == state[2]) {
-            return i;  // return the index of matching state. Will always evaluate to true
+            coll[i].initial_state[2] == state[2])
+        {
+            return i; // return the index of matching state. Will always evaluate to true
         }
     }
-    return -1.0;  // The state is not found in the array, false
+    return -1.0; // The state is not found in the array, false
 }
 
 /// Statistical weight
 
-struct Weights {
-int mass;
-int num_states;
-int** states;
-double* weight;
-                };
+struct Weights
+{
+    int mass;
+    int num_states;
+    int **states;
+    double *weight;
+};
 
 // Initalize statistical weights from a file
-static struct Weights InitializeWeightsFromFile(const char* filePath, int mass) {
+static struct Weights InitializeWeightsFromFile(const char *filePath, int mass)
+{
     struct Weights weights;
     weights.mass = mass;
     weights.num_states = countLinesInFile(filePath);
 
-    weights.states = (int**)malloc(weights.num_states * sizeof(int*));
-    weights.weight = (double*)malloc(weights.num_states * sizeof(double));
+    weights.states = (int **)malloc(weights.num_states * sizeof(int *));
+    weights.weight = (double *)malloc(weights.num_states * sizeof(double));
 
-    FILE* file = fopen(filePath, "r");
-    if (file == NULL) {
-        fprintf(stderr, "Error opening the file '%s' in 'InitializeWeightsFromFile'.\n",filePath);
+    FILE *file = fopen(filePath, "r");
+    if (file == NULL)
+    {
+        fprintf(stderr, "Error opening the file '%s' in 'InitializeWeightsFromFile'.\n", filePath);
         exit(1);
     }
     int i;
-    for (i = 0; i < weights.num_states; i++) {
-        weights.states[i] = (int*)malloc(3 * sizeof(int));
-        if (fscanf(file, "%d %d %d %lf", &weights.states[i][0], &weights.states[i][1], &weights.states[i][2], &weights.weight[i]) != 4) {
+    for (i = 0; i < weights.num_states; i++)
+    {
+        weights.states[i] = (int *)malloc(3 * sizeof(int));
+        if (fscanf(file, "%d %d %d %lf", &weights.states[i][0], &weights.states[i][1], &weights.states[i][2], &weights.weight[i]) != 4)
+        {
             fprintf(stderr, "Error reading data from the file.\n");
             exit(1);
         }
@@ -622,21 +692,26 @@ static struct Weights InitializeWeightsFromFile(const char* filePath, int mass) 
 }
 
 // Function to free the memory of the struct Weights
-static void freeWeights(struct Weights weights) {
+static void freeWeights(struct Weights weights)
+{
     int i;
-    for (i = 0; i < weights.num_states; i++) {
+    for (i = 0; i < weights.num_states; i++)
+    {
         free(weights.states[i]);
     }
     free(weights.states);
     free(weights.weight);
 }
 
-static double getWeightForState(struct Weights weights, int state[3]) {
+static double getWeightForState(struct Weights weights, int state[3])
+{
     int i;
-    for (i = 0; i < weights.num_states; i++) {
+    for (i = 0; i < weights.num_states; i++)
+    {
         if (weights.states[i][0] == state[0] &&
             weights.states[i][1] == state[1] &&
-            weights.states[i][2] == state[2]) {
+            weights.states[i][2] == state[2])
+        {
             return weights.weight[i];
         }
     }
@@ -644,52 +719,53 @@ static double getWeightForState(struct Weights weights, int state[3]) {
     return -1.0;
 }
 
-
-
-
-
-
 ///// DICTIONARIES FOR ENERGIES
-
 
 #define TABLE_SIZE 100
 
 // Define a structure for key-value pairs
-struct KeyValuePair {
-    char* key;
+struct KeyValuePair
+{
+    char *key;
     double value;
-    struct KeyValuePair* next;
+    struct KeyValuePair *next;
 };
 
 // Define a dictionary structure
-struct Dictionary {
-    struct KeyValuePair* table[TABLE_SIZE];
+struct Dictionary
+{
+    struct KeyValuePair *table[TABLE_SIZE];
 };
 
 // Hash function to map keys to an index in the table
-static int hash(char* key) {
+static int hash(char *key)
+{
     int hash = 0;
     int i;
-    for (i = 0; key[i] != '\0'; i++) {
+    for (i = 0; key[i] != '\0'; i++)
+    {
         hash = (hash + key[i]) % TABLE_SIZE;
     }
     return hash;
 }
 
 // Initialize a dictionary
-static struct Dictionary* createDictionary() {
-    struct Dictionary* dict = (struct Dictionary*)malloc(sizeof(struct Dictionary));
+static struct Dictionary *createDictionary()
+{
+    struct Dictionary *dict = (struct Dictionary *)malloc(sizeof(struct Dictionary));
     int i;
-    for (i = 0; i < TABLE_SIZE; i++) {
+    for (i = 0; i < TABLE_SIZE; i++)
+    {
         dict->table[i] = NULL;
     }
     return dict;
 }
 
 // Insert a key-value pair into the dictionary
-static void insert(struct Dictionary* dict, char* key, double value) {
+static void insert(struct Dictionary *dict, char *key, double value)
+{
     int index = hash(key);
-    struct KeyValuePair* newPair = (struct KeyValuePair*)malloc(sizeof(struct KeyValuePair));
+    struct KeyValuePair *newPair = (struct KeyValuePair *)malloc(sizeof(struct KeyValuePair));
     newPair->key = strdup(key);
     newPair->value = value;
     newPair->next = dict->table[index];
@@ -697,11 +773,14 @@ static void insert(struct Dictionary* dict, char* key, double value) {
 }
 
 // Get the value associated with a key
-static double get(struct Dictionary* dict, char* key) {
+static double get(struct Dictionary *dict, char *key)
+{
     int index = hash(key);
-    struct KeyValuePair* current = dict->table[index];
-    while (current != NULL) {
-        if (strcmp(current->key, key) == 0) {
+    struct KeyValuePair *current = dict->table[index];
+    while (current != NULL)
+    {
+        if (strcmp(current->key, key) == 0)
+        {
             return current->value;
         }
         current = current->next;
@@ -710,32 +789,38 @@ static double get(struct Dictionary* dict, char* key) {
     return -1.0;
 }
 
-static void printDictionary(struct Dictionary* dict) {
-   int i;
-    for (i = 0; i < TABLE_SIZE; i++) {
-        struct KeyValuePair* current = dict->table[i];
-        while (current != NULL) {
+static void printDictionary(struct Dictionary *dict)
+{
+    int i;
+    for (i = 0; i < TABLE_SIZE; i++)
+    {
+        struct KeyValuePair *current = dict->table[i];
+        while (current != NULL)
+        {
             // Process the key-value pair
-            printf("%s -> %f\n",current->key, current->value );
+            printf("%s -> %f\n", current->key, current->value);
             current = current->next;
         }
     }
 }
 
 // Function to read the file and populate the dictionary
-struct Dictionary* readFileAndCreateEnergyDictionary(char* filename) {
+struct Dictionary *readFileAndCreateEnergyDictionary(char *filename)
+{
     FILE *file = fopen(filename, "r");
-    if (file == NULL) {
-        printf("Failed to open the file '%s' in 'readFileAndCreateEnergyDictionary'.\n",filename);
+    if (file == NULL)
+    {
+        printf("Failed to open the file '%s' in 'readFileAndCreateEnergyDictionary'.\n", filename);
         return NULL;
     }
 
-    struct Dictionary* dict = createDictionary();
+    struct Dictionary *dict = createDictionary();
     double energy;
-    int a,b,c;
-    char key[20]; 
+    int a, b, c;
+    char key[20];
 
-    while (fscanf(file, "%d %d %d %lf", &a, &b, &c, &energy) == 4) {
+    while (fscanf(file, "%d %d %d %lf", &a, &b, &c, &energy) == 4)
+    {
         snprintf(key, sizeof(key), "%d %d %d", a, b, c);
         insert(dict, key, energy);
     }
@@ -744,14 +829,16 @@ struct Dictionary* readFileAndCreateEnergyDictionary(char* filename) {
     return dict;
 }
 
-
 // Free the memory used by a dictionary
-static void freeDictionary(struct Dictionary* dict) {
+static void freeDictionary(struct Dictionary *dict)
+{
     int i;
-    for (i = 0; i < TABLE_SIZE; i++) {
-        struct KeyValuePair* current = dict->table[i];
-        while (current != NULL) {
-            struct KeyValuePair* temp = current;
+    for (i = 0; i < TABLE_SIZE; i++)
+    {
+        struct KeyValuePair *current = dict->table[i];
+        while (current != NULL)
+        {
+            struct KeyValuePair *temp = current;
             current = current->next;
             free(temp->key);
             free(temp);
@@ -760,25 +847,26 @@ static void freeDictionary(struct Dictionary* dict) {
     free(dict);
 }
 
-
 // Collects all relevant atomic data
-struct Atomic_data {
+struct Atomic_data
+{
     int mass;
-    struct Dictionary* energyLevels;
-    struct Rate* transitionRates;
+    struct Dictionary *energyLevels;
+    struct Rate *transitionRates;
     int numRates;
-    struct Coll* collisions;
-    int numColl;                    
+    struct Coll *collisions;
+    int numColl;
     struct Weights weights;
 };
 
-char* get_data_path(const char* original,int mass) {
+char *get_data_path(const char *original, int mass)
+{
 
-    char* toAppend = mass2char(mass);
-    char* extension = ".txt";
+    char *toAppend = mass2char(mass);
+    char *extension = ".txt";
 
     int newLength = strlen(original) + strlen(toAppend) + strlen(extension) + 1;
-    char* newPath = (char*)malloc(newLength * sizeof(char));
+    char *newPath = (char *)malloc(newLength * sizeof(char));
 
     // Copy and concatenate strings
     strcpy(newPath, original);
@@ -788,42 +876,39 @@ char* get_data_path(const char* original,int mass) {
     return newPath;
 }
 
-
-static struct Atomic_data initAtomicData(int atom_idx,int do_coll) {
-    struct Atomic_data atomData; 
+static struct Atomic_data initAtomicData(int atom_idx, int do_coll)
+{
+    struct Atomic_data atomData;
     atomData.mass = idx2mass(atom_idx);
 
-    char* energyPath = (char*)get_data_path(ENERGY,atomData.mass);
-    //printf("path to energy levels for %s is %s\n",mass2char(atomData.mass),energyPath);
+    char *energyPath = (char *)get_data_path(ENERGY, atomData.mass);
+    // printf("path to energy levels for %s is %s\n",mass2char(atomData.mass),energyPath);
     atomData.energyLevels = readFileAndCreateEnergyDictionary(energyPath);
     free(energyPath);
 
-    char* ratesPath           = get_data_path(RATES,atomData.mass);
-    //printf("path to rates for %s is %s\n",mass2char(atomData.mass),ratesPath);
-    atomData.transitionRates = initializeRatesArrayFromFile(ratesPath,atomData.mass);
-    atomData.numRates      = countLinesInFile(ratesPath);
+    char *ratesPath = get_data_path(RATES, atomData.mass);
+    // printf("path to rates for %s is %s\n",mass2char(atomData.mass),ratesPath);
+    atomData.transitionRates = initializeRatesArrayFromFile(ratesPath, atomData.mass); // Parallel error here
+    atomData.numRates = countLinesInFile(ratesPath);
     free(ratesPath);
 
-    if (do_coll) {
+    if (do_coll)
+    {
 
-    char* collPath = get_data_path(COLL,atomData.mass);
-    //printf("path to colls for %s is %s\n",mass2char(atomData.mass),collPath);
-    atomData.collisions = initializeCollArrayFromFile(collPath,atomData.mass);
-    atomData.numColl = countLinesInFile(collPath);
-    free(collPath);
+        char *collPath = get_data_path(COLL, atomData.mass);
+        // printf("path to colls for %s is %s\n",mass2char(atomData.mass),collPath);
+        atomData.collisions = initializeCollArrayFromFile(collPath, atomData.mass);
+        atomData.numColl = countLinesInFile(collPath);
+        free(collPath);
 
-    char* weightPath = get_data_path(WEIGHT,atomData.mass);
-    //printf("path to weights for %s is %s\n",mass2char(atomData.mass),weightPath);
-    atomData.weights = InitializeWeightsFromFile(weightPath,atomData.mass);  
-    free(weightPath);       
-
-    } 
+        char *weightPath = get_data_path(WEIGHT, atomData.mass);
+        // printf("path to weights for %s is %s\n",mass2char(atomData.mass),weightPath);
+        atomData.weights = InitializeWeightsFromFile(weightPath, atomData.mass);
+        free(weightPath);
+    }
 
     return atomData;
-} 
-
-
-
+}
 
 //////////////////////////////////////////////////////////////////////////////////////
 ////////////                                                            //////////////                                                          //////////////
@@ -835,24 +920,28 @@ static struct Atomic_data initAtomicData(int atom_idx,int do_coll) {
 ////////////                                                            //////////////                                                //////////////
 //////////////////////////////////////////////////////////////////////////////////////
 
-
-
-
-/* simulation conditions to transmit. Keep in mind that they are 
+/* simulation conditions to transmit. Keep in mind that they are
    transmitted to other nodes through an MPI_Reduce after
-   casting them to a real (so the signals can be sent together with other 
-   data). This means that the only meaningful values are positive, 
+   casting them to a real (so the signals can be sent together with other
+   data). This means that the only meaningful values are positive,
    negative or zero. */
-enum { eglsNABNSB, eglsCHKPT, eglsSTOPCOND, eglsRESETCOUNTERS, eglsNR };
+enum
+{
+    eglsNABNSB,
+    eglsCHKPT,
+    eglsSTOPCOND,
+    eglsRESETCOUNTERS,
+    eglsNR
+};
 /* Is the signal in one simulation independent of other simulations? */
-gmx_bool gs_simlocal[eglsNR] = { TRUE, FALSE, FALSE, TRUE };
+gmx_bool gs_simlocal[eglsNR] = {TRUE, FALSE, FALSE, TRUE};
 
-typedef struct {
+typedef struct
+{
     int nstms;       /* The frequency for intersimulation communication */
     int sig[eglsNR]; /* The signal set by one process in do_md */
     int set[eglsNR]; /* The communicated signal, equal for all processes */
 } globsig_t;
-
 
 //// EI ////
 
@@ -863,17 +952,16 @@ typedef struct {
 //    xExponential_Integral_Ei                                                //
 ////////////////////////////////////////////////////////////////////////////////
 
-#include <math.h>           // required for fabsl(), expl() and logl()        
-#include <float.h>          // required for LDBL_EPSILON, DBL_MAX
+#include <math.h>  // required for fabsl(), expl() and logl()
+#include <float.h> // required for LDBL_EPSILON, DBL_MAX
 
 //                         Internally Defined Routines                        //
-double      Exponential_Integral_Ei( double x );
-long double xExponential_Integral_Ei( long double x );
+double Exponential_Integral_Ei(double x);
+long double xExponential_Integral_Ei(long double x);
 
-static long double Continued_Fraction_Ei( long double x );
-static long double Power_Series_Ei( long double x );
-static long double Argument_Addition_Series_Ei( long double x);
-
+static long double Continued_Fraction_Ei(long double x);
+static long double Power_Series_Ei(long double x);
+static long double Argument_Addition_Series_Ei(long double x);
 
 //                         Internally Defined Constants                       //
 static const long double epsilon = 10.0 * LDBL_EPSILON;
@@ -905,11 +993,10 @@ static const long double epsilon = 10.0 * LDBL_EPSILON;
 //                                                                            //
 //     y = Exponential_Integral_Ei( x );                                      //
 ////////////////////////////////////////////////////////////////////////////////
-double Exponential_Integral_Ei( double x )
+double Exponential_Integral_Ei(double x)
 {
-   return (double) xExponential_Integral_Ei( (long double) x);
+    return (double)xExponential_Integral_Ei((long double)x);
 }
-
 
 ////////////////////////////////////////////////////////////////////////////////
 // long double xExponential_Integral_Ei( long double x )                      //
@@ -939,13 +1026,17 @@ double Exponential_Integral_Ei( double x )
 //     y = xExponential_Integral_Ei( x );                                     //
 ////////////////////////////////////////////////////////////////////////////////
 
-long double xExponential_Integral_Ei( long double x )
+long double xExponential_Integral_Ei(long double x)
 {
-   if ( x < -5.0L ) return Continued_Fraction_Ei(x);
-   if ( x == 0.0L ) return -DBL_MAX;
-   if ( x < 6.8L )  return Power_Series_Ei(x);
-   if ( x < 50.0L ) return Argument_Addition_Series_Ei(x);
-   return Continued_Fraction_Ei(x);
+    if (x < -5.0L)
+        return Continued_Fraction_Ei(x);
+    if (x == 0.0L)
+        return -DBL_MAX;
+    if (x < 6.8L)
+        return Power_Series_Ei(x);
+    if (x < 50.0L)
+        return Argument_Addition_Series_Ei(x);
+    return Continued_Fraction_Ei(x);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -967,40 +1058,43 @@ long double xExponential_Integral_Ei( long double x )
 //     The value of the exponential integral Ei evaluated at x.               //
 ////////////////////////////////////////////////////////////////////////////////
 
-static long double Continued_Fraction_Ei( long double x )
+static long double Continued_Fraction_Ei(long double x)
 {
-   long double Am1 = 1.0L;
-   long double A0 = 0.0L;
-   long double Bm1 = 0.0L;
-   long double B0 = 1.0L;
-   long double a = expl(x);
-   long double b = -x + 1.0L;
-   long double Ap1 = b * A0 + a * Am1;
-   long double Bp1 = b * B0 + a * Bm1;
-   int j = 1;
+    long double Am1 = 1.0L;
+    long double A0 = 0.0L;
+    long double Bm1 = 0.0L;
+    long double B0 = 1.0L;
+    long double a = expl(x);
+    long double b = -x + 1.0L;
+    long double Ap1 = b * A0 + a * Am1;
+    long double Bp1 = b * B0 + a * Bm1;
+    int j = 1;
 
-   a = 1.0L;
-   while ( fabsl(Ap1 * B0 - A0 * Bp1) > epsilon * fabsl(A0 * Bp1) ) {
-      if ( fabsl(Bp1) > 1.0L) {
-         Am1 = A0 / Bp1;
-         A0 = Ap1 / Bp1;
-         Bm1 = B0 / Bp1;
-         B0 = 1.0L;
-      } else {
-         Am1 = A0;
-         A0 = Ap1;
-         Bm1 = B0;
-         B0 = Bp1;
-      }
-      a = -j * j;
-      b += 2.0L;
-      Ap1 = b * A0 + a * Am1;
-      Bp1 = b * B0 + a * Bm1;
-      j += 1;
-   }
-   return (-Ap1 / Bp1);
+    a = 1.0L;
+    while (fabsl(Ap1 * B0 - A0 * Bp1) > epsilon * fabsl(A0 * Bp1))
+    {
+        if (fabsl(Bp1) > 1.0L)
+        {
+            Am1 = A0 / Bp1;
+            A0 = Ap1 / Bp1;
+            Bm1 = B0 / Bp1;
+            B0 = 1.0L;
+        }
+        else
+        {
+            Am1 = A0;
+            A0 = Ap1;
+            Bm1 = B0;
+            B0 = Bp1;
+        }
+        a = -j * j;
+        b += 2.0L;
+        Ap1 = b * A0 + a * Am1;
+        Bp1 = b * B0 + a * Bm1;
+        j += 1;
+    }
+    return (-Ap1 / Bp1);
 }
-
 
 ////////////////////////////////////////////////////////////////////////////////
 // static long double Power_Series_Ei( long double x )                        //
@@ -1024,29 +1118,30 @@ static long double Continued_Fraction_Ei( long double x )
 //     The value of the exponential integral Ei evaluated at x.               //
 ////////////////////////////////////////////////////////////////////////////////
 
-static long double Power_Series_Ei( long double x )
-{ 
-   long double xn = -x;
-   long double Sn = -x;
-   long double Sm1 = 0.0L;
-   long double hsum = 1.0L;
-   long double g = 0.5772156649015328606065121L;
-   long double y = 1.0L;
-   long double factorial = 1.0L;
-  
-   if ( x == 0.0L ) return (long double) -DBL_MAX;
- 
-   while ( fabsl(Sn - Sm1) > epsilon * fabsl(Sm1) ) {
-      Sm1 = Sn;
-      y += 1.0L;
-      xn *= (-x);
-      factorial *= y;
-      hsum += (1.0 / y);
-      Sn += hsum * xn / factorial;
-   }
-   return (g + logl(fabsl(x)) - expl(x) * Sn);
-}
+static long double Power_Series_Ei(long double x)
+{
+    long double xn = -x;
+    long double Sn = -x;
+    long double Sm1 = 0.0L;
+    long double hsum = 1.0L;
+    long double g = 0.5772156649015328606065121L;
+    long double y = 1.0L;
+    long double factorial = 1.0L;
 
+    if (x == 0.0L)
+        return (long double)-DBL_MAX;
+
+    while (fabsl(Sn - Sm1) > epsilon * fabsl(Sm1))
+    {
+        Sm1 = Sn;
+        y += 1.0L;
+        xn *= (-x);
+        factorial *= y;
+        hsum += (1.0 / y);
+        Sn += hsum * xn / factorial;
+    }
+    return (g + logl(fabsl(x)) - expl(x) * Sn);
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 // static long double Argument_Addition_Series_Ei(long double x)              //
@@ -1070,56 +1165,54 @@ static long double Power_Series_Ei( long double x )
 ////////////////////////////////////////////////////////////////////////////////
 static long double Argument_Addition_Series_Ei(long double x)
 {
-   static long double ei[] = {
-      1.915047433355013959531e2L,  4.403798995348382689974e2L,
-      1.037878290717089587658e3L,  2.492228976241877759138e3L,
-      6.071406374098611507965e3L,  1.495953266639752885229e4L,
-      3.719768849068903560439e4L,  9.319251363396537129882e4L,
-      2.349558524907683035782e5L,  5.955609986708370018502e5L,
-      1.516637894042516884433e6L,  3.877904330597443502996e6L,
-      9.950907251046844760026e6L,  2.561565266405658882048e7L,
-      6.612718635548492136250e7L,  1.711446713003636684975e8L,
-      4.439663698302712208698e8L,  1.154115391849182948287e9L,
-      3.005950906525548689841e9L,  7.842940991898186370453e9L,
-      2.049649711988081236484e10L, 5.364511859231469415605e10L,
-      1.405991957584069047340e11L, 3.689732094072741970640e11L,
-      9.694555759683939661662e11L, 2.550043566357786926147e12L,
-      6.714640184076497558707e12L, 1.769803724411626854310e13L,
-      4.669055014466159544500e13L, 1.232852079912097685431e14L,
-      3.257988998672263996790e14L, 8.616388199965786544948e14L,
-      2.280446200301902595341e15L, 6.039718263611241578359e15L,
-      1.600664914324504111070e16L, 4.244796092136850759368e16L,
-      1.126348290166966760275e17L, 2.990444718632336675058e17L,
-      7.943916035704453771510e17L, 2.111342388647824195000e18L,
-      5.614329680810343111535e18L, 1.493630213112993142255e19L,
-      3.975442747903744836007e19L, 1.058563689713169096306e20L
-   };
-   int  k = (int) (x + 0.5);
-   int  j = 0;
-   long double xx = (long double) k;
-   long double dx = x - xx;
-   long double xxj = xx;
-   long double edx = expl(dx);
-   long double Sm = 1.0L;
-   long double Sn = (edx - 1.0L) / xxj;
-   long double term = DBL_MAX;
-   long double factorial = 1.0L;
-   long double dxj = 1.0L;
+    static long double ei[] = {
+        1.915047433355013959531e2L, 4.403798995348382689974e2L,
+        1.037878290717089587658e3L, 2.492228976241877759138e3L,
+        6.071406374098611507965e3L, 1.495953266639752885229e4L,
+        3.719768849068903560439e4L, 9.319251363396537129882e4L,
+        2.349558524907683035782e5L, 5.955609986708370018502e5L,
+        1.516637894042516884433e6L, 3.877904330597443502996e6L,
+        9.950907251046844760026e6L, 2.561565266405658882048e7L,
+        6.612718635548492136250e7L, 1.711446713003636684975e8L,
+        4.439663698302712208698e8L, 1.154115391849182948287e9L,
+        3.005950906525548689841e9L, 7.842940991898186370453e9L,
+        2.049649711988081236484e10L, 5.364511859231469415605e10L,
+        1.405991957584069047340e11L, 3.689732094072741970640e11L,
+        9.694555759683939661662e11L, 2.550043566357786926147e12L,
+        6.714640184076497558707e12L, 1.769803724411626854310e13L,
+        4.669055014466159544500e13L, 1.232852079912097685431e14L,
+        3.257988998672263996790e14L, 8.616388199965786544948e14L,
+        2.280446200301902595341e15L, 6.039718263611241578359e15L,
+        1.600664914324504111070e16L, 4.244796092136850759368e16L,
+        1.126348290166966760275e17L, 2.990444718632336675058e17L,
+        7.943916035704453771510e17L, 2.111342388647824195000e18L,
+        5.614329680810343111535e18L, 1.493630213112993142255e19L,
+        3.975442747903744836007e19L, 1.058563689713169096306e20L};
+    int k = (int)(x + 0.5);
+    int j = 0;
+    long double xx = (long double)k;
+    long double dx = x - xx;
+    long double xxj = xx;
+    long double edx = expl(dx);
+    long double Sm = 1.0L;
+    long double Sn = (edx - 1.0L) / xxj;
+    long double term = DBL_MAX;
+    long double factorial = 1.0L;
+    long double dxj = 1.0L;
 
-   while (fabsl(term) > epsilon * fabsl(Sn) ) {
-      j++;
-      factorial *= (long double) j;
-      xxj *= xx;
-      dxj *= (-dx);
-      Sm += (dxj / factorial);
-      term = ( factorial * (edx * Sm - 1.0L) ) / xxj;
-      Sn += term;
-   }
-   
-   return ei[k-7] + Sn * expl(xx); 
+    while (fabsl(term) > epsilon * fabsl(Sn))
+    {
+        j++;
+        factorial *= (long double)j;
+        xxj *= xx;
+        dxj *= (-dx);
+        Sm += (dxj / factorial);
+        term = (factorial * (edx * Sm - 1.0L)) / xxj;
+        Sn += term;
+    }
+
+    return ei[k - 7] + Sn * expl(xx);
 }
-
-
 
 /* check which of the multisim simulations has the shortest number of
    steps and return that number of nsteps */
@@ -1128,29 +1221,29 @@ static gmx_large_int_t get_multisim_nsteps(const t_commrec *cr,
 {
     gmx_large_int_t steps_out;
 
-    if MASTER(cr)
+    if MASTER (cr)
     {
         gmx_large_int_t *buf;
         int s;
 
-        snew(buf,cr->ms->nsim);
+        snew(buf, cr->ms->nsim);
 
         buf[cr->ms->sim] = nsteps;
         gmx_sumli_sim(cr->ms->nsim, buf, cr->ms);
 
-        steps_out=-1;
-        for(s=0; s<cr->ms->nsim; s++)
+        steps_out = -1;
+        for (s = 0; s < cr->ms->nsim; s++)
         {
             /* find the smallest positive number */
-            if (buf[s]>= 0 && ((steps_out < 0) || (buf[s]<steps_out)) )
+            if (buf[s] >= 0 && ((steps_out < 0) || (buf[s] < steps_out)))
             {
-                steps_out=buf[s];
+                steps_out = buf[s];
             }
         }
         sfree(buf);
 
         /* if we're the limiting simulation, don't do anything */
-        if (steps_out>=0 && steps_out<nsteps) 
+        if (steps_out >= 0 && steps_out < nsteps)
         {
             char strbuf[255];
             snprintf(strbuf, 255, "Will stop simulation %%d after %s steps (another simulation will end then).\n", gmx_large_int_pfmt);
@@ -1162,32 +1255,32 @@ static gmx_large_int_t get_multisim_nsteps(const t_commrec *cr,
     return steps_out;
 }
 
-static int multisim_min(const gmx_multisim_t *ms,int nmin,int n)
+static int multisim_min(const gmx_multisim_t *ms, int nmin, int n)
 {
-    int  *buf;
-    gmx_bool bPos,bEqual;
-    int  s,d;
+    int *buf;
+    gmx_bool bPos, bEqual;
+    int s, d;
 
-    snew(buf,ms->nsim);
+    snew(buf, ms->nsim);
     buf[ms->sim] = n;
-    gmx_sumi_sim(ms->nsim,buf,ms);
-    bPos   = TRUE;
+    gmx_sumi_sim(ms->nsim, buf, ms);
+    bPos = TRUE;
     bEqual = TRUE;
-    for(s=0; s<ms->nsim; s++)
+    for (s = 0; s < ms->nsim; s++)
     {
-        bPos   = bPos   && (buf[s] > 0);
+        bPos = bPos && (buf[s] > 0);
         bEqual = bEqual && (buf[s] == buf[0]);
     }
     if (bPos)
     {
         if (bEqual)
         {
-            nmin = min(nmin,buf[0]);
+            nmin = min(nmin, buf[0]);
         }
         else
         {
             /* Find the least common multiple */
-            for(d=2; d<nmin; d++)
+            for (d = 2; d < nmin; d++)
             {
                 s = 0;
                 while (s < ms->nsim && d % buf[s] == 0)
@@ -1209,19 +1302,19 @@ static int multisim_min(const gmx_multisim_t *ms,int nmin,int n)
 }
 
 static int multisim_nstsimsync(const t_commrec *cr,
-                               const t_inputrec *ir,int repl_ex_nst)
+                               const t_inputrec *ir, int repl_ex_nst)
 {
     int nmin;
 
     if (MASTER(cr))
     {
         nmin = INT_MAX;
-        nmin = multisim_min(cr->ms,nmin,ir->nstlist);
-        nmin = multisim_min(cr->ms,nmin,ir->nstcalcenergy);
-        nmin = multisim_min(cr->ms,nmin,repl_ex_nst);
+        nmin = multisim_min(cr->ms, nmin, ir->nstlist);
+        nmin = multisim_min(cr->ms, nmin, ir->nstcalcenergy);
+        nmin = multisim_min(cr->ms, nmin, repl_ex_nst);
         if (nmin == INT_MAX)
         {
-            gmx_fatal(FARGS,"Can not find an appropriate interval for inter-simulation communication, since nstlist, nstcalcenergy and -replex are all <= 0");
+            gmx_fatal(FARGS, "Can not find an appropriate interval for inter-simulation communication, since nstlist, nstcalcenergy and -replex are all <= 0");
         }
         /* Avoid inter-simulation communication at every (second) step */
         if (nmin <= 2)
@@ -1230,22 +1323,22 @@ static int multisim_nstsimsync(const t_commrec *cr,
         }
     }
 
-    gmx_bcast(sizeof(int),&nmin,cr);
+    gmx_bcast(sizeof(int), &nmin, cr);
 
     return nmin;
 }
 
-static void init_global_signals(globsig_t *gs,const t_commrec *cr,
-                                const t_inputrec *ir,int repl_ex_nst)
+static void init_global_signals(globsig_t *gs, const t_commrec *cr,
+                                const t_inputrec *ir, int repl_ex_nst)
 {
     int i;
 
     if (MULTISIM(cr))
     {
-        gs->nstms = multisim_nstsimsync(cr,ir,repl_ex_nst);
+        gs->nstms = multisim_nstsimsync(cr, ir, repl_ex_nst);
         if (debug)
         {
-            fprintf(debug,"Syncing simulations for checkpointing and termination every %d steps\n",gs->nstms);
+            fprintf(debug, "Syncing simulations for checkpointing and termination every %d steps\n", gs->nstms);
         }
     }
     else
@@ -1253,71 +1346,71 @@ static void init_global_signals(globsig_t *gs,const t_commrec *cr,
         gs->nstms = 1;
     }
 
-    for(i=0; i<eglsNR; i++)
+    for (i = 0; i < eglsNR; i++)
     {
         gs->sig[i] = 0;
         gs->set[i] = 0;
     }
 }
 
-static void copy_coupling_state(t_state *statea,t_state *stateb, 
-                                gmx_ekindata_t *ekinda,gmx_ekindata_t *ekindb, t_grpopts* opts) 
+static void copy_coupling_state(t_state *statea, t_state *stateb,
+                                gmx_ekindata_t *ekinda, gmx_ekindata_t *ekindb, t_grpopts *opts)
 {
-    
+
     /* MRS note -- might be able to get rid of some of the arguments.  Look over it when it's all debugged */
-    
-    int i,j,nc;
+
+    int i, j, nc;
 
     /* Make sure we have enough space for x and v */
     if (statea->nalloc > stateb->nalloc)
     {
         stateb->nalloc = statea->nalloc;
-        srenew(stateb->x,stateb->nalloc);
-        srenew(stateb->v,stateb->nalloc);
+        srenew(stateb->x, stateb->nalloc);
+        srenew(stateb->v, stateb->nalloc);
     }
 
-    stateb->natoms     = statea->natoms;
-    stateb->ngtc       = statea->ngtc;
-    stateb->nnhpres    = statea->nnhpres;
-    stateb->veta       = statea->veta;
-    if (ekinda) 
+    stateb->natoms = statea->natoms;
+    stateb->ngtc = statea->ngtc;
+    stateb->nnhpres = statea->nnhpres;
+    stateb->veta = statea->veta;
+    if (ekinda)
     {
-        copy_mat(ekinda->ekin,ekindb->ekin);
-        for (i=0; i<stateb->ngtc; i++) 
+        copy_mat(ekinda->ekin, ekindb->ekin);
+        for (i = 0; i < stateb->ngtc; i++)
         {
             ekindb->tcstat[i].T = ekinda->tcstat[i].T;
             ekindb->tcstat[i].Th = ekinda->tcstat[i].Th;
-            copy_mat(ekinda->tcstat[i].ekinh,ekindb->tcstat[i].ekinh);
-            copy_mat(ekinda->tcstat[i].ekinf,ekindb->tcstat[i].ekinf);
-            ekindb->tcstat[i].ekinscalef_nhc =  ekinda->tcstat[i].ekinscalef_nhc;
-            ekindb->tcstat[i].ekinscaleh_nhc =  ekinda->tcstat[i].ekinscaleh_nhc;
-            ekindb->tcstat[i].vscale_nhc =  ekinda->tcstat[i].vscale_nhc;
+            copy_mat(ekinda->tcstat[i].ekinh, ekindb->tcstat[i].ekinh);
+            copy_mat(ekinda->tcstat[i].ekinf, ekindb->tcstat[i].ekinf);
+            ekindb->tcstat[i].ekinscalef_nhc = ekinda->tcstat[i].ekinscalef_nhc;
+            ekindb->tcstat[i].ekinscaleh_nhc = ekinda->tcstat[i].ekinscaleh_nhc;
+            ekindb->tcstat[i].vscale_nhc = ekinda->tcstat[i].vscale_nhc;
         }
     }
-    copy_rvecn(statea->x,stateb->x,0,stateb->natoms);
-    copy_rvecn(statea->v,stateb->v,0,stateb->natoms);
-    copy_mat(statea->box,stateb->box);
-    copy_mat(statea->box_rel,stateb->box_rel);
-    copy_mat(statea->boxv,stateb->boxv);
+    copy_rvecn(statea->x, stateb->x, 0, stateb->natoms);
+    copy_rvecn(statea->v, stateb->v, 0, stateb->natoms);
+    copy_mat(statea->box, stateb->box);
+    copy_mat(statea->box_rel, stateb->box_rel);
+    copy_mat(statea->boxv, stateb->boxv);
 
-    for (i = 0; i<stateb->ngtc; i++) 
-    { 
-        nc = i*opts->nhchainlength;
-        for (j=0; j<opts->nhchainlength; j++) 
+    for (i = 0; i < stateb->ngtc; i++)
+    {
+        nc = i * opts->nhchainlength;
+        for (j = 0; j < opts->nhchainlength; j++)
         {
-            stateb->nosehoover_xi[nc+j]  = statea->nosehoover_xi[nc+j];
-            stateb->nosehoover_vxi[nc+j] = statea->nosehoover_vxi[nc+j];
+            stateb->nosehoover_xi[nc + j] = statea->nosehoover_xi[nc + j];
+            stateb->nosehoover_vxi[nc + j] = statea->nosehoover_vxi[nc + j];
         }
     }
     if (stateb->nhpres_xi != NULL)
     {
-        for (i = 0; i<stateb->nnhpres; i++) 
+        for (i = 0; i < stateb->nnhpres; i++)
         {
-            nc = i*opts->nhchainlength;
-            for (j=0; j<opts->nhchainlength; j++) 
+            nc = i * opts->nhchainlength;
+            for (j = 0; j < opts->nhchainlength; j++)
             {
-                stateb->nhpres_xi[nc+j]  = statea->nhpres_xi[nc+j];
-                stateb->nhpres_vxi[nc+j] = statea->nhpres_vxi[nc+j];
+                stateb->nhpres_xi[nc + j] = statea->nhpres_xi[nc + j];
+                stateb->nhpres_vxi[nc + j] = statea->nhpres_vxi[nc + j];
             }
         }
     }
@@ -1326,17 +1419,17 @@ static void copy_coupling_state(t_state *statea,t_state *stateb,
 static real compute_conserved_from_auxiliary(t_inputrec *ir, t_state *state, t_extmass *MassQ)
 {
     real quantity = 0;
-    switch (ir->etc) 
+    switch (ir->etc)
     {
     case etcNO:
         break;
     case etcBERENDSEN:
         break;
     case etcNOSEHOOVER:
-        quantity = NPT_energy(ir,state,MassQ);                
+        quantity = NPT_energy(ir, state, MassQ);
         break;
     case etcVRESCALE:
-        quantity = vrescale_energy(&(ir->opts),state->therm_integral);
+        quantity = vrescale_energy(&(ir->opts), state->therm_integral);
         break;
     default:
         break;
@@ -1344,24 +1437,24 @@ static real compute_conserved_from_auxiliary(t_inputrec *ir, t_state *state, t_e
     return quantity;
 }
 
-static void compute_globals(FILE *fplog, gmx_global_stat_t gstat, t_commrec *cr, t_inputrec *ir, 
-                            t_forcerec *fr, gmx_ekindata_t *ekind, 
-                            t_state *state, t_state *state_global, t_mdatoms *mdatoms, 
+static void compute_globals(FILE *fplog, gmx_global_stat_t gstat, t_commrec *cr, t_inputrec *ir,
+                            t_forcerec *fr, gmx_ekindata_t *ekind,
+                            t_state *state, t_state *state_global, t_mdatoms *mdatoms,
                             t_nrnb *nrnb, t_vcm *vcm, gmx_wallcycle_t wcycle,
-                            gmx_enerdata_t *enerd,tensor force_vir, tensor shake_vir, tensor total_vir, 
-                            tensor pres, rvec mu_tot, gmx_constr_t constr, 
-                            globsig_t *gs,gmx_bool bInterSimGS,
-                            matrix box, gmx_mtop_t *top_global, real *pcurr, 
+                            gmx_enerdata_t *enerd, tensor force_vir, tensor shake_vir, tensor total_vir,
+                            tensor pres, rvec mu_tot, gmx_constr_t constr,
+                            globsig_t *gs, gmx_bool bInterSimGS,
+                            matrix box, gmx_mtop_t *top_global, real *pcurr,
                             int natoms, gmx_bool *bSumEkinhOld, int flags)
 {
-    int  i,gsi;
+    int i, gsi;
     real gs_buf[eglsNR];
-    tensor corr_vir,corr_pres,shakeall_vir;
-    gmx_bool bEner,bPres,bTemp, bVV;
-    gmx_bool bRerunMD, bStopCM, bGStat, bIterate, 
-        bFirstIterate,bReadEkin,bEkinAveVel,bScaleEkin, bConstrain;
-    real ekin,temp,prescorr,enercorr,dvdlcorr;
-    
+    tensor corr_vir, corr_pres, shakeall_vir;
+    gmx_bool bEner, bPres, bTemp, bVV;
+    gmx_bool bRerunMD, bStopCM, bGStat, bIterate,
+        bFirstIterate, bReadEkin, bEkinAveVel, bScaleEkin, bConstrain;
+    real ekin, temp, prescorr, enercorr, dvdlcorr;
+
     /* translate CGLO flags to gmx_booleans */
     bRerunMD = flags & CGLO_RERUNMD;
     bStopCM = flags & CGLO_STOPCM;
@@ -1371,82 +1464,81 @@ static void compute_globals(FILE *fplog, gmx_global_stat_t gstat, t_commrec *cr,
     bScaleEkin = (flags & CGLO_SCALEEKIN);
     bEner = flags & CGLO_ENERGY;
     bTemp = flags & CGLO_TEMPERATURE;
-    bPres  = (flags & CGLO_PRESSURE);
+    bPres = (flags & CGLO_PRESSURE);
     bConstrain = (flags & CGLO_CONSTRAINT);
     bIterate = (flags & CGLO_ITERATE);
     bFirstIterate = (flags & CGLO_FIRSTITERATE);
 
     /* we calculate a full state kinetic energy either with full-step velocity verlet
        or half step where we need the pressure */
-    
-    bEkinAveVel = (ir->eI==eiVV || (ir->eI==eiVVAK && bPres) || bReadEkin);
-    
-    /* in initalization, it sums the shake virial in vv, and to 
+
+    bEkinAveVel = (ir->eI == eiVV || (ir->eI == eiVVAK && bPres) || bReadEkin);
+
+    /* in initalization, it sums the shake virial in vv, and to
        sums ekinh_old in leapfrog (or if we are calculating ekinh_old) for other reasons */
 
     /* ########## Kinetic energy  ############## */
-    
-    if (bTemp) 
+
+    if (bTemp)
     {
         /* Non-equilibrium MD: this is parallellized, but only does communication
          * when there really is NEMD.
          */
-        
-        if (PAR(cr) && (ekind->bNEMD)) 
+
+        if (PAR(cr) && (ekind->bNEMD))
         {
-            accumulate_u(cr,&(ir->opts),ekind);
+            accumulate_u(cr, &(ir->opts), ekind);
         }
         debug_gmx();
         if (bReadEkin)
         {
-            restore_ekinstate_from_state(cr,ekind,&state_global->ekinstate);
+            restore_ekinstate_from_state(cr, ekind, &state_global->ekinstate);
         }
-        else 
+        else
         {
 
-            calc_ke_part(state,&(ir->opts),mdatoms,ekind,nrnb,bEkinAveVel,bIterate);
+            calc_ke_part(state, &(ir->opts), mdatoms, ekind, nrnb, bEkinAveVel, bIterate);
         }
-        
+
         debug_gmx();
-        
+
         /* Calculate center of mass velocity if necessary, also parallellized */
-        if (bStopCM && !bRerunMD && bEner) 
+        if (bStopCM && !bRerunMD && bEner)
         {
-            calc_vcm_grp(fplog,mdatoms->start,mdatoms->homenr,mdatoms,
-                         state->x,state->v,vcm);
+            calc_vcm_grp(fplog, mdatoms->start, mdatoms->homenr, mdatoms,
+                         state->x, state->v, vcm);
         }
     }
 
-    if (bTemp || bPres || bEner || bConstrain) 
+    if (bTemp || bPres || bEner || bConstrain)
     {
         if (!bGStat)
         {
-            /* We will not sum ekinh_old,                                                            
-             * so signal that we still have to do it.                                                
+            /* We will not sum ekinh_old,
+             * so signal that we still have to do it.
              */
             *bSumEkinhOld = TRUE;
-
         }
         else
         {
             if (gs != NULL)
             {
-                for(i=0; i<eglsNR; i++)
+                for (i = 0; i < eglsNR; i++)
                 {
                     gs_buf[i] = gs->sig[i];
                 }
             }
-            if (PAR(cr)) 
+            if (PAR(cr))
             {
-                wallcycle_start(wcycle,ewcMoveE);
+                wallcycle_start(wcycle, ewcMoveE);
                 GMX_MPE_LOG(ev_global_stat_start);
-                global_stat(fplog,gstat,cr,enerd,force_vir,shake_vir,mu_tot,
-                            ir,ekind,constr,vcm,
-                            gs != NULL ? eglsNR : 0,gs_buf,
-                            top_global,state,
-                            *bSumEkinhOld,flags);
+                global_stat(fplog, gstat, cr, enerd, force_vir, shake_vir, mu_tot,
+                            ir, ekind, constr, vcm,
+                            gs != NULL ? eglsNR : 0, gs_buf,
+                            top_global, state,
+                            *bSumEkinhOld, flags);
                 GMX_MPE_LOG(ev_global_stat_finish);
-                wallcycle_stop(wcycle,ewcMoveE);
+                wallcycle_stop(wcycle, ewcMoveE);
             }
             if (gs != NULL)
             {
@@ -1455,21 +1547,19 @@ static void compute_globals(FILE *fplog, gmx_global_stat_t gstat, t_commrec *cr,
                     if (MASTER(cr))
                     {
                         /* Communicate the signals between the simulations */
-                        gmx_sum_sim(eglsNR,gs_buf,cr->ms);
+                        gmx_sum_sim(eglsNR, gs_buf, cr->ms);
                     }
                     /* Communicate the signals form the master to the others */
-                    gmx_bcast(eglsNR*sizeof(gs_buf[0]),gs_buf,cr);
+                    gmx_bcast(eglsNR * sizeof(gs_buf[0]), gs_buf, cr);
                 }
-                for(i=0; i<eglsNR; i++)
+                for (i = 0; i < eglsNR; i++)
                 {
                     if (bInterSimGS || gs_simlocal[i])
                     {
                         /* Set the communicated signal only when it is non-zero,
                          * since signals might not be processed at each MD step.
                          */
-                        gsi = (gs_buf[i] >= 0 ?
-                               (int)(gs_buf[i] + 0.5) :
-                               (int)(gs_buf[i] - 0.5));
+                        gsi = (gs_buf[i] >= 0 ? (int)(gs_buf[i] + 0.5) : (int)(gs_buf[i] - 0.5));
                         if (gsi != 0)
                         {
                             gs->set[i] = gsi;
@@ -1482,154 +1572,154 @@ static void compute_globals(FILE *fplog, gmx_global_stat_t gstat, t_commrec *cr,
             *bSumEkinhOld = FALSE;
         }
     }
-    
+
     if (!ekind->bNEMD && debug && bTemp && (vcm->nr > 0))
     {
         correct_ekin(debug,
-                     mdatoms->start,mdatoms->start+mdatoms->homenr,
-                     state->v,vcm->group_p[0],
-                     mdatoms->massT,mdatoms->tmass,ekind->ekin);
+                     mdatoms->start, mdatoms->start + mdatoms->homenr,
+                     state->v, vcm->group_p[0],
+                     mdatoms->massT, mdatoms->tmass, ekind->ekin);
     }
-    
-    if (bEner) {
+
+    if (bEner)
+    {
         /* Do center of mass motion removal */
         if (bStopCM && !bRerunMD) /* is this correct?  Does it get called too often with this logic? */
         {
-            check_cm_grp(fplog,vcm,ir,1);
-            do_stopcm_grp(fplog,mdatoms->start,mdatoms->homenr,mdatoms->cVCM,
-                          state->x,state->v,vcm);
-            inc_nrnb(nrnb,eNR_STOPCM,mdatoms->homenr);
+            check_cm_grp(fplog, vcm, ir, 1);
+            do_stopcm_grp(fplog, mdatoms->start, mdatoms->homenr, mdatoms->cVCM,
+                          state->x, state->v, vcm);
+            inc_nrnb(nrnb, eNR_STOPCM, mdatoms->homenr);
         }
 
         /* Calculate the amplitude of the cosine velocity profile */
-        ekind->cosacc.vcos = ekind->cosacc.mvcos/mdatoms->tmass;
+        ekind->cosacc.vcos = ekind->cosacc.mvcos / mdatoms->tmass;
     }
 
-    if (bTemp) 
+    if (bTemp)
     {
         /* Sum the kinetic energies of the groups & calc temp */
         /* compute full step kinetic energies if vv, or if vv-avek and we are computing the pressure with IR_NPT_TROTTER */
-        /* three maincase:  VV with AveVel (md-vv), vv with AveEkin (md-vv-avek), leap with AveEkin (md).  
-           Leap with AveVel is not supported; it's not clear that it will actually work.  
-           bEkinAveVel: If TRUE, we simply multiply ekin by ekinscale to get a full step kinetic energy. 
+        /* three maincase:  VV with AveVel (md-vv), vv with AveEkin (md-vv-avek), leap with AveEkin (md).
+           Leap with AveVel is not supported; it's not clear that it will actually work.
+           bEkinAveVel: If TRUE, we simply multiply ekin by ekinscale to get a full step kinetic energy.
            If FALSE, we average ekinh_old and ekinh*ekinscale_nhc to get an averaged half step kinetic energy.
-           bSaveEkinOld: If TRUE (in the case of iteration = bIterate is TRUE), we don't reset the ekinscale_nhc.  
+           bSaveEkinOld: If TRUE (in the case of iteration = bIterate is TRUE), we don't reset the ekinscale_nhc.
            If FALSE, we go ahead and erase over it.
-        */ 
-        enerd->term[F_TEMP] = sum_ekin(&(ir->opts),ekind,&(enerd->term[F_DKDL]),
-                                       bEkinAveVel,bIterate,bScaleEkin);
- 
+        */
+        enerd->term[F_TEMP] = sum_ekin(&(ir->opts), ekind, &(enerd->term[F_DKDL]),
+                                       bEkinAveVel, bIterate, bScaleEkin);
+
         enerd->term[F_EKIN] = trace(ekind->ekin);
     }
-    
+
     /* ##########  Long range energy information ###### */
-    
-    if (bEner || bPres || bConstrain) 
+
+    if (bEner || bPres || bConstrain)
     {
-        calc_dispcorr(fplog,ir,fr,0,top_global->natoms,box,state->lambda,
-                      corr_pres,corr_vir,&prescorr,&enercorr,&dvdlcorr);
+        calc_dispcorr(fplog, ir, fr, 0, top_global->natoms, box, state->lambda,
+                      corr_pres, corr_vir, &prescorr, &enercorr, &dvdlcorr);
     }
-    
-    if (bEner && bFirstIterate) 
+
+    if (bEner && bFirstIterate)
     {
         enerd->term[F_DISPCORR] = enercorr;
         enerd->term[F_EPOT] += enercorr;
         enerd->term[F_DVDL] += dvdlcorr;
-        if (fr->efep != efepNO) {
+        if (fr->efep != efepNO)
+        {
             enerd->dvdl_lin += dvdlcorr;
         }
     }
-    
+
     /* ########## Now pressure ############## */
-    if (bPres || bConstrain) 
+    if (bPres || bConstrain)
     {
-        
-        m_add(force_vir,shake_vir,total_vir);
-        
+
+        m_add(force_vir, shake_vir, total_vir);
+
         /* Calculate pressure and apply LR correction if PPPM is used.
          * Use the box from last timestep since we already called update().
          */
-        
-        enerd->term[F_PRES] = calc_pres(fr->ePBC,ir->nwall,box,ekind->ekin,total_vir,pres,
-                                        (fr->eeltype==eelPPPM)?enerd->term[F_COUL_RECIP]:0.0);
-        
+
+        enerd->term[F_PRES] = calc_pres(fr->ePBC, ir->nwall, box, ekind->ekin, total_vir, pres,
+                                        (fr->eeltype == eelPPPM) ? enerd->term[F_COUL_RECIP] : 0.0);
+
         /* Calculate long range corrections to pressure and energy */
-        /* this adds to enerd->term[F_PRES] and enerd->term[F_ETOT], 
-           and computes enerd->term[F_DISPCORR].  Also modifies the 
+        /* this adds to enerd->term[F_PRES] and enerd->term[F_ETOT],
+           and computes enerd->term[F_DISPCORR].  Also modifies the
            total_vir and pres tesors */
-        
-        m_add(total_vir,corr_vir,total_vir);
-        m_add(pres,corr_pres,pres);
+
+        m_add(total_vir, corr_vir, total_vir);
+        m_add(pres, corr_pres, pres);
         enerd->term[F_PDISPCORR] = prescorr;
         enerd->term[F_PRES] += prescorr;
         *pcurr = enerd->term[F_PRES];
         /* calculate temperature using virial */
-        enerd->term[F_VTEMP] = calc_temp(trace(total_vir),ir->opts.nrdf[0]);
-        
-    }    
+        enerd->term[F_VTEMP] = calc_temp(trace(total_vir), ir->opts.nrdf[0]);
+    }
 }
-
 
 /* Definitions for convergence of iterated constraints */
 
 /* iterate constraints up to 50 times  */
-#define MAXITERCONST       50
+#define MAXITERCONST 50
 
 /* data type */
 typedef struct
 {
-    real f,fprev,x,xprev;  
+    real f, fprev, x, xprev;
     int iter_i;
     gmx_bool bIterate;
-    real allrelerr[MAXITERCONST+2];
+    real allrelerr[MAXITERCONST + 2];
     int num_close; /* number of "close" violations, caused by limited precision. */
 } gmx_iterate_t;
-  
+
 #ifdef GMX_DOUBLE
-#define CONVERGEITER  0.000000001
-#define CLOSE_ENOUGH  0.000001000
+#define CONVERGEITER 0.000000001
+#define CLOSE_ENOUGH 0.000001000
 #else
-#define CONVERGEITER  0.0001
-#define CLOSE_ENOUGH  0.0050
+#define CONVERGEITER 0.0001
+#define CLOSE_ENOUGH 0.0050
 #endif
 
 /* we want to keep track of the close calls.  If there are too many, there might be some other issues.
    so we make sure that it's either less than some predetermined number, or if more than that number,
    only some small fraction of the total. */
-#define MAX_NUMBER_CLOSE        50
-#define FRACTION_CLOSE       0.001
-  
-/* maximum length of cyclic traps to check, emerging from limited numerical precision  */
-#define CYCLEMAX            20
+#define MAX_NUMBER_CLOSE 50
+#define FRACTION_CLOSE 0.001
 
-static void gmx_iterate_init(gmx_iterate_t *iterate,gmx_bool bIterate)
+/* maximum length of cyclic traps to check, emerging from limited numerical precision  */
+#define CYCLEMAX 20
+
+static void gmx_iterate_init(gmx_iterate_t *iterate, gmx_bool bIterate)
 {
     int i;
 
     iterate->iter_i = 0;
     iterate->bIterate = bIterate;
     iterate->num_close = 0;
-    for (i=0;i<MAXITERCONST+2;i++) 
+    for (i = 0; i < MAXITERCONST + 2; i++)
     {
         iterate->allrelerr[i] = 0;
     }
 }
 
-static gmx_bool done_iterating(const t_commrec *cr,FILE *fplog, int nsteps, gmx_iterate_t *iterate, gmx_bool bFirstIterate, real fom, real *newf) 
-{    
+static gmx_bool done_iterating(const t_commrec *cr, FILE *fplog, int nsteps, gmx_iterate_t *iterate, gmx_bool bFirstIterate, real fom, real *newf)
+{
     /* monitor convergence, and use a secant search to propose new
-       values.  
+       values.
                                                                   x_{i} - x_{i-1}
        The secant method computes x_{i+1} = x_{i} - f(x_{i}) * ---------------------
                                                                 f(x_{i}) - f(x_{i-1})
-       
+
        The function we are trying to zero is fom-x, where fom is the
        "figure of merit" which is the pressure (or the veta value) we
        would get by putting in an old value of the pressure or veta into
        the incrementor function for the step or half step.  I have
        verified that this gives the same answer as self consistent
        iteration, usually in many fewer steps, especially for small tau_p.
-       
+
        We could possibly eliminate an iteration with proper use
        of the value from the previous step, but that would take a bit
        more bookkeeping, especially for veta, since tests indicate the
@@ -1639,76 +1729,76 @@ static gmx_bool done_iterating(const t_commrec *cr,FILE *fplog, int nsteps, gmx_
        0.02, which is smaller that would ever be necessary in
        practice. Generally, 3-5 iterations will be sufficient */
 
-    real relerr,err,xmin;
+    real relerr, err, xmin;
     char buf[256];
     int i;
     gmx_bool incycle;
-    
-    if (bFirstIterate) 
+
+    if (bFirstIterate)
     {
         iterate->x = fom;
-        iterate->f = fom-iterate->x;
+        iterate->f = fom - iterate->x;
         iterate->xprev = 0;
         iterate->fprev = 0;
         *newf = fom;
-    } 
-    else 
+    }
+    else
     {
-        iterate->f = fom-iterate->x; /* we want to zero this difference */
-        if ((iterate->iter_i > 1) && (iterate->iter_i < MAXITERCONST)) 
+        iterate->f = fom - iterate->x; /* we want to zero this difference */
+        if ((iterate->iter_i > 1) && (iterate->iter_i < MAXITERCONST))
         {
-            if (iterate->f==iterate->fprev) 
+            if (iterate->f == iterate->fprev)
             {
                 *newf = iterate->f;
-            } 
-            else 
-            {
-                *newf = iterate->x - (iterate->x-iterate->xprev)*(iterate->f)/(iterate->f-iterate->fprev); 
             }
-        } 
-        else 
+            else
+            {
+                *newf = iterate->x - (iterate->x - iterate->xprev) * (iterate->f) / (iterate->f - iterate->fprev);
+            }
+        }
+        else
         {
-            /* just use self-consistent iteration the first step to initialize, or 
+            /* just use self-consistent iteration the first step to initialize, or
                if it's not converging (which happens occasionally -- need to investigate why) */
-            *newf = fom; 
+            *newf = fom;
         }
     }
     /* Consider a slight shortcut allowing us to exit one sooner -- we check the
        difference between the closest of x and xprev to the new
        value. To be 100% certain, we should check the difference between
        the last result, and the previous result, or
-       
+
        relerr = (fabs((x-xprev)/fom));
-       
+
        but this is pretty much never necessary under typical conditions.
        Checking numerically, it seems to lead to almost exactly the same
        trajectories, but there are small differences out a few decimal
        places in the pressure, and eventually in the v_eta, but it could
        save an interation.
-       
+
        if (fabs(*newf-x) < fabs(*newf - xprev)) { xmin = x;} else { xmin = xprev;}
        relerr = (fabs((*newf-xmin) / *newf));
     */
-    
-    err = fabs((iterate->f-iterate->fprev));
-    relerr = fabs(err/fom);
+
+    err = fabs((iterate->f - iterate->fprev));
+    relerr = fabs(err / fom);
 
     iterate->allrelerr[iterate->iter_i] = relerr;
-    
-    if (iterate->iter_i > 0) 
+
+    if (iterate->iter_i > 0)
     {
-        if (debug) 
+        if (debug)
         {
-            fprintf(debug,"Iterating NPT constraints: %6i %20.12f%14.6g%20.12f\n",
-                    iterate->iter_i,fom,relerr,*newf);
+            fprintf(debug, "Iterating NPT constraints: %6i %20.12f%14.6g%20.12f\n",
+                    iterate->iter_i, fom, relerr, *newf);
         }
-        
-        if ((relerr < CONVERGEITER) || (err < CONVERGEITER) || (fom==0) || ((iterate->x == iterate->xprev) && iterate->iter_i > 1))
+
+        if ((relerr < CONVERGEITER) || (err < CONVERGEITER) || (fom == 0) || ((iterate->x == iterate->xprev) && iterate->iter_i > 1))
         {
             iterate->bIterate = FALSE;
-            if (debug) 
+            if (debug)
             {
-                fprintf(debug,"Iterating NPT constraints: CONVERGED\n");
+                fprintf(debug, "Iterating NPT constraints: CONVERGED\n");
             }
             return TRUE;
         }
@@ -1717,87 +1807,92 @@ static gmx_bool done_iterating(const t_commrec *cr,FILE *fplog, int nsteps, gmx_
             if (relerr < CLOSE_ENOUGH)
             {
                 incycle = FALSE;
-                for (i=1;i<CYCLEMAX;i++) {
-                    if ((iterate->allrelerr[iterate->iter_i-(1+i)] == iterate->allrelerr[iterate->iter_i-1]) &&
-                        (iterate->allrelerr[iterate->iter_i-(1+i)] == iterate->allrelerr[iterate->iter_i-(1+2*i)])) {
+                for (i = 1; i < CYCLEMAX; i++)
+                {
+                    if ((iterate->allrelerr[iterate->iter_i - (1 + i)] == iterate->allrelerr[iterate->iter_i - 1]) &&
+                        (iterate->allrelerr[iterate->iter_i - (1 + i)] == iterate->allrelerr[iterate->iter_i - (1 + 2 * i)]))
+                    {
                         incycle = TRUE;
-                        if (debug) 
+                        if (debug)
                         {
-                            fprintf(debug,"Exiting from an NPT iterating cycle of length %d\n",i);
+                            fprintf(debug, "Exiting from an NPT iterating cycle of length %d\n", i);
                         }
                         break;
                     }
                 }
-                
-                if (incycle) {
+
+                if (incycle)
+                {
                     /* step 1: trapped in a numerical attractor */
                     /* we are trapped in a numerical attractor, and can't converge any more, and are close to the final result.
                        Better to give up convergence here than have the simulation die.
                     */
                     iterate->num_close++;
                     return TRUE;
-                } 
-                else 
+                }
+                else
                 {
                     /* Step #2: test if we are reasonably close for other reasons, then monitor the number.  If not, die */
-                    
+
                     /* how many close calls have we had?  If less than a few, we're OK */
-                    if (iterate->num_close < MAX_NUMBER_CLOSE) 
+                    if (iterate->num_close < MAX_NUMBER_CLOSE)
                     {
-                        sprintf(buf,"Slight numerical convergence deviation with NPT at step %d, relative error only %10.5g, likely not a problem, continuing\n",nsteps,relerr);
-                        md_print_warning(cr,fplog,buf);
+                        sprintf(buf, "Slight numerical convergence deviation with NPT at step %d, relative error only %10.5g, likely not a problem, continuing\n", nsteps, relerr);
+                        md_print_warning(cr, fplog, buf);
                         iterate->num_close++;
                         return TRUE;
                         /* if more than a few, check the total fraction.  If too high, die. */
-                    } else if (iterate->num_close/(double)nsteps > FRACTION_CLOSE) {
-                        gmx_fatal(FARGS,"Could not converge NPT constraints, too many exceptions (%d%%\n",iterate->num_close/(double)nsteps);
-                    } 
+                    }
+                    else if (iterate->num_close / (double)nsteps > FRACTION_CLOSE)
+                    {
+                        gmx_fatal(FARGS, "Could not converge NPT constraints, too many exceptions (%d%%\n", iterate->num_close / (double)nsteps);
+                    }
                 }
             }
-            else 
+            else
             {
-                gmx_fatal(FARGS,"Could not converge NPT constraints\n");
+                gmx_fatal(FARGS, "Could not converge NPT constraints\n");
             }
         }
     }
-    
+
     iterate->xprev = iterate->x;
     iterate->x = *newf;
     iterate->fprev = iterate->f;
     iterate->iter_i++;
-    
+
     return FALSE;
 }
 
-static void check_nst_param(FILE *fplog,t_commrec *cr,
-                            const char *desc_nst,int nst,
-                            const char *desc_p,int *p)
+static void check_nst_param(FILE *fplog, t_commrec *cr,
+                            const char *desc_nst, int nst,
+                            const char *desc_p, int *p)
 {
     char buf[STRLEN];
 
     if (*p > 0 && *p % nst != 0)
     {
         /* Round up to the next multiple of nst */
-        *p = ((*p)/nst + 1)*nst;
-        sprintf(buf,"NOTE: %s changes %s to %d\n",desc_nst,desc_p,*p);
-        md_print_warning(cr,fplog,buf);
+        *p = ((*p) / nst + 1) * nst;
+        sprintf(buf, "NOTE: %s changes %s to %d\n", desc_nst, desc_p, *p);
+        md_print_warning(cr, fplog, buf);
     }
 }
 
-static void reset_all_counters(FILE *fplog,t_commrec *cr,
+static void reset_all_counters(FILE *fplog, t_commrec *cr,
                                gmx_large_int_t step,
-                               gmx_large_int_t *step_rel,t_inputrec *ir,
-                               gmx_wallcycle_t wcycle,t_nrnb *nrnb,
+                               gmx_large_int_t *step_rel, t_inputrec *ir,
+                               gmx_wallcycle_t wcycle, t_nrnb *nrnb,
                                gmx_runtime_t *runtime)
 {
-    char buf[STRLEN],sbuf[STEPSTRSIZE];
+    char buf[STRLEN], sbuf[STEPSTRSIZE];
 
     /* Reset all the counters related to performance over the run */
-    sprintf(buf,"Step %s: resetting all time and cycle counters\n",
-            gmx_step_str(step,sbuf));
-    md_print_warning(cr,fplog,buf);
+    sprintf(buf, "Step %s: resetting all time and cycle counters\n",
+            gmx_step_str(step, sbuf));
+    md_print_warning(cr, fplog, buf);
 
-    wallcycle_stop(wcycle,ewcRUN);
+    wallcycle_stop(wcycle, ewcRUN);
     wallcycle_reset_all(wcycle);
     if (DOMAINDECOMP(cr))
     {
@@ -1805,14 +1900,14 @@ static void reset_all_counters(FILE *fplog,t_commrec *cr,
     }
     init_nrnb(nrnb);
     ir->init_step += *step_rel;
-    ir->nsteps    -= *step_rel;
+    ir->nsteps -= *step_rel;
     *step_rel = 0;
-    wallcycle_start(wcycle,ewcRUN);
+    wallcycle_start(wcycle, ewcRUN);
     runtime_start(runtime);
-    print_date_and_time(fplog,cr->nodeid,"Restarted time",runtime);
+    print_date_and_time(fplog, cr->nodeid, "Restarted time", runtime);
 }
 
-static void min_zero(int *n,int i)
+static void min_zero(int *n, int i)
 {
     if (i > 0 && (*n == 0 || i < *n))
     {
@@ -1820,23 +1915,23 @@ static void min_zero(int *n,int i)
     }
 }
 
-static int lcd4(int i1,int i2,int i3,int i4)
+static int lcd4(int i1, int i2, int i3, int i4)
 {
     int nst;
 
     nst = 0;
-    min_zero(&nst,i1);
-    min_zero(&nst,i2);
-    min_zero(&nst,i3);
-    min_zero(&nst,i4);
+    min_zero(&nst, i1);
+    min_zero(&nst, i2);
+    min_zero(&nst, i3);
+    min_zero(&nst, i4);
     if (nst == 0)
     {
         gmx_incons("All 4 inputs for determininig nstglobalcomm are <= 0");
     }
-    
-    while (nst > 1 && ((i1 > 0 && i1 % nst != 0)  ||
-                       (i2 > 0 && i2 % nst != 0)  ||
-                       (i3 > 0 && i3 % nst != 0)  ||
+
+    while (nst > 1 && ((i1 > 0 && i1 % nst != 0) ||
+                       (i2 > 0 && i2 % nst != 0) ||
+                       (i3 > 0 && i3 % nst != 0) ||
                        (i4 > 0 && i4 % nst != 0)))
     {
         nst--;
@@ -1845,8 +1940,8 @@ static int lcd4(int i1,int i2,int i3,int i4)
     return nst;
 }
 
-static int check_nstglobalcomm(FILE *fplog,t_commrec *cr,
-                               int nstglobalcomm,t_inputrec *ir)
+static int check_nstglobalcomm(FILE *fplog, t_commrec *cr,
+                               int nstglobalcomm, t_inputrec *ir)
 {
     char buf[STRLEN];
 
@@ -1884,142 +1979,144 @@ static int check_nstglobalcomm(FILE *fplog,t_commrec *cr,
         if (ir->nstlist > 0 &&
             nstglobalcomm > ir->nstlist && nstglobalcomm % ir->nstlist != 0)
         {
-            nstglobalcomm = (nstglobalcomm / ir->nstlist)*ir->nstlist;
-            sprintf(buf,"WARNING: nstglobalcomm is larger than nstlist, but not a multiple, setting it to %d\n",nstglobalcomm);
-            md_print_warning(cr,fplog,buf);
+            nstglobalcomm = (nstglobalcomm / ir->nstlist) * ir->nstlist;
+            sprintf(buf, "WARNING: nstglobalcomm is larger than nstlist, but not a multiple, setting it to %d\n", nstglobalcomm);
+            md_print_warning(cr, fplog, buf);
         }
         if (ir->nstcalcenergy > 0)
         {
-            check_nst_param(fplog,cr,"-gcom",nstglobalcomm,
-                            "nstcalcenergy",&ir->nstcalcenergy);
+            check_nst_param(fplog, cr, "-gcom", nstglobalcomm,
+                            "nstcalcenergy", &ir->nstcalcenergy);
         }
         if (ir->etc != etcNO && ir->nsttcouple > 0)
         {
-            check_nst_param(fplog,cr,"-gcom",nstglobalcomm,
-                            "nsttcouple",&ir->nsttcouple);
+            check_nst_param(fplog, cr, "-gcom", nstglobalcomm,
+                            "nsttcouple", &ir->nsttcouple);
         }
         if (ir->epc != epcNO && ir->nstpcouple > 0)
         {
-            check_nst_param(fplog,cr,"-gcom",nstglobalcomm,
-                            "nstpcouple",&ir->nstpcouple);
+            check_nst_param(fplog, cr, "-gcom", nstglobalcomm,
+                            "nstpcouple", &ir->nstpcouple);
         }
 
-        check_nst_param(fplog,cr,"-gcom",nstglobalcomm,
-                        "nstenergy",&ir->nstenergy);
+        check_nst_param(fplog, cr, "-gcom", nstglobalcomm,
+                        "nstenergy", &ir->nstenergy);
 
-        check_nst_param(fplog,cr,"-gcom",nstglobalcomm,
-                        "nstlog",&ir->nstlog);
+        check_nst_param(fplog, cr, "-gcom", nstglobalcomm,
+                        "nstlog", &ir->nstlog);
     }
 
     if (ir->comm_mode != ecmNO && ir->nstcomm < nstglobalcomm)
     {
-        sprintf(buf,"WARNING: Changing nstcomm from %d to %d\n",
-                ir->nstcomm,nstglobalcomm);
-        md_print_warning(cr,fplog,buf);
+        sprintf(buf, "WARNING: Changing nstcomm from %d to %d\n",
+                ir->nstcomm, nstglobalcomm);
+        md_print_warning(cr, fplog, buf);
         ir->nstcomm = nstglobalcomm;
     }
 
     return nstglobalcomm;
 }
 
-void check_ir_old_tpx_versions(t_commrec *cr,FILE *fplog,
-                               t_inputrec *ir,gmx_mtop_t *mtop)
+void check_ir_old_tpx_versions(t_commrec *cr, FILE *fplog,
+                               t_inputrec *ir, gmx_mtop_t *mtop)
 {
     /* Check required for old tpx files */
     if (IR_TWINRANGE(*ir) && ir->nstlist > 1 &&
         ir->nstcalcenergy % ir->nstlist != 0)
     {
-        md_print_warning(cr,fplog,"Old tpr file with twin-range settings: modifying energy calculation and/or T/P-coupling frequencies");
+        md_print_warning(cr, fplog, "Old tpr file with twin-range settings: modifying energy calculation and/or T/P-coupling frequencies");
 
-        if (gmx_mtop_ftype_count(mtop,F_CONSTR) +
-            gmx_mtop_ftype_count(mtop,F_CONSTRNC) > 0 &&
+        if (gmx_mtop_ftype_count(mtop, F_CONSTR) +
+                    gmx_mtop_ftype_count(mtop, F_CONSTRNC) >
+                0 &&
             ir->eConstrAlg == econtSHAKE)
         {
-            md_print_warning(cr,fplog,"With twin-range cut-off's and SHAKE the virial and pressure are incorrect");
+            md_print_warning(cr, fplog, "With twin-range cut-off's and SHAKE the virial and pressure are incorrect");
             if (ir->epc != epcNO)
             {
-                gmx_fatal(FARGS,"Can not do pressure coupling with twin-range cut-off's and SHAKE");
+                gmx_fatal(FARGS, "Can not do pressure coupling with twin-range cut-off's and SHAKE");
             }
         }
-        check_nst_param(fplog,cr,"nstlist",ir->nstlist,
-                        "nstcalcenergy",&ir->nstcalcenergy);
+        check_nst_param(fplog, cr, "nstlist", ir->nstlist,
+                        "nstcalcenergy", &ir->nstcalcenergy);
         if (ir->epc != epcNO)
         {
-            check_nst_param(fplog,cr,"nstlist",ir->nstlist,
-                            "nstpcouple",&ir->nstpcouple);
+            check_nst_param(fplog, cr, "nstlist", ir->nstlist,
+                            "nstpcouple", &ir->nstpcouple);
         }
-        check_nst_param(fplog,cr,"nstcalcenergy",ir->nstcalcenergy,
-                        "nstenergy",&ir->nstenergy);
-        check_nst_param(fplog,cr,"nstcalcenergy",ir->nstcalcenergy,
-                        "nstlog",&ir->nstlog);
+        check_nst_param(fplog, cr, "nstcalcenergy", ir->nstcalcenergy,
+                        "nstenergy", &ir->nstenergy);
+        check_nst_param(fplog, cr, "nstcalcenergy", ir->nstcalcenergy,
+                        "nstlog", &ir->nstlog);
         if (ir->efep != efepNO)
         {
-            check_nst_param(fplog,cr,"nstcalcenergy",ir->nstcalcenergy,
-                            "nstdhdl",&ir->nstdhdl);
+            check_nst_param(fplog, cr, "nstcalcenergy", ir->nstcalcenergy,
+                            "nstdhdl", &ir->nstdhdl);
         }
     }
 }
 
-typedef struct {
-    gmx_bool       bGStatEveryStep;
+typedef struct
+{
+    gmx_bool bGStatEveryStep;
     gmx_large_int_t step_ns;
     gmx_large_int_t step_nscheck;
     gmx_large_int_t nns;
-    matrix     scale_tot;
-    int        nabnsb;
-    double     s1;
-    double     s2;
-    double     ab;
-    double     lt_runav;
-    double     lt_runav2;
+    matrix scale_tot;
+    int nabnsb;
+    double s1;
+    double s2;
+    double ab;
+    double lt_runav;
+    double lt_runav2;
 } gmx_nlheur_t;
 
-static void reset_nlistheuristics(gmx_nlheur_t *nlh,gmx_large_int_t step)
+static void reset_nlistheuristics(gmx_nlheur_t *nlh, gmx_large_int_t step)
 {
-    nlh->lt_runav  = 0;
+    nlh->lt_runav = 0;
     nlh->lt_runav2 = 0;
     nlh->step_nscheck = step;
 }
 
 static void init_nlistheuristics(gmx_nlheur_t *nlh,
-                                 gmx_bool bGStatEveryStep,gmx_large_int_t step)
+                                 gmx_bool bGStatEveryStep, gmx_large_int_t step)
 {
     nlh->bGStatEveryStep = bGStatEveryStep;
-    nlh->nns       = 0;
-    nlh->nabnsb    = 0;
-    nlh->s1        = 0;
-    nlh->s2        = 0;
-    nlh->ab        = 0;
+    nlh->nns = 0;
+    nlh->nabnsb = 0;
+    nlh->s1 = 0;
+    nlh->s2 = 0;
+    nlh->ab = 0;
 
-    reset_nlistheuristics(nlh,step);
+    reset_nlistheuristics(nlh, step);
 }
 
-static void update_nliststatistics(gmx_nlheur_t *nlh,gmx_large_int_t step)
+static void update_nliststatistics(gmx_nlheur_t *nlh, gmx_large_int_t step)
 {
     gmx_large_int_t nl_lt;
-    char sbuf[STEPSTRSIZE],sbuf2[STEPSTRSIZE];
+    char sbuf[STEPSTRSIZE], sbuf2[STEPSTRSIZE];
 
     /* Determine the neighbor list life time */
     nl_lt = step - nlh->step_ns;
     if (debug)
     {
-        fprintf(debug,"%d atoms beyond ns buffer, updating neighbor list after %s steps\n",nlh->nabnsb,gmx_step_str(nl_lt,sbuf));
+        fprintf(debug, "%d atoms beyond ns buffer, updating neighbor list after %s steps\n", nlh->nabnsb, gmx_step_str(nl_lt, sbuf));
     }
     nlh->nns++;
     nlh->s1 += nl_lt;
-    nlh->s2 += nl_lt*nl_lt;
+    nlh->s2 += nl_lt * nl_lt;
     nlh->ab += nlh->nabnsb;
     if (nlh->lt_runav == 0)
     {
-        nlh->lt_runav  = nl_lt;
+        nlh->lt_runav = nl_lt;
         /* Initialize the fluctuation average
          * such that at startup we check after 0 steps.
          */
-        nlh->lt_runav2 = sqr(nl_lt/2.0);
+        nlh->lt_runav2 = sqr(nl_lt / 2.0);
     }
     /* Running average with 0.9 gives an exp. history of 9.5 */
-    nlh->lt_runav2 = 0.9*nlh->lt_runav2 + 0.1*sqr(nlh->lt_runav - nl_lt);
-    nlh->lt_runav  = 0.9*nlh->lt_runav  + 0.1*nl_lt;
+    nlh->lt_runav2 = 0.9 * nlh->lt_runav2 + 0.1 * sqr(nlh->lt_runav - nl_lt);
+    nlh->lt_runav = 0.9 * nlh->lt_runav + 0.1 * nl_lt;
     if (nlh->bGStatEveryStep)
     {
         /* Always check the nlist validity */
@@ -2032,45 +2129,44 @@ static void update_nliststatistics(gmx_nlheur_t *nlh,gmx_large_int_t step)
          * but we assume that with nstlist=-1 the user
          * prefers exact integration over performance.
          */
-        nlh->step_nscheck = step
-                  + (int)(nlh->lt_runav - 2.0*sqrt(nlh->lt_runav2)) - 1;
+        nlh->step_nscheck = step + (int)(nlh->lt_runav - 2.0 * sqrt(nlh->lt_runav2)) - 1;
     }
     if (debug)
     {
-        fprintf(debug,"nlist life time %s run av. %4.1f sig %3.1f check %s check with -gcom %d\n",
-                gmx_step_str(nl_lt,sbuf),nlh->lt_runav,sqrt(nlh->lt_runav2),
-                gmx_step_str(nlh->step_nscheck-step+1,sbuf2),
-                (int)(nlh->lt_runav - 2.0*sqrt(nlh->lt_runav2)));
+        fprintf(debug, "nlist life time %s run av. %4.1f sig %3.1f check %s check with -gcom %d\n",
+                gmx_step_str(nl_lt, sbuf), nlh->lt_runav, sqrt(nlh->lt_runav2),
+                gmx_step_str(nlh->step_nscheck - step + 1, sbuf2),
+                (int)(nlh->lt_runav - 2.0 * sqrt(nlh->lt_runav2)));
     }
 }
 
-static void set_nlistheuristics(gmx_nlheur_t *nlh,gmx_bool bReset,gmx_large_int_t step)
+static void set_nlistheuristics(gmx_nlheur_t *nlh, gmx_bool bReset, gmx_large_int_t step)
 {
     int d;
 
     if (bReset)
     {
-        reset_nlistheuristics(nlh,step);
+        reset_nlistheuristics(nlh, step);
     }
     else
     {
-        update_nliststatistics(nlh,step);
+        update_nliststatistics(nlh, step);
     }
 
     nlh->step_ns = step;
     /* Initialize the cumulative coordinate scaling matrix */
     clear_mat(nlh->scale_tot);
-    for(d=0; d<DIM; d++)
+    for (d = 0; d < DIM; d++)
     {
         nlh->scale_tot[d][d] = 1.0;
     }
 }
 
-static void rerun_parallel_comm(t_commrec *cr,t_trxframe *fr,
+static void rerun_parallel_comm(t_commrec *cr, t_trxframe *fr,
                                 gmx_bool *bNotLastFrame)
 {
     gmx_bool bAlloc;
-    rvec *xp,*vp;
+    rvec *xp, *vp;
 
     bAlloc = (fr->natoms == 0);
 
@@ -2080,7 +2176,7 @@ static void rerun_parallel_comm(t_commrec *cr,t_trxframe *fr,
     }
     xp = fr->x;
     vp = fr->v;
-    gmx_bcast(sizeof(*fr),fr,cr);
+    gmx_bcast(sizeof(*fr), fr, cr);
     fr->x = xp;
     fr->v = vp;
 
@@ -2093,190 +2189,187 @@ static void rerun_parallel_comm(t_commrec *cr,t_trxframe *fr,
          */
         if (bAlloc)
         {
-            snew(fr->x,fr->natoms);
-            snew(fr->v,fr->natoms);
+            snew(fr->x, fr->natoms);
+            snew(fr->v, fr->natoms);
         }
         if (fr->bX)
         {
-            gmx_bcast(fr->natoms*sizeof(fr->x[0]),fr->x[0],cr);
+            gmx_bcast(fr->natoms * sizeof(fr->x[0]), fr->x[0], cr);
         }
         if (fr->bV)
         {
-            gmx_bcast(fr->natoms*sizeof(fr->v[0]),fr->v[0],cr);
+            gmx_bcast(fr->natoms * sizeof(fr->v[0]), fr->v[0], cr);
         }
     }
 }
 
-double do_md(FILE *fplog,t_commrec *cr,int nfile,const t_filenm fnm[],
-             const output_env_t oenv, gmx_bool bVerbose,gmx_bool bCompact,
+double do_md(FILE *fplog, t_commrec *cr, int nfile, const t_filenm fnm[],
+             const output_env_t oenv, gmx_bool bVerbose, gmx_bool bCompact,
              int nstglobalcomm,
-             gmx_vsite_t *vsite,gmx_constr_t constr,
-             int stepout,t_inputrec *ir,
+             gmx_vsite_t *vsite, gmx_constr_t constr,
+             int stepout, t_inputrec *ir,
              gmx_mtop_t *top_global,
              t_fcdata *fcd,
              t_state *state_global,
              t_mdatoms *mdatoms,
-             t_nrnb *nrnb,gmx_wallcycle_t wcycle,
-             gmx_edsam_t ed,t_forcerec *fr,
-             int repl_ex_nst,int repl_ex_seed,
-             real cpt_period,real max_hours,
+             t_nrnb *nrnb, gmx_wallcycle_t wcycle,
+             gmx_edsam_t ed, t_forcerec *fr,
+             int repl_ex_nst, int repl_ex_seed,
+             real cpt_period, real max_hours,
              const char *deviceOptions,
              unsigned long Flags,
              gmx_runtime_t *runtime)
 {
     gmx_mdoutf_t *outf;
-    gmx_large_int_t step,step_rel;
-    double     run_time;
-    double     t,t0,lam0;
-    gmx_bool       bGStatEveryStep,bGStat,bNstEner,bCalcEnerPres;
-    gmx_bool       bNS,bNStList,bSimAnn,bStopCM,bRerunMD,bNotLastFrame=FALSE,
-               bFirstStep,bStateFromTPX,bInitStep,bLastStep,
-               bBornRadii,bStartingFromCpt;
-    gmx_bool       bDoDHDL=FALSE;
-    gmx_bool       do_ene,do_log,do_verbose,bRerunWarnNoV=TRUE,
-               bForceUpdate=FALSE,bCPT;
-    int        mdof_flags;
-    gmx_bool       bMasterState;
-    int        force_flags,cglo_flags;
-    tensor     force_vir,shake_vir,total_vir,tmp_vir,pres;
-    int        i,m;
+    gmx_large_int_t step, step_rel;
+    double run_time;
+    double t, t0, lam0;
+    gmx_bool bGStatEveryStep, bGStat, bNstEner, bCalcEnerPres;
+    gmx_bool bNS, bNStList, bSimAnn, bStopCM, bRerunMD, bNotLastFrame = FALSE,
+                                                        bFirstStep, bStateFromTPX, bInitStep, bLastStep,
+                                                        bBornRadii, bStartingFromCpt;
+    gmx_bool bDoDHDL = FALSE;
+    gmx_bool do_ene, do_log, do_verbose, bRerunWarnNoV = TRUE,
+                                         bForceUpdate = FALSE, bCPT;
+    int mdof_flags;
+    gmx_bool bMasterState;
+    int force_flags, cglo_flags;
+    tensor force_vir, shake_vir, total_vir, tmp_vir, pres;
+    int i, m;
     t_trxstatus *status;
-    rvec       mu_tot;
-    t_vcm      *vcm;
-    t_state    *bufstate=NULL;   
-    matrix     *scale_tot,pcoupl_mu,M,ebox;
+    rvec mu_tot;
+    t_vcm *vcm;
+    t_state *bufstate = NULL;
+    matrix *scale_tot, pcoupl_mu, M, ebox;
     gmx_nlheur_t nlh;
     t_trxframe rerun_fr;
-    gmx_repl_ex_t repl_ex=NULL;
-    int        nchkpt=1;
+    gmx_repl_ex_t repl_ex = NULL;
+    int nchkpt = 1;
 
-    gmx_localtop_t *top;    
-    t_mdebin *mdebin=NULL;
-    t_state    *state=NULL;
-    rvec       *f_global=NULL;
-    int        n_xtc=-1;
-    rvec       *x_xtc=NULL;
+    gmx_localtop_t *top;
+    t_mdebin *mdebin = NULL;
+    t_state *state = NULL;
+    rvec *f_global = NULL;
+    int n_xtc = -1;
+    rvec *x_xtc = NULL;
     gmx_enerdata_t *enerd;
-    rvec       *f=NULL;
+    rvec *f = NULL;
     gmx_global_stat_t gstat;
-    gmx_update_t upd=NULL;
-    t_graph    *graph=NULL;
-    globsig_t   gs;
+    gmx_update_t upd = NULL;
+    t_graph *graph = NULL;
+    globsig_t gs;
 
-    gmx_bool        bFFscan;
+    gmx_bool bFFscan;
     gmx_groups_t *groups;
     gmx_ekindata_t *ekind, *ekind_save;
     gmx_shellfc_t shellfc;
-    int         count,nconverged=0;
-    real        timestep=0;
-    double      tcount=0;
-    gmx_bool        bIonize=FALSE;
-    gmx_bool        bTCR=FALSE,bConverged=TRUE,bOK,bSumEkinhOld,bExchanged;
-    gmx_bool        bAppend;
-    gmx_bool        bResetCountersHalfMaxH=FALSE;
-    gmx_bool        bVV,bIterations,bFirstIterate,bTemp,bPres,bTrotter;
-    real        temp0,mu_aver=0,dvdl;
-    int         a0,a1,gnx=0,ii;
-    atom_id     *grpindex=NULL;
-    char        *grpname;
-    t_coupl_rec *tcr=NULL;
-    rvec        *xcopy=NULL,*vcopy=NULL,*cbuf=NULL;
-    matrix      boxcopy={{0}},lastbox;
-    tensor      tmpvir;
-    real        fom,oldfom,veta_save,pcurr,scalevir,tracevir;
-    real        vetanew = 0;
-    double      cycles;
-    real        saved_conserved_quantity = 0;
-    real        last_ekin = 0;
-    int         iter_i;
-    t_extmass   MassQ;
-    int         **trotter_seq; 
-    char        sbuf[STEPSTRSIZE],sbuf2[STEPSTRSIZE];
-    int         handled_stop_condition=gmx_stop_cond_none; /* compare to get_stop_condition*/
+    int count, nconverged = 0;
+    real timestep = 0;
+    double tcount = 0;
+    gmx_bool bIonize = FALSE;
+    gmx_bool bTCR = FALSE, bConverged = TRUE, bOK, bSumEkinhOld, bExchanged;
+    gmx_bool bAppend;
+    gmx_bool bResetCountersHalfMaxH = FALSE;
+    gmx_bool bVV, bIterations, bFirstIterate, bTemp, bPres, bTrotter;
+    real temp0, mu_aver = 0, dvdl;
+    int a0, a1, gnx = 0, ii;
+    atom_id *grpindex = NULL;
+    char *grpname;
+    t_coupl_rec *tcr = NULL;
+    rvec *xcopy = NULL, *vcopy = NULL, *cbuf = NULL;
+    matrix boxcopy = {{0}}, lastbox;
+    tensor tmpvir;
+    real fom, oldfom, veta_save, pcurr, scalevir, tracevir;
+    real vetanew = 0;
+    double cycles;
+    real saved_conserved_quantity = 0;
+    real last_ekin = 0;
+    int iter_i;
+    t_extmass MassQ;
+    int **trotter_seq;
+    char sbuf[STEPSTRSIZE], sbuf2[STEPSTRSIZE];
+    int handled_stop_condition = gmx_stop_cond_none; /* compare to get_stop_condition*/
     gmx_iterate_t iterate;
-    gmx_large_int_t multisim_nsteps=-1; /* number of steps to do  before first multisim 
-                                          simulation stops. If equal to zero, don't
-                                          communicate any more between multisims.*/
+    gmx_large_int_t multisim_nsteps = -1; /* number of steps to do  before first multisim
+                                            simulation stops. If equal to zero, don't
+                                            communicate any more between multisims.*/
 #ifdef GMX_FAHCORE
     /* Temporary addition for FAHCORE checkpointing */
     int chkpt_ret;
 #endif
 
+    ///////////////////////////////////////////////////////////////////////////////////////////////////////
+    /////////                                                                                     /////////
+    /////////                                                                                     /////////
+    /////////                               Initialization                                        /////////
+    /////////                                                                                     /////////
+    /////////                                                                                     /////////
+    ///////////////////////////////////////////////////////////////////////////////////////////////////////
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////
-/////////                                                                                     /////////
-/////////                                                                                     /////////
-/////////                               Initialization                                        /////////
-/////////                                                                                     /////////
-/////////                                                                                     /////////
-///////////////////////////////////////////////////////////////////////////////////////////////////////    
+    int do_coll = ir->userint6;
+    int init_charges = ir->userint9;
 
-int do_coll = ir->userint6;
-int init_charges = ir->userint9;
+    int **atom_configurations;
+    int **atomic_transitions;
+    int **GS_configurations;
 
+    const double boltzmann = 1.380649e-23;
+    const double elementary_charge = 1.60217663e-19;
+    const double ev_to_joule = 1.60218e-19;
+    const double kelvin_to_ev = 8.61732814974493e-5;
+    const double pi_const = 3.1415;
 
+    int count_auger = 0;
+    int count_flourecence = 0;
+    int count_photoionization = 0;
+    int count_chargetransfer = 0;
 
-int** atom_configurations;
-int** atomic_transitions;
-int** GS_configurations;
-
-
-const double boltzmann = 1.380649e-23; 
-const double elementary_charge = 1.60217663e-19;
-const double ev_to_joule = 1.60218e-19;
-const double kelvin_to_ev = 8.61732814974493e-5;
-const double pi_const = 3.1415;
-
-
-
-int count_auger = 0;
-int count_flourecence = 0;
-int count_photoionization = 0;
-int count_chargetransfer = 0;
-
-
+    /* Seed the random number generator.  time(NULL) alone gives identical
+     * seeds to every job started within the same second, which silently
+     * correlates trajectories across an ensemble; mix in the pid. */
+    srand((unsigned int)(time(NULL) ^ (getpid() << 16)));
 
     /* Check for special mdrun options */
     bRerunMD = (Flags & MD_RERUN);
-    bIonize  = (Flags & MD_IONIZE);
-    bFFscan  = (Flags & MD_FFSCAN);
-    bAppend  = (Flags & MD_APPENDFILES);
+    bIonize = (Flags & MD_IONIZE);
+    bFFscan = (Flags & MD_FFSCAN);
+    bAppend = (Flags & MD_APPENDFILES);
     if (Flags & MD_RESETCOUNTERSHALFWAY)
     {
         if (ir->nsteps > 0)
         {
             /* Signal to reset the counters half the simulation steps. */
-            wcycle_set_reset_counters(wcycle,ir->nsteps/2);
+            wcycle_set_reset_counters(wcycle, ir->nsteps / 2);
         }
         /* Signal to reset the counters halfway the simulation time. */
         bResetCountersHalfMaxH = (max_hours > 0);
     }
 
-    /* md-vv uses averaged full step velocities for T-control 
+    /* md-vv uses averaged full step velocities for T-control
        md-vv-avek uses averaged half step velocities for T-control (but full step ekin for P control)
        md uses averaged half step kinetic energies to determine temperature unless defined otherwise by GMX_EKIN_AVE_VEL; */
     bVV = EI_VV(ir->eI);
     if (bVV) /* to store the initial velocities while computing virial */
     {
-        snew(cbuf,top_global->natoms);
+        snew(cbuf, top_global->natoms);
     }
-    /* all the iteratative cases - only if there are constraints */ 
+    /* all the iteratative cases - only if there are constraints */
     bIterations = ((IR_NPT_TROTTER(ir)) && (constr) && (!bRerunMD));
-    bTrotter = (bVV && (IR_NPT_TROTTER(ir) || (IR_NVT_TROTTER(ir))));        
-    
+    bTrotter = (bVV && (IR_NPT_TROTTER(ir) || (IR_NVT_TROTTER(ir))));
+
     if (bRerunMD)
     {
         /* Since we don't know if the frames read are related in any way,
          * rebuild the neighborlist at every step.
          */
-        ir->nstlist       = 1;
+        ir->nstlist = 1;
         ir->nstcalcenergy = 1;
-        nstglobalcomm     = 1;
+        nstglobalcomm = 1;
     }
 
-    check_ir_old_tpx_versions(cr,fplog,ir,top_global);
+    check_ir_old_tpx_versions(cr, fplog, ir, top_global);
 
-    nstglobalcomm = check_nstglobalcomm(fplog,cr,nstglobalcomm,ir);
+    nstglobalcomm = check_nstglobalcomm(fplog, cr, nstglobalcomm, ir);
     bGStatEveryStep = (nstglobalcomm == 1);
 
     if (!bGStatEveryStep && ir->nstlist == -1 && fplog != NULL)
@@ -2299,32 +2392,32 @@ int count_chargetransfer = 0;
     groups = &top_global->groups;
 
     /* Initial values */
-    init_md(fplog,cr,ir,oenv,&t,&t0,&state_global->lambda,&lam0,
-            nrnb,top_global,&upd,
-            nfile,fnm,&outf,&mdebin,
-            force_vir,shake_vir,mu_tot,&bSimAnn,&vcm,state_global,Flags);
+    init_md(fplog, cr, ir, oenv, &t, &t0, &state_global->lambda, &lam0,
+            nrnb, top_global, &upd,
+            nfile, fnm, &outf, &mdebin,
+            force_vir, shake_vir, mu_tot, &bSimAnn, &vcm, state_global, Flags);
 
     clear_mat(total_vir);
     clear_mat(pres);
     /* Energy terms and groups */
-    snew(enerd,1);
-    init_enerdata(top_global->groups.grps[egcENER].nr,ir->n_flambda,enerd);
+    snew(enerd, 1);
+    init_enerdata(top_global->groups.grps[egcENER].nr, ir->n_flambda, enerd);
     if (DOMAINDECOMP(cr))
     {
         f = NULL;
     }
     else
     {
-        snew(f,top_global->natoms);
+        snew(f, top_global->natoms);
     }
 
     /* Kinetic energy data */
-    snew(ekind,1);
-    init_ekindata(fplog,top_global,&(ir->opts),ekind);
+    snew(ekind, 1);
+    init_ekindata(fplog, top_global, &(ir->opts), ekind);
     /* needed for iteration of constraints */
-    snew(ekind_save,1);
-    init_ekindata(fplog,top_global,&(ir->opts),ekind_save);
-    /* Copy the cos acceleration to the groups struct */    
+    snew(ekind_save, 1);
+    init_ekindata(fplog, top_global, &(ir->opts), ekind_save);
+    /* Copy the cos acceleration to the groups struct */
     ekind->cosacc.cos_accel = ir->cos_accel;
 
     gstat = global_stat_init(ir);
@@ -2332,10 +2425,11 @@ int count_chargetransfer = 0;
 
     /* Check for polarizable models and flexible constraints */
     shellfc = init_shell_flexcon(fplog,
-                                 top_global,n_flexible_constraints(constr),
-                                 (ir->bContinuation || 
-                                  (DOMAINDECOMP(cr) && !MASTER(cr))) ?
-                                 NULL : state_global->x);
+                                 top_global, n_flexible_constraints(constr),
+                                 (ir->bContinuation ||
+                                  (DOMAINDECOMP(cr) && !MASTER(cr)))
+                                     ? NULL
+                                     : state_global->x);
 
     if (DEFORM(*ir))
     {
@@ -2351,79 +2445,90 @@ int count_chargetransfer = 0;
     }
 
     {
-        double io = compute_io(ir,top_global->natoms,groups,mdebin->ebin->nener,1);
+        double io = compute_io(ir, top_global->natoms, groups, mdebin->ebin->nener, 1);
         if ((io > 2000) && MASTER(cr))
             fprintf(stderr,
                     "\nWARNING: This run will generate roughly %.0f Mb of data\n\n",
                     io);
     }
 
-    if (DOMAINDECOMP(cr)) {
+    if (DOMAINDECOMP(cr))
+    {
         top = dd_init_local_top(top_global);
 
-        snew(state,1);
-        dd_init_local_state(cr->dd,state_global,state);
+        snew(state, 1);
+        dd_init_local_state(cr->dd, state_global, state);
 
-        if (DDMASTER(cr->dd) && ir->nstfout) {
-            snew(f_global,state_global->natoms);
+        if (DDMASTER(cr->dd) && ir->nstfout)
+        {
+            snew(f_global, state_global->natoms);
         }
-    } else {
-        if (PAR(cr)) {
+    }
+    else
+    {
+        if (PAR(cr))
+        {
             /* Initialize the particle decomposition and split the topology */
-            top = split_system(fplog,top_global,ir,cr);
+            top = split_system(fplog, top_global, ir, cr);
 
-            pd_cg_range(cr,&fr->cg0,&fr->hcg);
-            pd_at_range(cr,&a0,&a1);
-        } else {
-            top = gmx_mtop_generate_local_top(top_global,ir);
+            pd_cg_range(cr, &fr->cg0, &fr->hcg);
+            pd_at_range(cr, &a0, &a1);
+        }
+        else
+        {
+            top = gmx_mtop_generate_local_top(top_global, ir);
 
             a0 = 0;
             a1 = top_global->natoms;
         }
 
-        state = partdec_init_local_state(cr,state_global);
+        state = partdec_init_local_state(cr, state_global);
         f_global = f;
 
-        atoms2md(top_global,ir,0,NULL,a0,a1-a0,mdatoms);
+        atoms2md(top_global, ir, 0, NULL, a0, a1 - a0, mdatoms);
 
-        if (vsite) {
-            set_vsite_top(vsite,top,mdatoms,cr);
+        if (vsite)
+        {
+            set_vsite_top(vsite, top, mdatoms, cr);
         }
 
-        if (ir->ePBC != epbcNONE && !ir->bPeriodicMols) {
-            graph = mk_graph(fplog,&(top->idef),0,top_global->natoms,FALSE,FALSE);
+        if (ir->ePBC != epbcNONE && !ir->bPeriodicMols)
+        {
+            graph = mk_graph(fplog, &(top->idef), 0, top_global->natoms, FALSE, FALSE);
         }
 
-        if (shellfc) {
-            make_local_shells(cr,mdatoms,shellfc);
+        if (shellfc)
+        {
+            make_local_shells(cr, mdatoms, shellfc);
         }
 
-        if (ir->pull && PAR(cr)) {
-            dd_make_local_pull_groups(NULL,ir->pull,mdatoms);
+        if (ir->pull && PAR(cr))
+        {
+            dd_make_local_pull_groups(NULL, ir->pull, mdatoms);
         }
     }
 
     if (DOMAINDECOMP(cr))
     {
         /* Distribute the charge groups over the nodes from the master node */
-        dd_partition_system(fplog,ir->init_step,cr,TRUE,1,
-                            state_global,top_global,ir,
-                          
-  state,&f,mdatoms,top,fr,
-                            vsite,shellfc,constr,
-                            nrnb,wcycle,FALSE);
+        dd_partition_system(fplog, ir->init_step, cr, TRUE, 1,
+                            state_global, top_global, ir,
+
+                            state, &f, mdatoms, top, fr,
+                            vsite, shellfc, constr,
+                            nrnb, wcycle, FALSE);
     }
 
-    update_mdatoms(mdatoms,state->lambda);
+    update_mdatoms(mdatoms, state->lambda);
 
     if (MASTER(cr))
     {
-        if (opt2bSet("-cpi",nfile,fnm))
+        if (opt2bSet("-cpi", nfile, fnm))
         {
             /* Update mdebin with energy history if appending to output files */
-            if ( Flags & MD_APPENDFILES )
+            if (Flags & MD_APPENDFILES)
             {
-                restore_energyhistory_from_state(mdebin,&state_global->enerhist);
+                restore_energyhistory_from_state(mdebin, &state_global->enerhist);
             }
             else
             {
@@ -2435,29 +2540,34 @@ int count_chargetransfer = 0;
             }
         }
         /* Set the initial energy history in state by updating once */
-        update_energyhistory(&state_global->enerhist,mdebin);
-    }   
+        update_energyhistory(&state_global->enerhist, mdebin);
+    }
 
-    if ((state->flags & (1<<estLD_RNG)) && (Flags & MD_READ_RNG)) {
+    if ((state->flags & (1 << estLD_RNG)) && (Flags & MD_READ_RNG))
+    {
         /* Set the random state if we read a checkpoint file */
-        set_stochd_state(upd,state);
+        set_stochd_state(upd, state);
     }
 
     /* Initialize constraints */
-    if (constr) {
+    if (constr)
+    {
         if (!DOMAINDECOMP(cr))
-            set_constraints(constr,top,ir,mdatoms,cr);
+            set_constraints(constr, top, ir, mdatoms, cr);
     }
 
     /* Check whether we have to GCT stuff */
-    bTCR = ftp2bSet(efGCT,nfile,fnm);
-    if (bTCR) {
-        if (MASTER(cr)) {
-            fprintf(stderr,"Will do General Coupling Theory!\n");
+    bTCR = ftp2bSet(efGCT, nfile, fnm);
+    if (bTCR)
+    {
+        if (MASTER(cr))
+        {
+            fprintf(stderr, "Will do General Coupling Theory!\n");
         }
         gnx = top_global->mols.nr;
-        snew(grpindex,gnx);
-        for(i=0; (i<gnx); i++) {
+        snew(grpindex, gnx);
+        for (i = 0; (i < gnx); i++)
+        {
             grpindex[i] = i;
         }
     }
@@ -2466,23 +2576,23 @@ int count_chargetransfer = 0;
     {
         /* We need to be sure replica exchange can only occur
          * when the energies are current */
-        check_nst_param(fplog,cr,"nstcalcenergy",ir->nstcalcenergy,
-                        "repl_ex_nst",&repl_ex_nst);
+        check_nst_param(fplog, cr, "nstcalcenergy", ir->nstcalcenergy,
+                        "repl_ex_nst", &repl_ex_nst);
         /* This check needs to happen before inter-simulation
          * signals are initialized, too */
     }
     if (repl_ex_nst > 0 && MASTER(cr))
-        repl_ex = init_replica_exchange(fplog,cr->ms,state_global,ir,
-                                        repl_ex_nst,repl_ex_seed);
+        repl_ex = init_replica_exchange(fplog, cr->ms, state_global, ir,
+                                        repl_ex_nst, repl_ex_seed);
 
     if (!ir->bContinuation && !bRerunMD)
     {
-        if (mdatoms->cFREEZE && (state->flags & (1<<estV)))
+        if (mdatoms->cFREEZE && (state->flags & (1 << estV)))
         {
             /* Set the velocities of frozen particles to zero */
-            for(i=mdatoms->start; i<mdatoms->start+mdatoms->homenr; i++)
+            for (i = mdatoms->start; i < mdatoms->start + mdatoms->homenr; i++)
             {
-                for(m=0; m<DIM; m++)
+                for (m = 0; m < DIM; m++)
                 {
                     if (ir->opts.nFreeze[mdatoms->cFREEZE[i]][m])
                     {
@@ -2495,202 +2605,230 @@ int count_chargetransfer = 0;
         if (constr)
         {
             /* Constrain the initial coordinates and velocities */
-            do_constrain_first(fplog,constr,ir,mdatoms,state,f,
-                               graph,cr,nrnb,fr,top,shake_vir);
+            do_constrain_first(fplog, constr, ir, mdatoms, state, f,
+                               graph, cr, nrnb, fr, top, shake_vir);
         }
         if (vsite)
         {
             /* Construct the virtual sites for the initial configuration */
-            construct_vsites(fplog,vsite,state->x,nrnb,ir->delta_t,NULL,
-                             top->idef.iparams,top->idef.il,
-                             fr->ePBC,fr->bMolPBC,graph,cr,state->box);
+            construct_vsites(fplog, vsite, state->x, nrnb, ir->delta_t, NULL,
+                             top->idef.iparams, top->idef.il,
+                             fr->ePBC, fr->bMolPBC, graph, cr, state->box);
         }
     }
 
     debug_gmx();
-  
+
     /* I'm assuming we need global communication the first time! MRS */
-    cglo_flags = (CGLO_TEMPERATURE | CGLO_GSTAT
-                  | (bVV ? CGLO_PRESSURE:0)
-                  | (bVV ? CGLO_CONSTRAINT:0)
-                  | (bRerunMD ? CGLO_RERUNMD:0)
-                  | ((Flags & MD_READ_EKIN) ? CGLO_READEKIN:0));
-    
+    cglo_flags = (CGLO_TEMPERATURE | CGLO_GSTAT | (bVV ? CGLO_PRESSURE : 0) | (bVV ? CGLO_CONSTRAINT : 0) | (bRerunMD ? CGLO_RERUNMD : 0) | ((Flags & MD_READ_EKIN) ? CGLO_READEKIN : 0));
+
     bSumEkinhOld = FALSE;
-    compute_globals(fplog,gstat,cr,ir,fr,ekind,state,state_global,mdatoms,nrnb,vcm,
-                    wcycle,enerd,force_vir,shake_vir,total_vir,pres,mu_tot,
-                    constr,NULL,FALSE,state->box,
-                    top_global,&pcurr,top_global->natoms,&bSumEkinhOld,cglo_flags);
-    if (ir->eI == eiVVAK) {
-        /* a second call to get the half step temperature initialized as well */ 
-        /* we do the same call as above, but turn the pressure off -- internally to 
-           compute_globals, this is recognized as a velocity verlet half-step 
-           kinetic energy calculation.  This minimized excess variables, but 
-           perhaps loses some logic?*/
-        
-        compute_globals(fplog,gstat,cr,ir,fr,ekind,state,state_global,mdatoms,nrnb,vcm,
-                        wcycle,enerd,force_vir,shake_vir,total_vir,pres,mu_tot,
-                        constr,NULL,FALSE,state->box,
-                        top_global,&pcurr,top_global->natoms,&bSumEkinhOld,
-                        cglo_flags &~ CGLO_PRESSURE);
-    }
-    
-    /* Calculate the initial half step temperature, and save the ekinh_old */
-    if (!(Flags & MD_STARTFROMCPT)) 
+    compute_globals(fplog, gstat, cr, ir, fr, ekind, state, state_global, mdatoms, nrnb, vcm,
+                    wcycle, enerd, force_vir, shake_vir, total_vir, pres, mu_tot,
+                    constr, NULL, FALSE, state->box,
+                    top_global, &pcurr, top_global->natoms, &bSumEkinhOld, cglo_flags);
+    if (ir->eI == eiVVAK)
     {
-        for(i=0; (i<ir->opts.ngtc); i++) 
-        {
-            copy_mat(ekind->tcstat[i].ekinh,ekind->tcstat[i].ekinh_old);
-        } 
+        /* a second call to get the half step temperature initialized as well */
+        /* we do the same call as above, but turn the pressure off -- internally to
+           compute_globals, this is recognized as a velocity verlet half-step
+           kinetic energy calculation.  This minimized excess variables, but
+           perhaps loses some logic?*/
+
+        compute_globals(fplog, gstat, cr, ir, fr, ekind, state, state_global, mdatoms, nrnb, vcm,
+                        wcycle, enerd, force_vir, shake_vir, total_vir, pres, mu_tot,
+                        constr, NULL, FALSE, state->box,
+                        top_global, &pcurr, top_global->natoms, &bSumEkinhOld,
+                        cglo_flags & ~CGLO_PRESSURE);
     }
-    if (ir->eI != eiVV) 
+
+    /* Calculate the initial half step temperature, and save the ekinh_old */
+    if (!(Flags & MD_STARTFROMCPT))
+    {
+        for (i = 0; (i < ir->opts.ngtc); i++)
+        {
+            copy_mat(ekind->tcstat[i].ekinh, ekind->tcstat[i].ekinh_old);
+        }
+    }
+    if (ir->eI != eiVV)
     {
         enerd->term[F_TEMP] *= 2; /* result of averages being done over previous and current step,
                                      and there is no previous step */
     }
     temp0 = enerd->term[F_TEMP];
-    
+
     /* if using an iterative algorithm, we need to create a working directory for the state. */
-    if (bIterations) 
+    if (bIterations)
     {
-            bufstate = init_bufstate(state);
+        bufstate = init_bufstate(state);
     }
-    if (bFFscan) 
+    if (bFFscan)
     {
-        snew(xcopy,state->natoms);
-        snew(vcopy,state->natoms);
-        copy_rvecn(state->x,xcopy,0,state->natoms);
-        copy_rvecn(state->v,vcopy,0,state->natoms);
-        copy_mat(state->box,boxcopy);
-    } 
-    
+        snew(xcopy, state->natoms);
+        snew(vcopy, state->natoms);
+        copy_rvecn(state->x, xcopy, 0, state->natoms);
+        copy_rvecn(state->v, vcopy, 0, state->natoms);
+        copy_mat(state->box, boxcopy);
+    }
+
     /* need to make an initiation call to get the Trotter variables set, as well as other constants for non-trotter
        temperature control */
-    trotter_seq = init_npt_vars(ir,state,&MassQ,bTrotter);
-    
+    trotter_seq = init_npt_vars(ir, state, &MassQ, bTrotter);
+
     if (MASTER(cr))
     {
         if (constr && !ir->bContinuation && ir->eConstrAlg == econtLINCS)
         {
             fprintf(fplog,
                     "RMS relative constraint deviation after constraining: %.2e\n",
-                    constr_rmsd(constr,FALSE));
+                    constr_rmsd(constr, FALSE));
         }
-        fprintf(fplog,"Initial temperature: %g K\n",enerd->term[F_TEMP]);
+        fprintf(fplog, "Initial temperature: %g K\n", enerd->term[F_TEMP]);
         if (bRerunMD)
         {
-            fprintf(stderr,"starting md rerun '%s', reading coordinates from"
-                    " input trajectory '%s'\n\n",
-                    *(top_global->name),opt2fn("-rerun",nfile,fnm));
+            fprintf(stderr, "starting md rerun '%s', reading coordinates from"
+                            " input trajectory '%s'\n\n",
+                    *(top_global->name), opt2fn("-rerun", nfile, fnm));
             if (bVerbose)
             {
-                fprintf(stderr,"Calculated time to finish depends on nsteps from "
-                        "run input file,\nwhich may not correspond to the time "
-                        "needed to process input trajectory.\n\n");
+                fprintf(stderr, "Calculated time to finish depends on nsteps from "
+                                "run input file,\nwhich may not correspond to the time "
+                                "needed to process input trajectory.\n\n");
             }
         }
         else
         {
             char tbuf[20];
-            fprintf(stderr,"starting mdrun '%s'\n",
+            fprintf(stderr, "starting mdrun '%s'\n",
                     *(top_global->name));
             if (ir->nsteps >= 0)
             {
-                sprintf(tbuf,"%8.1f",(ir->init_step+ir->nsteps)*ir->delta_t);
+                sprintf(tbuf, "%8.1f", (ir->init_step + ir->nsteps) * ir->delta_t);
             }
             else
             {
-                sprintf(tbuf,"%s","infinite");
+                sprintf(tbuf, "%s", "infinite");
             }
             if (ir->init_step > 0)
             {
-                fprintf(stderr,"%s steps, %s ps (continuing from step %s, %8.1f ps).\n",
-                        gmx_step_str(ir->init_step+ir->nsteps,sbuf),tbuf,
-                        gmx_step_str(ir->init_step,sbuf2),
-                        ir->init_step*ir->delta_t);
+                fprintf(stderr, "%s steps, %s ps (continuing from step %s, %8.1f ps).\n",
+                        gmx_step_str(ir->init_step + ir->nsteps, sbuf), tbuf,
+                        gmx_step_str(ir->init_step, sbuf2),
+                        ir->init_step * ir->delta_t);
             }
             else
             {
-                fprintf(stderr,"%s steps, %s ps.\n",
-                        gmx_step_str(ir->nsteps,sbuf),tbuf);
+                fprintf(stderr, "%s steps, %s ps.\n",
+                        gmx_step_str(ir->nsteps, sbuf), tbuf);
             }
         }
-        fprintf(fplog,"\n");
+        fprintf(fplog, "\n");
     }
 
     /* Set and write start time */
     runtime_start(runtime);
-    print_date_and_time(fplog,cr->nodeid,"Started mdrun",runtime);
-    wallcycle_start(wcycle,ewcRUN);
+    print_date_and_time(fplog, cr->nodeid, "Started mdrun", runtime);
+    wallcycle_start(wcycle, ewcRUN);
     if (fplog)
-        fprintf(fplog,"\n");
+        fprintf(fplog, "\n");
 
     /* safest point to do file checkpointing is here.  More general point would be immediately before integrator call */
 #ifdef GMX_FAHCORE
-    chkpt_ret=fcCheckPointParallel( cr->nodeid,
-                                    NULL,0);
-    if ( chkpt_ret == 0 ) 
-        gmx_fatal( 3,__FILE__,__LINE__, "Checkpoint error on step %d\n", 0 );
+    chkpt_ret = fcCheckPointParallel(cr->nodeid,
+                                     NULL, 0);
+    if (chkpt_ret == 0)
+        gmx_fatal(3, __FILE__, __LINE__, "Checkpoint error on step %d\n", 0);
 #endif
 
     debug_gmx();
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////
-/////////                                                                                     /////////
-/////////                                                                                     /////////
-/////////                           Hydrogen Index initialization                             /////////
-/////////                                                                                     /////////
-/////////                                                                                     /////////
-///////////////////////////////////////////////////////////////////////////////////////////////////////  
+    ///////////////////////////////////////////////////////////////////////////////////////////////////////
+    /////////                                                                                     /////////
+    /////////                                                                                     /////////
+    /////////                           Hydrogen Index initialization                             /////////
+    /////////                                                                                     /////////
+    /////////                                                                                     /////////
+    ///////////////////////////////////////////////////////////////////////////////////////////////////////
 
+    // Work out the hydrogen index
+    int num_hydrogen = 0;
+    int *hydrogen_idx;
+    int counter = 0;
 
-// Work out the hydrogen index
-   int  num_hydrogen = 0;
-   int* hydrogen_idx;
-   int counter = 0;
-
-   for(i=mdatoms->start; (i<mdatoms->nr); i++) {
-      if (round(mdatoms->massT[i])==1) {
-         num_hydrogen +=1;
-      }
-   }
-
-
-   hydrogen_idx = (int*)malloc(num_hydrogen*sizeof(int));
-   for(i=mdatoms->start; (i<mdatoms->nr); i++) {
-      if ((int)round(mdatoms->massT[i])==1) {
-         hydrogen_idx[counter] = i;
-         counter +=1;
-      }
-   }
-
-#define ATOM_TABLE_SIZE 20  // Make sure it is bigger than number of atomic species
-int* counts = (int*)calloc(ATOM_TABLE_SIZE,sizeof(int));
-int idx;
-int approx_mass;
-
-
-// Count atoms
-for(i=mdatoms->start; (i<mdatoms->nr); i++) {
-    approx_mass = (int)(round(mdatoms->massT[i]));
-    idx = mass2idx(approx_mass);
-    counts[idx] +=1;
-}
-
-
-
-struct Atomic_data* atomData = (struct Atomic_data*)malloc(ATOM_TABLE_SIZE*sizeof(struct Atomic_data));
-
-
-for (i=0;i<ATOM_TABLE_SIZE;i++) {        
-    if (counts[i]>0) {
-        atomData[i] = initAtomicData(i,do_coll);
+    for (i = mdatoms->start; (i < mdatoms->nr); i++)
+    {
+        if (round(mdatoms->massT[i]) == 1)
+        {
+            num_hydrogen += 1;
+        }
     }
-}
+
+    hydrogen_idx = (int *)malloc(num_hydrogen * sizeof(int));
+    for (i = mdatoms->start; (i < mdatoms->nr); i++)
+    {
+        if ((int)round(mdatoms->massT[i]) == 1)
+        {
+            hydrogen_idx[counter] = i;
+            counter += 1;
+        }
+    }
+
+    // Check if the "simulation_output" directory exists, create it if it doesn't
+    struct stat st = {0};
+    if (stat("./simulation_output", &st) == -1)
+    {
+        // Create directory with appropriate permissions
+        if (mkdir("./simulation_output", 0700) != 0)
+        {
+            printf("Error: could not create simulation_output directory.\n");
+            return 1;
+        }
+    }
+
+    // Charges
+    FILE *fcharges = fopen("./simulation_output/charges_over_time.bin", "wb");
+
+    // masses
+    FILE *fmasses = fopen("./simulation_output/masses.bin", "wb");
+
+    fwrite(mdatoms->massT, sizeof(mdatoms->massT[0]), mdatoms->nr, fmasses);
+    fclose(fmasses);
+
+#define ATOM_TABLE_SIZE 20 // Make sure it is bigger than number of atomic species
+    int *counts = (int *)calloc(ATOM_TABLE_SIZE, sizeof(int));
+    int idx;
+    int approx_mass;
+
+    // Count atoms
+    // for(i=mdatoms->start; (i<mdatoms->nr); i++) {
+    //    approx_mass = (int)(round(mdatoms->massT[i]));
+    //    idx = mass2idx(approx_mass);
+    //    counts[idx] +=1;
+    //}
+
+    struct Atomic_data *atomData = (struct Atomic_data *)malloc(ATOM_TABLE_SIZE * sizeof(struct Atomic_data));
+
+#pragma omp parallel
+    {
+#pragma omp for
+        for (int i = 0; i < ATOM_TABLE_SIZE; i++)
+        {
+#pragma omp critical(init_atomic_data)
+            {
+                atomData[i] = initAtomicData(i, do_coll);
+            }
+        }
+    }
+    //
+    // for (i=0;i<ATOM_TABLE_SIZE;i++) {
+    //    if (counts[i]>0) {
+    //        atomData[i] = initAtomicData(i,do_coll);
+    //    }
+    //}
 
     /***********************************************************
      *
-     *             Loop over MD steps 
+     *             Loop over MD steps
      *
      ************************************************************/
 
@@ -2705,32 +2843,32 @@ for (i=0;i<ATOM_TABLE_SIZE;i++) {
         rerun_fr.natoms = 0;
         if (MASTER(cr))
         {
-            bNotLastFrame = read_first_frame(oenv,&status,
-                                             opt2fn("-rerun",nfile,fnm),
-                                             &rerun_fr,TRX_NEED_X | TRX_READ_V);
+            bNotLastFrame = read_first_frame(oenv, &status,
+                                             opt2fn("-rerun", nfile, fnm),
+                                             &rerun_fr, TRX_NEED_X | TRX_READ_V);
             if (rerun_fr.natoms != top_global->natoms)
             {
                 gmx_fatal(FARGS,
                           "Number of atoms in trajectory (%d) does not match the "
                           "run input file (%d)\n",
-                          rerun_fr.natoms,top_global->natoms);
+                          rerun_fr.natoms, top_global->natoms);
             }
             if (ir->ePBC != epbcNONE)
             {
                 if (!rerun_fr.bBox)
                 {
-                    gmx_fatal(FARGS,"Rerun trajectory frame step %d time %f does not contain a box, while pbc is used",rerun_fr.step,rerun_fr.time);
+                    gmx_fatal(FARGS, "Rerun trajectory frame step %d time %f does not contain a box, while pbc is used", rerun_fr.step, rerun_fr.time);
                 }
-                if (max_cutoff2(ir->ePBC,rerun_fr.box) < sqr(fr->rlistlong))
+                if (max_cutoff2(ir->ePBC, rerun_fr.box) < sqr(fr->rlistlong))
                 {
-                    gmx_fatal(FARGS,"Rerun trajectory frame step %d time %f has too small box dimensions",rerun_fr.step,rerun_fr.time);
+                    gmx_fatal(FARGS, "Rerun trajectory frame step %d time %f has too small box dimensions", rerun_fr.step, rerun_fr.time);
                 }
             }
         }
 
         if (PAR(cr))
         {
-            rerun_parallel_comm(cr,&rerun_fr,&bNotLastFrame);
+            rerun_parallel_comm(cr, &rerun_fr, &bNotLastFrame);
         }
 
         if (ir->ePBC != epbcNONE)
@@ -2738,157 +2876,157 @@ for (i=0;i<ATOM_TABLE_SIZE;i++) {
             /* Set the shift vectors.
              * Necessary here when have a static box different from the tpr box.
              */
-            calc_shifts(rerun_fr.box,fr->shift_vec);
+            calc_shifts(rerun_fr.box, fr->shift_vec);
         }
     }
 
     /* loop over MD steps or if rerunMD to end of input trajectory */
     bFirstStep = TRUE;
     /* Skip the first Nose-Hoover integration when we get the state from tpx */
-    bStateFromTPX = !opt2bSet("-cpi",nfile,fnm);
+    bStateFromTPX = !opt2bSet("-cpi", nfile, fnm);
     bInitStep = bFirstStep && (bStateFromTPX || bVV);
     bStartingFromCpt = (Flags & MD_STARTFROMCPT) && bInitStep;
-    bLastStep    = FALSE;
+    bLastStep = FALSE;
     bSumEkinhOld = FALSE;
-    bExchanged   = FALSE;
+    bExchanged = FALSE;
 
-    init_global_signals(&gs,cr,ir,repl_ex_nst);
+    init_global_signals(&gs, cr, ir, repl_ex_nst);
 
     step = ir->init_step;
     step_rel = 0;
 
-
-
-
     if (ir->nstlist == -1)
     {
-        init_nlistheuristics(&nlh,bGStatEveryStep,step);
+        init_nlistheuristics(&nlh, bGStatEveryStep, step);
     }
 
-    if (MULTISIM(cr) && (repl_ex_nst <=0 ))
+    if (MULTISIM(cr) && (repl_ex_nst <= 0))
     {
         /* check how many steps are left in other sims */
-        multisim_nsteps=get_multisim_nsteps(cr, ir->nsteps);
+        multisim_nsteps = get_multisim_nsteps(cr, ir->nsteps);
     }
-
 
     /* and stop now if we should */
     bLastStep = (bRerunMD || (ir->nsteps >= 0 && step_rel > ir->nsteps) ||
-                 ((multisim_nsteps >= 0) && (step_rel >= multisim_nsteps )));
-    while (!bLastStep || (bRerunMD && bNotLastFrame)) {  // THIS IS THE MAIN MD LOOP @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+                 ((multisim_nsteps >= 0) && (step_rel >= multisim_nsteps)));
+    while (!bLastStep || (bRerunMD && bNotLastFrame))
+    { // THIS IS THE MAIN MD LOOP @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
-        wallcycle_start(wcycle,ewcSTEP);
+        wallcycle_start(wcycle, ewcSTEP);
 
         GMX_MPE_LOG(ev_timestep1);
 
-        if (bRerunMD) {
-            if (rerun_fr.bStep) {
+        if (bRerunMD)
+        {
+            if (rerun_fr.bStep)
+            {
                 step = rerun_fr.step;
                 step_rel = step - ir->init_step;
             }
-            if (rerun_fr.bTime) {
+            if (rerun_fr.bTime)
+            {
                 t = rerun_fr.time;
             }
             else
             {
                 t = step;
             }
-        } 
-        else 
+        }
+        else
         {
             bLastStep = (step_rel == ir->nsteps);
-            t = t0 + step*ir->delta_t;
+            t = t0 + step * ir->delta_t;
         }
 
         if (ir->efep != efepNO)
         {
-            if (bRerunMD && rerun_fr.bLambda && (ir->delta_lambda!=0))
+            if (bRerunMD && rerun_fr.bLambda && (ir->delta_lambda != 0))
             {
                 state_global->lambda = rerun_fr.lambda;
             }
             else
             {
-                state_global->lambda = lam0 + step*ir->delta_lambda;
+                state_global->lambda = lam0 + step * ir->delta_lambda;
             }
             state->lambda = state_global->lambda;
-            bDoDHDL = do_per_step(step,ir->nstdhdl);
+            bDoDHDL = do_per_step(step, ir->nstdhdl);
         }
 
-        if (bSimAnn) 
+        if (bSimAnn)
         {
-            update_annealing_target_temp(&(ir->opts),t);
+            update_annealing_target_temp(&(ir->opts), t);
         }
 
         if (bRerunMD)
         {
             if (!(DOMAINDECOMP(cr) && !MASTER(cr)))
             {
-                for(i=0; i<state_global->natoms; i++)
+                for (i = 0; i < state_global->natoms; i++)
                 {
-                    copy_rvec(rerun_fr.x[i],state_global->x[i]);
+                    copy_rvec(rerun_fr.x[i], state_global->x[i]);
                 }
                 if (rerun_fr.bV)
                 {
-                    for(i=0; i<state_global->natoms; i++)
+                    for (i = 0; i < state_global->natoms; i++)
                     {
-                        copy_rvec(rerun_fr.v[i],state_global->v[i]);
+                        copy_rvec(rerun_fr.v[i], state_global->v[i]);
                     }
                 }
                 else
                 {
-                    for(i=0; i<state_global->natoms; i++)
+                    for (i = 0; i < state_global->natoms; i++)
                     {
                         clear_rvec(state_global->v[i]);
                     }
                     if (bRerunWarnNoV)
                     {
-                        fprintf(stderr,"\nWARNING: Some frames do not contain velocities.\n"
-                                "         Ekin, temperature and pressure are incorrect,\n"
-                                "         the virial will be incorrect when constraints are present.\n"
-                                "\n");
+                        fprintf(stderr, "\nWARNING: Some frames do not contain velocities.\n"
+                                        "         Ekin, temperature and pressure are incorrect,\n"
+                                        "         the virial will be incorrect when constraints are present.\n"
+                                        "\n");
                         bRerunWarnNoV = FALSE;
                     }
                 }
             }
-            copy_mat(rerun_fr.box,state_global->box);
-            copy_mat(state_global->box,state->box);
+            copy_mat(rerun_fr.box, state_global->box);
+            copy_mat(state_global->box, state->box);
 
             if (vsite && (Flags & MD_RERUN_VSITE))
             {
                 if (DOMAINDECOMP(cr))
                 {
-                    gmx_fatal(FARGS,"Vsite recalculation with -rerun is not implemented for domain decomposition, use particle decomposition");
+                    gmx_fatal(FARGS, "Vsite recalculation with -rerun is not implemented for domain decomposition, use particle decomposition");
                 }
                 if (graph)
                 {
                     /* Following is necessary because the graph may get out of sync
                      * with the coordinates if we only have every N'th coordinate set
                      */
-                    mk_mshift(fplog,graph,fr->ePBC,state->box,state->x);
-                    shift_self(graph,state->box,state->x);
+                    mk_mshift(fplog, graph, fr->ePBC, state->box, state->x);
+                    shift_self(graph, state->box, state->x);
                 }
-                construct_vsites(fplog,vsite,state->x,nrnb,ir->delta_t,state->v,
-                                 top->idef.iparams,top->idef.il,
-                                 fr->ePBC,fr->bMolPBC,graph,cr,state->box);
+                construct_vsites(fplog, vsite, state->x, nrnb, ir->delta_t, state->v,
+                                 top->idef.iparams, top->idef.il,
+                                 fr->ePBC, fr->bMolPBC, graph, cr, state->box);
                 if (graph)
                 {
-                    unshift_self(graph,state->box,state->x);
+                    unshift_self(graph, state->box, state->x);
                 }
             }
         }
 
         /* Stop Center of Mass motion */
-        bStopCM = (ir->comm_mode != ecmNO && do_per_step(step,ir->nstcomm));
+        bStopCM = (ir->comm_mode != ecmNO && do_per_step(step, ir->nstcomm));
 
         /* Copy back starting coordinates in case we're doing a forcefield scan */
         if (bFFscan)
         {
-            for(ii=0; (ii<state->natoms); ii++)
+            for (ii = 0; (ii < state->natoms); ii++)
             {
-                copy_rvec(xcopy[ii],state->x[ii]);
-                copy_rvec(vcopy[ii],state->v[ii]);
+                copy_rvec(xcopy[ii], state->x[ii]);
+                copy_rvec(vcopy[ii], state->v[ii]);
             }
-            copy_mat(boxcopy,state->box);
+            copy_mat(boxcopy, state->box);
         }
 
         if (bRerunMD)
@@ -2900,55 +3038,55 @@ for (i=0;i<ATOM_TABLE_SIZE;i++) {
         else
         {
             /* Determine whether or not to do Neighbour Searching and LR */
-            bNStList = (ir->nstlist > 0  && step % ir->nstlist == 0);
-            
+            bNStList = (ir->nstlist > 0 && step % ir->nstlist == 0);
+
             bNS = (bFirstStep || bExchanged || bNStList ||
                    (ir->nstlist == -1 && nlh.nabnsb > 0));
 
             if (bNS && ir->nstlist == -1)
             {
-                set_nlistheuristics(&nlh,bFirstStep || bExchanged,step);
+                set_nlistheuristics(&nlh, bFirstStep || bExchanged, step);
             }
-        } 
+        }
 
-        /* check whether we should stop because another simulation has 
+        /* check whether we should stop because another simulation has
            stopped. */
         if (MULTISIM(cr))
         {
-            if ( (multisim_nsteps >= 0) &&  (step_rel >= multisim_nsteps)  &&  
-                 (multisim_nsteps != ir->nsteps) )  
+            if ((multisim_nsteps >= 0) && (step_rel >= multisim_nsteps) &&
+                (multisim_nsteps != ir->nsteps))
             {
                 if (bNS)
                 {
                     if (MASTER(cr))
                     {
-                        fprintf(stderr, 
+                        fprintf(stderr,
                                 "Stopping simulation %d because another one has finished\n",
                                 cr->ms->sim);
                     }
-                    bLastStep=TRUE;
+                    bLastStep = TRUE;
                     gs.sig[eglsCHKPT] = 1;
                 }
             }
         }
 
         /* < 0 means stop at next step, > 0 means stop at next NS step */
-        if ( (gs.set[eglsSTOPCOND] < 0 ) ||
-             ( (gs.set[eglsSTOPCOND] > 0 ) && ( bNS || ir->nstlist==0)) )
+        if ((gs.set[eglsSTOPCOND] < 0) ||
+            ((gs.set[eglsSTOPCOND] > 0) && (bNS || ir->nstlist == 0)))
         {
             bLastStep = TRUE;
         }
 
         /* Determine whether or not to update the Born radii if doing GB */
-        bBornRadii=bFirstStep;
-        if (ir->implicit_solvent && (step % ir->nstgbradii==0))
+        bBornRadii = bFirstStep;
+        if (ir->implicit_solvent && (step % ir->nstgbradii == 0))
         {
-            bBornRadii=TRUE;
+            bBornRadii = TRUE;
         }
-        
-        do_log = do_per_step(step,ir->nstlog) || bFirstStep || bLastStep;
+
+        do_log = do_per_step(step, ir->nstlog) || bFirstStep || bLastStep;
         do_verbose = bVerbose &&
-                  (step % stepout == 0 || bFirstStep || bLastStep);
+                     (step % stepout == 0 || bFirstStep || bLastStep);
 
         if (bNS && !(bFirstStep && ir->bContinuation && !bRerunMD))
         {
@@ -2962,377 +3100,380 @@ for (i=0;i<ATOM_TABLE_SIZE;i++) {
                 /* Correct the new box if it is too skewed */
                 if (DYNAMIC_BOX(*ir))
                 {
-                    if (correct_box(fplog,step,state->box,graph))
+                    if (correct_box(fplog, step, state->box, graph))
                     {
                         bMasterState = TRUE;
                     }
                 }
                 if (DOMAINDECOMP(cr) && bMasterState)
                 {
-                    dd_collect_state(cr->dd,state,state_global);
+                    dd_collect_state(cr->dd, state, state_global);
                 }
             }
 
             if (DOMAINDECOMP(cr))
             {
                 /* Repartition the domain decomposition */
-                wallcycle_start(wcycle,ewcDOMDEC);
-                dd_partition_system(fplog,step,cr,
-                                    bMasterState,nstglobalcomm,
-                                    state_global,top_global,ir,
-                                    state,&f,mdatoms,top,fr,
-                                    vsite,shellfc,constr,
-                                    nrnb,wcycle,do_verbose);
-                wallcycle_stop(wcycle,ewcDOMDEC);
+                wallcycle_start(wcycle, ewcDOMDEC);
+                dd_partition_system(fplog, step, cr,
+                                    bMasterState, nstglobalcomm,
+                                    state_global, top_global, ir,
+                                    state, &f, mdatoms, top, fr,
+                                    vsite, shellfc, constr,
+                                    nrnb, wcycle, do_verbose);
+                wallcycle_stop(wcycle, ewcDOMDEC);
                 /* If using an iterative integrator, reallocate space to match the decomposition */
             }
         }
 
         if (MASTER(cr) && do_log && !bFFscan)
         {
-            print_ebin_header(fplog,step,t,state->lambda);
+            print_ebin_header(fplog, step, t, state->lambda);
         }
 
         if (ir->efep != efepNO)
         {
-            update_mdatoms(mdatoms,state->lambda); 
+            update_mdatoms(mdatoms, state->lambda);
         }
 
         if (bRerunMD && rerun_fr.bV)
         {
-            
+
             /* We need the kinetic energy at minus the half step for determining
              * the full step kinetic energy and possibly for T-coupling.*/
             /* This may not be quite working correctly yet . . . . */
-            compute_globals(fplog,gstat,cr,ir,fr,ekind,state,state_global,mdatoms,nrnb,vcm,
-                            wcycle,enerd,NULL,NULL,NULL,NULL,mu_tot,
-                            constr,NULL,FALSE,state->box,
-                            top_global,&pcurr,top_global->natoms,&bSumEkinhOld,
+            compute_globals(fplog, gstat, cr, ir, fr, ekind, state, state_global, mdatoms, nrnb, vcm,
+                            wcycle, enerd, NULL, NULL, NULL, NULL, mu_tot,
+                            constr, NULL, FALSE, state->box,
+                            top_global, &pcurr, top_global->natoms, &bSumEkinhOld,
                             CGLO_RERUNMD | CGLO_GSTAT | CGLO_TEMPERATURE);
         }
         clear_mat(force_vir);
-////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////
-////////                                                ////////
-////////                  IONIZE MODULE                 ////////
-////////                                                ////////
-////////                                                ////////
-////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////
-
+        ////////////////////////////////////////////////////////////////
+        ////////////////////////////////////////////////////////////////
+        ////////////////////////////////////////////////////////////////
+        ////////                                                ////////
+        ////////                  IONIZE MODULE                 ////////
+        ////////                                                ////////
+        ////////                                                ////////
+        ////////////////////////////////////////////////////////////////
+        ////////////////////////////////////////////////////////////////
+        ////////////////////////////////////////////////////////////////
 
         /* Ionize the atoms if necessary */
-        if (bIonize){       
+        if (bIonize)
+        {
 
-                        
-        int j;
-        int n = top_global->natoms;  // the size of the array
+            int j;
+            int n = top_global->natoms; // the size of the array
 
-        FILE *fp;
-   
-      static double thermalized_free_electron_energy;
-      static double num_free_electrons;
-      static double radius_gyration_equilibrium;
-      double electron_temperature;
-      double electron_density = 0;
-      static double escaped_photoelectrons; 
-      double current_num_free_electrons;
+            FILE *fp;
 
-      double radius_of_gyration = 0;
-      static double total_mass = 0;
-      double rg_factor;
-      double CURRENT_VOLUME;
-      static double sample_volume; //in nm^3
-      static double radius_of_sample;
-      double T_MEAN,imax,width,rho,nphot;
-      double INTENSITY;
-      double max_x = 0;
-      double max_y = 0;
-      double max_z = 0;
-      int read_states = ir->userint4; 
-      int logging = ir->userint5;
-      /* if 0 the simulation will initiate all charges and electronic states 
-      in the ground state configuration. If 1 it will try to read 
-      states and charges from ___. and ___.
-        */
+            static double thermalized_free_electron_energy;
+            static double num_free_electrons;
+            static double radius_gyration_equilibrium;
+            double electron_temperature;
+            double electron_density = 0;
+            static double escaped_photoelectrons;
+            double current_num_free_electrons;
 
+            double radius_of_gyration = 0;
+            static double total_mass = 0;
+            double rg_factor;
+            double CURRENT_VOLUME;
+            static double sample_volume; // in nm^3
+            static double radius_of_sample;
+            double T_MEAN, imax, width, rho, nphot;
+            double INTENSITY;
+            double max_x = 0;
+            double max_y = 0;
+            double max_z = 0;
+            int read_states = ir->userint4;
+            int logging = ir->userint5;
+            /* if 0 the simulation will initiate all charges and electronic states
+            in the ground state configuration. If 1 it will try to read
+            states and charges from ___. and ___.
+              */
 
-    /*
-    LIST OF USERINT AND USERREAL THAT ARE IMPORTANT
-    userint1 - Alter forcefield. If set to zero the everything should run as unmodifed gromacs 4.5.4 (hopefully) (default = 1)
-    userint2 - Do charge transfer. Enables the charge transfer module (default = 1)
-    userint3 - Enable autostop of sim after threshold energy is reached (userreal6) 
-    userint4 - Read electronic states from file. Reads electronic states from file. Useful for continued sims (default = 0)
-    userint5 - Enable logging of electronic dynamics,writes a bunch of useful information, big performance drop due to I/O. (default = 0)
-    userint6 - Enable collisional ionization (Currently not implemented) (default = 0)
-    userint9 - Enable reading charges from file.
+            /*
+            LIST OF USERINT AND USERREAL THAT ARE IMPORTANT
+            userint1 - Alter forcefield. If set to zero the everything should run as unmodifed gromacs 4.5.4 (hopefully) (default = 1)
+            userint2 - Do charge transfer. Enables the charge transfer module (default = 1)
+            userint3 - Enable autostop of sim after threshold energy is reached (userreal6)
+            userint4 - Read electronic states from file. Reads electronic states from file. Useful for continued sims (default = 0)
+            userint5 - Enable logging of electronic dynamics,writes a bunch of useful information, big performance drop due to I/O. (default = 0)
+            userint6 - Enable collisional ionization (Currently not implemented) (default = 0)
+            userint9 - Enable reading charges from file.
 
-    The userreal are mostly the FEL parameters
-    userreal1 - Peak of the gaussian pulse in ps
-    userreal2 - Total number of photons in the pulse
-    userreal3 - Width of the peak in ps. This is the sigma value of the guassian.
-    userreal4 - Diameter of the focal spot [nm]
-    userreal5 - Photon energy [eV]
-    userreal6 - threshold for stopping sim
-    */
+            The userreal are mostly the FEL parameters
+            userreal1 - Peak of the gaussian pulse in ps
+            userreal2 - Total number of photons in the pulse
+            userreal3 - Width of the peak in ps. This is the sigma value of the guassian.
+            userreal4 - Diameter of the focal spot [nm]
+            userreal5 - Photon energy [eV]
+            userreal6 - threshold for stopping sim
+            */
 
+            USERINT1 = ir->userint1; // alter forcefield
 
-      USERINT1 = ir->userint1; // alter forcefield
+            T_MEAN = ir->userreal1 * 1e-12;             /* Peak of the gaussian pulse in ps           */
+            nphot = (double)ir->userreal2;              /* Number of photons                      */
+            width = ir->userreal3 * 1e-12;              /* Width of the peak (in time, in ps) SIGMA           */
+            rho = ((double)ir->userreal4) * 1e-9 * 100; /* Diameter of the focal spot (cm)       */
 
-
-      T_MEAN   = ir->userreal1*1e-12;  /* Peak of the gaussian pulse in ps           */
-      nphot    = (double)ir->userreal2;  /* Number of photons                      */
-      width    = ir->userreal3*1e-12;  /* Width of the peak (in time, in ps) SIGMA           */
-      rho      = ((double)ir->userreal4)*1e-9*100;  /* Diameter of the focal spot (nm)       */
-
-     
-    if (nphot > 0) {
-        imax  = (nphot/(pi_const*sqr(rho/2.0)))/(width*sqrt(2.0*pi_const)); // this quantity should have units cm^-2s^-1 (hence multiplication by 1e-12 ps -> s)
-    } else {
-        imax = 0;
-    }
-
-    INTENSITY = imax*exp(-0.5*sqr((t*1e-12-T_MEAN)/width));
-
-
-            if (t==0) {
-                    atom_configurations = (int**)malloc(n*sizeof(int*));  // allocate memory for the array of arrays
-                    atomic_transitions= (int**)malloc(n*sizeof(int*));  // allocate memory for the array of arrays
-                    GS_configurations= (int**)malloc(n*sizeof(int*));  // allocate memory for the array of arrays
-
-            if (atom_configurations == NULL) {
-                // Memory allocation failed
-                printf("Failed to allocate memory\n");
-                exit(0);
+            if (nphot > 0)
+            {
+                imax = (nphot / (pi_const * sqr(rho / 2.0))) / (width * sqrt(2.0 * pi_const)); // this quantity should have units cm^-2s^-1
+            }
+            else
+            {
+                imax = 0;
             }
 
-   // Check if the "simulation_output" directory exists, create it if it doesn't
-    struct stat st = {0};
-    if (stat("./simulation_output", &st) == -1) {
-        // Create directory with appropriate permissions
-        if (mkdir("./simulation_output", 0700) != 0) {
-            printf("Error: could not create simulation_output directory.\n");
-            return 1;
-        }
-    }
+            INTENSITY = imax * exp(-0.5 * sqr((t * 1e-12 - T_MEAN) / width)); // in photons/cm^2, the factor 1e-4 is to convert from cm^-2s^-1 to W/cm^2
 
+            if (t == 0)
+            {
+                atom_configurations = (int **)malloc(n * sizeof(int *)); // allocate memory for the array of arrays
+                atomic_transitions = (int **)malloc(n * sizeof(int *));  // allocate memory for the array of arrays
+                GS_configurations = (int **)malloc(n * sizeof(int *));   // allocate memory for the array of arrays
 
-            // init files
-             fp = fopen("./simulation_output/mean_charge_vs_time.txt", "w");  // open the file in write mode
-            if (fp == NULL) {
-                printf("Error: could not open file.\n");
-                return 1;
-            }
-            fclose(fp);  // close the file
-
-            fp = fopen("./simulation_output/pulse_profile.txt", "w");  // open the file in write mode
-            if (fp == NULL) {
-                printf("Error: could not open file.\n");
-                return 1;
-            }
-            fclose(fp);  // close the file
-
-
-            fp = fopen("./simulation_output/electron_data.txt", "w");  // open the file in write mode
-            if (fp == NULL) {
-                printf("Error: could not open file.\n");
-                return 1;
-            }
-            fclose(fp);  // close the file
-
-            fp = fopen("./simulation_output/electronic_transition_log.txt", "w");  // open the file in write mode
-            if (fp == NULL) {
-                printf("Error: could not open file.\n");
-                return 1;
-            }
-            fclose(fp);  // close the file
-
-
-            electron_temperature = 0.0;
-            num_free_electrons = 0.0;
-            thermalized_free_electron_energy=0.0;
-            escaped_photoelectrons = 0.0;
-
-            double y;   
-            double x=5.0;                                                                                                                 
-            y = Exponential_Integral_Ei( x ); 
-           // printf("y: %lf and x=%lf", y,x); 
-           // exit(0); 
-
-           // determine the radius of the sampl, estimated by finding the atoms the maximum coordintes of x, y and z.
-
-            for (i = 0; i<mdatoms->nr; i++) {
-                    if (state->x[i][0] > max_x) {
-                        max_x = state->x[i][0] ;
-                    }
-
-                    if (state->x[i][1] > max_y) {
-                        max_y = state->x[i][1] ;
-                    }
-
-                    if (state->x[i][2] > max_z) {
-                        max_z = state->x[i][2] ;
-                    }
-
+                if (atom_configurations == NULL)
+                {
+                    // Memory allocation failed
+                    printf("Failed to allocate memory\n");
+                    exit(0);
                 }
 
-            radius_of_sample = sqrt(max_x*max_x + max_y*max_y + max_z*max_z);
-            //printf("Radius of sample: %lf", radius_of_sample);
+                // init files
+                fp = fopen("./simulation_output/mean_charge_vs_time.txt", "w"); // open the file in write mode
+                if (fp == NULL)
+                {
+                    printf("Error: could not open file.\n");
+                    return 1;
+                }
+                fclose(fp); // close the file
 
-             for (i=mdatoms->start; i <mdatoms->nr; i++) {
-                radius_of_gyration += mdatoms->massT[i]*(state->x[i][0]*state->x[i][0] + state->x[i][1]*state->x[i][1] + state->x[i][2]*state->x[i][2]);
-                total_mass += mdatoms->massT[i];
-                mdatoms->chargeA[i] = 0.0;
-                
-             }
-             radius_of_gyration = sqrt(radius_of_gyration/total_mass);
-             //printf("Radis of gyration at timestep 0: %lf\n", radius_of_gyration);
-             radius_gyration_equilibrium = radius_of_gyration;
-    
-            srand(time(NULL));
-            num_free_electrons=0;
-            thermalized_free_electron_energy = 0;
-            sample_volume= 100*100*100*1e-9*1e-9*1e-9*radius_of_sample*radius_of_sample*radius_of_sample;
+                fp = fopen("./simulation_output/pulse_profile.txt", "w"); // open the file in write mode
+                if (fp == NULL)
+                {
+                    printf("Error: could not open file.\n");
+                    return 1;
+                }
+                fclose(fp); // close the file
 
+                fp = fopen("./simulation_output/electron_data.txt", "w"); // open the file in write mode
+                if (fp == NULL)
+                {
+                    printf("Error: could not open file.\n");
+                    return 1;
+                }
+                fclose(fp); // close the file
 
-            for (i = 0; i < n; i++) { // works in serial
-                atom_configurations[i] = (int*)malloc(3*sizeof(int));  // allocate memory for each subarray
-                GS_configurations[i] = (int*)malloc(3*sizeof(int)); 
-                atomic_transitions[i] = (int*)malloc(3*sizeof(int));  // allocate memory for each subarray and set initial values to 0
+                fp = fopen("./simulation_output/electronic_transition_log.txt", "w"); // open the file in write mode
+                if (fp == NULL)
+                {
+                    printf("Error: could not open file.\n");
+                    return 1;
+                }
+                fclose(fp); // close the file
 
-             if (atomic_transitions[i] == NULL) {
+                electron_temperature = 0.0;
+                num_free_electrons = 0.0;
+                thermalized_free_electron_energy = 0.0;
+                escaped_photoelectrons = 0.0;
+
+                double y;
+                double x = 5.0;
+                y = Exponential_Integral_Ei(x);
+                // printf("y: %lf and x=%lf", y,x);
+                // exit(0);
+
+                // determine the radius of the sampl, estimated by finding the atoms the maximum coordintes of x, y and z.
+
+                for (i = 0; i < mdatoms->nr; i++)
+                {
+                    if (state->x[i][0] > max_x)
+                    {
+                        max_x = state->x[i][0];
+                    }
+
+                    if (state->x[i][1] > max_y)
+                    {
+                        max_y = state->x[i][1];
+                    }
+
+                    if (state->x[i][2] > max_z)
+                    {
+                        max_z = state->x[i][2];
+                    }
+                }
+
+                radius_of_sample = sqrt(max_x * max_x + max_y * max_y + max_z * max_z);
+                // printf("Radius of sample: %lf", radius_of_sample);
+
+                for (i = mdatoms->start; i < mdatoms->nr; i++)
+                {
+                    radius_of_gyration += mdatoms->massT[i] * (state->x[i][0] * state->x[i][0] + state->x[i][1] * state->x[i][1] + state->x[i][2] * state->x[i][2]);
+                    total_mass += mdatoms->massT[i];
+                    mdatoms->chargeA[i] = 0.0;
+                }
+                radius_of_gyration = sqrt(radius_of_gyration / total_mass);
+                // printf("Radis of gyration at timestep 0: %lf\n", radius_of_gyration);
+                radius_gyration_equilibrium = radius_of_gyration;
+
+                srand((unsigned int)(time(NULL) ^ (getpid() << 16)));
+                num_free_electrons = 0;
+                thermalized_free_electron_energy = 0;
+                sample_volume = 100 * 100 * 100 * 1e-9 * 1e-9 * 1e-9 * radius_of_sample * radius_of_sample * radius_of_sample;
+
+                for (i = 0; i < n; i++)
+                {                                                            // works in serial
+                    atom_configurations[i] = (int *)malloc(3 * sizeof(int)); // allocate memory for each subarray
+                    GS_configurations[i] = (int *)malloc(3 * sizeof(int));
+                    atomic_transitions[i] = (int *)malloc(3 * sizeof(int)); // allocate memory for each subarray and set initial values to 0
+
+                    if (atomic_transitions[i] == NULL)
+                    {
                         // Memory allocation failed for subarray
                         printf("Failed to allocate memory for subarray %d\n", i);
                         // You may need to free the memory allocated so far and exit the program
                     }
 
-             if (atom_configurations[i] == NULL) {
+                    if (atom_configurations[i] == NULL)
+                    {
                         // Memory allocation failed for subarray
                         printf("Failed to allocate memory for subarray %d\n", i);
                         exit(0);
                         // You may need to free the memory allocated so far and exit the program
                     }
-             if (GS_configurations[i] == NULL) {
+                    if (GS_configurations[i] == NULL)
+                    {
                         // Memory allocation failed for subarray
                         printf("Failed to allocate memory for subarray %d\n", i);
                         exit(0);
                         // You may need to free the memory allocated so far and exit the program
                     }
-            }
-
-
-            //Initialize groundstates 
-        int j;
-        for (i = mdatoms->start; i < mdatoms->nr; i++) {
-            int mass = (int)round(mdatoms->massT[i]);
-            for (j = 0; j < NUM_ELEMENTS; j++) {
-                if (elementConfigs[j].mass == mass) {
-                    memcpy(atom_configurations[i], elementConfigs[j].config, sizeof(elementConfigs[j].config));
-                    memcpy(GS_configurations[i], elementConfigs[j].config, sizeof(elementConfigs[j].config));
-                    break;
-                }
-            }
-        }
-
-        int charge_index;
-        int temp_charge;
-        char line[100];
-        int i = 0;
-        if (init_charges) {
-            fp = fopen("charges.txt", "r");
-                if (fp == NULL) {
-                    printf("Error: could not open charge file for reading.\n");
-                    exit(1);
                 }
 
-                while (fgets(line, sizeof(line), fp)) {
-                sscanf(line, "%d %d", &charge_index, &temp_charge) == 2;
-                mdatoms->chargeA[charge_index-1] = (float)temp_charge;
-                printf("Atom %d charge set to %f\n",charge_index-1,mdatoms->chargeA[i]);
-            i++;
-
-            }
-
-            for (i = mdatoms->start; i < mdatoms->nr; i++) {
-                // Remove electrons
-                for (j = 0; j<(int)mdatoms->chargeA[i]; j++) {
-
-                    // Remove from M shell                                              
-                    if (atom_configurations[i][2] > 0) {
-                        atom_configurations[i][2] -= 1;
+                // Initialize groundstates
+                int j;
+                for (i = mdatoms->start; i < mdatoms->nr; i++)
+                {
+                    int mass = (int)round(mdatoms->massT[i]);
+                    for (j = 0; j < NUM_ELEMENTS; j++)
+                    {
+                        if (elementConfigs[j].mass == mass)
+                        {
+                            memcpy(atom_configurations[i], elementConfigs[j].config, sizeof(elementConfigs[j].config));
+                            memcpy(GS_configurations[i], elementConfigs[j].config, sizeof(elementConfigs[j].config));
+                            break;
+                        }
                     }
+                }
 
-                    // Remove from L shell
-                    else if (atom_configurations[i][1] > 0) {
-                        atom_configurations[i][1] -= 1;
-                    } 
-
-                    // Remove from K shell
-                    else if (atom_configurations[i][0] > 0) {
-                        atom_configurations[i][0] -= 1;
-                    } 
-
-                    else {
-                        printf("Oj då, för få elektroner.\n");
+                int charge_index;
+                int temp_charge;
+                char line[100];
+                int i = 0;
+                if (init_charges)
+                {
+                    fp = fopen("charges.txt", "r");
+                    if (fp == NULL)
+                    {
+                        printf("Error: could not open charge file for reading.\n");
                         exit(1);
                     }
 
+                    while (fgets(line, sizeof(line), fp))
+                    {
+                        sscanf(line, "%d %d", &charge_index, &temp_charge) == 2;
+                        mdatoms->chargeA[charge_index - 1] = (float)temp_charge;
+                        printf("Atom %d charge set to %f\n", charge_index - 1, mdatoms->chargeA[i]);
+                        i++;
+                    }
+
+                    for (i = mdatoms->start; i < mdatoms->nr; i++)
+                    {
+                        // Remove electrons
+                        for (j = 0; j < (int)mdatoms->chargeA[i]; j++)
+                        {
+
+                            // Remove from M shell
+                            if (atom_configurations[i][2] > 0)
+                            {
+                                atom_configurations[i][2] -= 1;
+                            }
+
+                            // Remove from L shell
+                            else if (atom_configurations[i][1] > 0)
+                            {
+                                atom_configurations[i][1] -= 1;
+                            }
+
+                            // Remove from K shell
+                            else if (atom_configurations[i][0] > 0)
+                            {
+                                atom_configurations[i][0] -= 1;
+                            }
+
+                            else
+                            {
+                                printf("Oj då, för få elektroner.\n");
+                                exit(1);
+                            }
+                        }
+                    }
+                    fclose(fp);
                 }
-            }
-            fclose(fp);
-        }
 
+                // We read charges and electronic states from a previous simulation.
+                if (read_states)
+                {
+                    int n = top_global->natoms;
 
+                    fp = fopen("configurations.bin", "rb");
+                    if (fp == NULL)
+                    {
+                        printf("Error: could not open file for reading.\n");
+                        exit(1);
+                    }
 
+                    for (i = 0; i < n; i++)
+                    {
+                        fread(atom_configurations[i], sizeof(int), 3, fp);
+                    }
 
-            // We read charges and electronic states from a previous simulation.
-            if (read_states) {
-                int n = top_global->natoms; 
+                    fclose(fp);
 
-                fp = fopen("configurations.bin", "rb");
-                if (fp == NULL) {
-                    printf("Error: could not open file for reading.\n");
-                    exit(1);
+                    fp = fopen("charges.bin", "rb");
+                    if (fp == NULL)
+                    {
+                        printf("Error: could not open file for reading.\n");
+                        exit(1);
+                    }
+
+                    for (i = 0; i < n; i++)
+                    {
+                        fread(&mdatoms->chargeA[i], sizeof(double), 1, fp);
+                    }
+
+                    fclose(fp);
                 }
 
-                for (i = 0; i < n; i++) {
-                    fread(atom_configurations[i], sizeof(int), 3, fp);
-                }
+            } // IF t !=0!!
 
-                fclose(fp);
-
-                fp = fopen("charges.bin", "rb");
-                if (fp == NULL) {
-                    printf("Error: could not open file for reading.\n");
-                    exit(1);
-                }
-
-                for (i = 0; i < n; i++) {
-                    fread(&mdatoms->chargeA[i], sizeof(double), 1, fp);
-                }
-
-                fclose(fp);
-
-
-            }
-
-
-        } // IF t !=0!! 
-
-        
             int match[3];
-            current_num_free_electrons  = num_free_electrons;
-   
-            double photon_energy = (double)ir->userreal5;  // in eV
+            current_num_free_electrons = num_free_electrons;
+
+            double photon_energy = (double)ir->userreal5; // in eV
             double critical_potential;
             double ionization_energy;
             int found_match, found_match_collisional;
             double min_value;
             int min_value_index;
             double net_charge;
-            double Q_D, Q_A, V_B, V_D, R_cob,R_crit;
+            double Q_D, Q_A, V_B, V_D, R_cob, R_crit;
             double DT_current;
             int charge_transfer = ir->userint2; // 1;
             double tev;
@@ -3341,674 +3482,796 @@ for (i=0;i<ATOM_TABLE_SIZE;i++) {
             double sigma_collisional;
             double sigma_recombination;
             double qb;
-            double gi, gf; 
-          
-///////////////////////////////////////////////////
-////                                           ////
-////                                           ////
-////     Charge Transfer Module START          ////
-////                                           ////
-////                                           ////
-///////////////////////////////////////////////////
+            double gi, gf;
 
-        int i;
-        if (charge_transfer && (t!=0.0)) {
-           
-            for (i = 0; i<n; i++){ //set initial values to 0
-                atomic_transitions[i][0] = 0;
-                atomic_transitions[i][1] = 0;
-                atomic_transitions[i][2] = 0;
-            }
+            ///////////////////////////////////////////////////
+            ////                                           ////
+            ////                                           ////
+            ////     Charge Transfer Module START          ////
+            ////                                           ////
+            ////                                           ////
+            ///////////////////////////////////////////////////
 
+            int i;
+            if (charge_transfer && (t != 0.0))
+            {
 
-
-      // Charge transfer module
-      double E_donor;
-      int indx;
-      int number_of_charge_transfers = 0;
-      int donor_idx;
-      int acceptor_idx;
-      int j;
-      double R_min = 1e7;
-      double R_crit = 1e7;
-      int R_min_idx;
-      int R_crit_idx;
-      int* idx_map = (int*)malloc((mdatoms->nr)*sizeof(int)); 
-
-      // Populate map
-      for(j=mdatoms->start; (j<mdatoms->nr); j++) {
-         idx_map[j] = j;
-      }
-
-// shuffles/randomizes an array
-void shuffle(int arr[], int size) {
-    // Initialize the random number generator with the current time
-    srand(time(NULL));
-
-    // Perform Fisher-Yates shuffle
-    for (i = size - 1; i > 0; i--) {
-        // Generate a random index between 0 and i (inclusive)
-      j = rand() % (i + 1);
-
-        // Swap the elements at indices i and j
-        int temp = arr[i];
-        arr[i] = arr[j];
-        arr[j] = temp;
-    }
-}
-            // Shuffe map
-            shuffle(idx_map,mdatoms->nr);
-         int j2,k;
-         for(j2=mdatoms->start; (j2<mdatoms->nr); j2++) {
-            j = idx_map[j2]; // Use randomized index
-            R_min = 1e7;
-            R_min_idx = -1; // Reset index, if no suitible transfer is found we check if == -1 
-            for(k=0; k<num_hydrogen; k++) {
-                  i = hydrogen_idx[k];
-                  if (i == j) {
-                     continue;
-                  }
-
-                  if (atom_configurations[i][0] == 0 && 
-                      atom_configurations[i][1] == 0 && 
-                      atom_configurations[i][2] == 0
-                      ) {
-                     continue;
-                  }
-
-
-                  if (abs((mdatoms->chargeA[j])-mdatoms->chargeA[i])<1e-5 ) {
-                      continue;
-                  }
-                                R_cob = sqrt((state->x[i][0]-state->x[j][0])*(state->x[i][0]-state->x[j][0]) + (state->x[i][1]-state->x[j][1])*(state->x[i][1]-state->x[j][1])+ (state->x[i][2]-state->x[j][2])*(state->x[i][2]-state->x[j][2]));
-
-                  if (R_cob > 1) {   
-                     continue;
-                  }
- 
-                  if (mdatoms->chargeA[i] > mdatoms->chargeA[j]) {
-                     // the one with more net charge is the acceptor
-                     Q_D = mdatoms->chargeA[j];        
-                     Q_A = mdatoms->chargeA[i]; 
-                     // j donor
-                     donor_idx = j;
-                     acceptor_idx = i;
-
-                  }
-                else {
-                     Q_D = mdatoms->chargeA[i];
-                     Q_A = mdatoms->chargeA[j]; 
-                     // i donor
-                     donor_idx = i;
-                     acceptor_idx = j;
+                for (i = 0; i < n; i++)
+                { // set initial values to 0
+                    atomic_transitions[i][0] = 0;
+                    atomic_transitions[i][1] = 0;
+                    atomic_transitions[i][2] = 0;
                 }
 
-                // Find state of donor 
-                char state_str[20];
-                approx_mass = (int)round(mdatoms->massT[donor_idx]);
-                idx = mass2idx(approx_mass);
-                sprintf(state_str,"%d %d %d",atom_configurations[donor_idx][0],atom_configurations[donor_idx][1],atom_configurations[donor_idx][2]);
-                E_donor = get(atomData[idx].energyLevels,state_str);         
+                // Charge transfer module
+                double E_donor;
+                int indx;
+                int number_of_charge_transfers = 0;
+                int donor_idx;
+                int acceptor_idx;
+                int j;
+                double R_min = 1e7;
+                double R_crit = 1e7;
+                int R_min_idx;
+                int R_crit_idx;
+                int *idx_map = (int *)malloc((mdatoms->nr) * sizeof(int));
 
-                if ((int)E_donor ==-1) { // "get" function returns -1.0 if no state is found.
-                    printf("No matching state for atom %d with mass: %lf \n",donor_idx,round(mdatoms->massT[donor_idx]));
-                    exit(0);
+                // Populate map
+                for (j = mdatoms->start; (j < mdatoms->nr); j++)
+                {
+                    idx_map[j] = j;
                 }
 
+                // shuffles/randomizes an array
+                void shuffle(int arr[], int size)
+                {
+                    /* Deliberately NOT reseeding here: srand() on every call
+                     * resets the stream, so shuffle() called more than once
+                     * within the same second returned the same permutation. */
 
+                    // Perform Fisher-Yates shuffle
+                    for (i = size - 1; i > 0; i--)
+                    {
+                        // Generate a random index between 0 and i (inclusive)
+                        j = rand() % (i + 1);
 
-                              R_crit = (Q_D + 1 + 2*sqrt((Q_D+1)*Q_A))/E_donor;
+                        // Swap the elements at indices i and j
+                        int temp = arr[i];
+                        arr[i] = arr[j];
+                        arr[j] = temp;
+                    }
+                }
+                // Shuffe map
+                shuffle(idx_map, mdatoms->nr);
+                int j2, k;
+                for (j2 = mdatoms->start; (j2 < mdatoms->nr); j2++)
+                {
+                    j = idx_map[j2]; // Use randomized index
+                    R_min = 1e7;
+                    R_min_idx = -1; // Reset index, if no suitible transfer is found we check if == -1
+                    // for(k=mdatoms->start; (k<mdatoms); k++) {
+                    // printf("Considering atom %d with charge %lf and config %d %d %d\n", j, mdatoms->chargeA[j], atom_configurations[j][0], atom_configurations[j][1], atom_configurations[j][2]);
 
-                              if (R_crit < R_cob) {
-                                 continue;
-                                 }
-
-                              if (R_cob < R_min) {
-                                 R_min = R_cob;
-                                 R_min_idx = acceptor_idx;
-                                 } 
-                              } // End of hydrogen loop
-
-                              // If no suitable transfer is found.
-                              // Then continue and don't do one.
-                              if (R_min_idx == -1) { 
-                                 continue;
-                              }
-
-                              int INDEX1;
-                              int INDEX2;
-
-                              for(indx=2; (indx>-1); indx--) {
-                                 if ((double)atom_configurations[donor_idx][indx]<1e-5) {
-                                    if (indx ==0){
-                                       INDEX1 = 100;
-                                    }
-                                 } else {
-                                    INDEX1 = indx;
-                                    break;
-                                 }
-                              }
-                              for(indx=2; (indx>-1); indx--) {
-                                 if ((double)atom_configurations[R_min_idx][indx]<1e-5) {
-                                    if (indx ==0) {
-                                       INDEX2 = 100;
-                                    }   
-                                 } else {
-                                    INDEX2 = indx;
-                                    break;
-                                 }
-                              }
-
-                              if (INDEX1 == 100 || INDEX2 == 100 ){
-                                 continue;
-                              }
-                                    if (mdatoms->chargeA[R_min_idx] > mdatoms->chargeA[donor_idx]) {
-
-                                        if ((atom_configurations[donor_idx][INDEX1] + atomic_transitions[donor_idx][INDEX1] -1 ) < 0  || 
-                                            (atom_configurations[R_min_idx][INDEX2] + atomic_transitions[R_min_idx][INDEX2] + 1 ) > GS_configurations[R_min_idx][INDEX2]
-                                            ) {
-                                                    // Make sure that we are obeying how many electrons this orbital can occupy
-                                                    break;
-
-                                             }
-                                        else {
-                                            atomic_transitions[donor_idx][INDEX1]-=1; 
-                                            atomic_transitions[R_min_idx][INDEX2]+=1; 
-
-                                        }
-                                    }
-
-
-                                    if (mdatoms->chargeA[j] > mdatoms->chargeA[R_min_idx]) {
-
-   if ((atom_configurations[R_min_idx][INDEX2] + atomic_transitions[R_min_idx][INDEX2] -1 ) < 0  || 
-       (atom_configurations[donor_idx][INDEX1] + atomic_transitions[donor_idx][INDEX1] + 1 ) > GS_configurations[donor_idx][INDEX1]
-       ) {
-                                                    // Make sure that we are obeying how many electrons this orbital can occupy
-                                                    break; 
-                                                 }
-                                        else {
-                                            atomic_transitions[R_min_idx][INDEX2]-=1; 
-                                            atomic_transitions[donor_idx][INDEX1]+=1; 
-
-                                        }
-                                    }
-                           number_of_charge_transfers+=1;
-                           count_chargetransfer+=1;
-
-
-                // update all atoms' configurations due to charge transfer
-                if (atomic_transitions[R_min_idx][0]>0 ||
-                    atomic_transitions[R_min_idx][1]>0 ||
-                    atomic_transitions[R_min_idx][2]>0 ||
-                    atomic_transitions[R_min_idx][0]<0 ||
-                    atomic_transitions[R_min_idx][1]<0 ||
-                    atomic_transitions[R_min_idx][2]<0) {
-                  
-
-                    if (logging) {
-                        fp = fopen("./simulation_output/electronic_transition_log.txt", "a");  // open the file in write mode
-                        if (fp == NULL) {
-                            printf("Error: could not open file.\n");
-                            return 1;
+                    for (k = 0; k < num_hydrogen; k++)
+                    {
+                        i = hydrogen_idx[k];
+                        // i = k;
+                        if (i == j)
+                        {
+                            continue;
                         }
-                        fprintf(fp, "Charge transfer at t: %lf, Previous state: [%lf, %lf, %lf]. Charge init: %lf ", t,atom_configurations[R_min_idx][0], atom_configurations[R_min_idx][1],atom_configurations[R_min_idx][2], mdatoms->chargeA[R_min_idx]);  // write transition to file
+
+                        if (atom_configurations[i][0] == 0 &&
+                            atom_configurations[i][1] == 0 &&
+                            atom_configurations[i][2] == 0)
+                        {
+                            continue;
+                        }
+
+                        if (abs((mdatoms->chargeA[j]) - mdatoms->chargeA[i]) < 1e-5)
+                        {
+                            continue;
+                        }
+                        R_cob = sqrt((state->x[i][0] - state->x[j][0]) * (state->x[i][0] - state->x[j][0]) + (state->x[i][1] - state->x[j][1]) * (state->x[i][1] - state->x[j][1]) + (state->x[i][2] - state->x[j][2]) * (state->x[i][2] - state->x[j][2]));
+
+                        if (R_cob > 6)
+                        {
+                            continue;
+                        }
+
+                        if (mdatoms->chargeA[i] > mdatoms->chargeA[j])
+                        {
+                            // the one with more net charge is the acceptor
+                            Q_D = mdatoms->chargeA[j];
+                            Q_A = mdatoms->chargeA[i];
+                            // j donor
+                            donor_idx = j;
+                            acceptor_idx = i;
+                        }
+                        else
+                        {
+                            Q_D = mdatoms->chargeA[i];
+                            Q_A = mdatoms->chargeA[j];
+                            // i donor
+                            donor_idx = i;
+                            acceptor_idx = j;
+                        }
+
+                        // Find state of donor
+                        char state_str[20];
+                        approx_mass = (int)round(mdatoms->massT[donor_idx]);
+                        idx = mass2idx(approx_mass);
+                        sprintf(state_str, "%d %d %d", atom_configurations[donor_idx][0], atom_configurations[donor_idx][1], atom_configurations[donor_idx][2]);
+                        E_donor = get(atomData[idx].energyLevels, state_str);
+
+                        if ((int)E_donor == -1)
+                        { // "get" function returns -1.0 if no state is found.
+                            printf("No matching state for atom %d with mass: %lf \n", donor_idx, round(mdatoms->massT[donor_idx]));
+                            exit(0);
+                        }
+
+                        R_crit = (Q_D + 1 + 2 * sqrt((Q_D + 1) * Q_A)) / E_donor;
+
+                        if (R_crit < R_cob)
+                        {
+                            continue;
+                        }
+
+                        if (R_cob < R_min)
+                        {
+                            R_min = R_cob;
+                            R_min_idx = acceptor_idx;
+                        }
+                    } // End of hydrogen loop
+
+                    // If no suitable transfer is found.
+                    // Then continue and don't do one.
+                    if (R_min_idx == -1)
+                    {
+                        continue;
                     }
 
-                    // acceptor
-                    atom_configurations[R_min_idx][0] = atom_configurations[R_min_idx][0] + atomic_transitions[R_min_idx][0];
-                    atom_configurations[R_min_idx][1] = atom_configurations[R_min_idx][1] + atomic_transitions[R_min_idx][1];
-                    atom_configurations[R_min_idx][2] = atom_configurations[R_min_idx][2] + atomic_transitions[R_min_idx][2];
+                    int INDEX1;
+                    int INDEX2;
 
-                    mdatoms->chargeA[R_min_idx] =  (double)((GS_configurations[R_min_idx][0] - atom_configurations[R_min_idx][0]) + 
-                                                            (GS_configurations[R_min_idx][1] - atom_configurations[R_min_idx][1]) + 
-                                                            (GS_configurations[R_min_idx][2] - atom_configurations[R_min_idx][2])); // minus means electron lost, + means got one 
-                    // Donator 
-                    atom_configurations[donor_idx][0] = atom_configurations[donor_idx][0] + atomic_transitions[donor_idx][0];
-                    atom_configurations[donor_idx][1] = atom_configurations[donor_idx][1] + atomic_transitions[donor_idx][1];
-                    atom_configurations[donor_idx][2] = atom_configurations[donor_idx][2] + atomic_transitions[donor_idx][2];
-
-                    mdatoms->chargeA[donor_idx] =  (double)((GS_configurations[donor_idx][0] - atom_configurations[donor_idx][0]) + 
-                                                            (GS_configurations[donor_idx][1] - atom_configurations[donor_idx][1]) + 
-                                                            (GS_configurations[donor_idx][2] - atom_configurations[donor_idx][2])); // minus means electron lost, + means got one
-                    if (logging) {
-                        fprintf(fp, " New state: [%lf, %lf, %lf]. With %i charge transfers occuring. Charge after: %lf \n", atom_configurations[R_min_idx][0], atom_configurations[R_min_idx][1],atom_configurations[R_min_idx][2],number_of_charge_transfers, mdatoms->chargeA[R_min_idx]);
-                        fclose(fp);  // close the file
+                    for (indx = 2; (indx > -1); indx--)
+                    {
+                        if ((double)atom_configurations[donor_idx][indx] < 1e-5)
+                        {
+                            if (indx == 0)
+                            {
+                                INDEX1 = 100;
+                            }
+                        }
+                        else
+                        {
+                            INDEX1 = indx;
+                            break;
+                        }
+                    }
+                    for (indx = 2; (indx > -1); indx--)
+                    {
+                        if ((double)atom_configurations[R_min_idx][indx] < 1e-5)
+                        {
+                            if (indx == 0)
+                            {
+                                INDEX2 = 100;
+                            }
+                        }
+                        else
+                        {
+                            INDEX2 = indx;
+                            break;
+                        }
                     }
 
-                } else {
-                atom_configurations[R_min_idx][0] = atom_configurations[R_min_idx][0] + atomic_transitions[R_min_idx][0];
-                atom_configurations[R_min_idx][1] = atom_configurations[R_min_idx][1] + atomic_transitions[R_min_idx][1];
-                atom_configurations[R_min_idx][2] = atom_configurations[R_min_idx][2] + atomic_transitions[R_min_idx][2];
-                }
-               } // ATOM LOOP
-               free(idx_map);
+                    if (INDEX1 == 100 || INDEX2 == 100)
+                    {
+                        continue;
+                    }
+                    if (mdatoms->chargeA[R_min_idx] > mdatoms->chargeA[donor_idx])
+                    {
+
+                        if ((atom_configurations[donor_idx][INDEX1] + atomic_transitions[donor_idx][INDEX1] - 1) < 0 ||
+                            (atom_configurations[R_min_idx][INDEX2] + atomic_transitions[R_min_idx][INDEX2] + 1) > GS_configurations[R_min_idx][INDEX2])
+                        {
+                            // Make sure that we are obeying how many electrons this orbital can occupy
+                            break;
+                        }
+                        else
+                        {
+                            atomic_transitions[donor_idx][INDEX1] -= 1;
+                            atomic_transitions[R_min_idx][INDEX2] += 1;
+                        }
+                    }
+
+                    if (mdatoms->chargeA[j] > mdatoms->chargeA[R_min_idx])
+                    {
+
+                        if ((atom_configurations[R_min_idx][INDEX2] + atomic_transitions[R_min_idx][INDEX2] - 1) < 0 ||
+                            (atom_configurations[donor_idx][INDEX1] + atomic_transitions[donor_idx][INDEX1] + 1) > GS_configurations[donor_idx][INDEX1])
+                        {
+                            // Make sure that we are obeying how many electrons this orbital can occupy
+                            break;
+                        }
+                        else
+                        {
+                            atomic_transitions[R_min_idx][INDEX2] -= 1;
+                            atomic_transitions[donor_idx][INDEX1] += 1;
+                        }
+                    }
+                    number_of_charge_transfers += 1;
+                    count_chargetransfer += 1;
+
+                    // update all atoms' configurations due to charge transfer
+                    if (atomic_transitions[R_min_idx][0] > 0 ||
+                        atomic_transitions[R_min_idx][1] > 0 ||
+                        atomic_transitions[R_min_idx][2] > 0 ||
+                        atomic_transitions[R_min_idx][0] < 0 ||
+                        atomic_transitions[R_min_idx][1] < 0 ||
+                        atomic_transitions[R_min_idx][2] < 0)
+                    {
+
+                        if (logging)
+                        {
+                            fp = fopen("./simulation_output/electronic_transition_log.txt", "a"); // open the file in write mode
+                            if (fp == NULL)
+                            {
+                                printf("Error: could not open file.\n");
+                                return 1;
+                            }
+                            fprintf(fp, "Charge transfer at t: %lf, Previous state: [%lf, %lf, %lf]. Charge init: %lf ", t, atom_configurations[R_min_idx][0], atom_configurations[R_min_idx][1], atom_configurations[R_min_idx][2], mdatoms->chargeA[R_min_idx]); // write transition to file
+                        }
+
+                        // acceptor
+                        atom_configurations[R_min_idx][0] = atom_configurations[R_min_idx][0] + atomic_transitions[R_min_idx][0];
+                        atom_configurations[R_min_idx][1] = atom_configurations[R_min_idx][1] + atomic_transitions[R_min_idx][1];
+                        atom_configurations[R_min_idx][2] = atom_configurations[R_min_idx][2] + atomic_transitions[R_min_idx][2];
+
+                        mdatoms->chargeA[R_min_idx] = (double)((GS_configurations[R_min_idx][0] - atom_configurations[R_min_idx][0]) +
+                                                               (GS_configurations[R_min_idx][1] - atom_configurations[R_min_idx][1]) +
+                                                               (GS_configurations[R_min_idx][2] - atom_configurations[R_min_idx][2])); // minus means electron lost, + means got one
+                        // Donator
+                        atom_configurations[donor_idx][0] = atom_configurations[donor_idx][0] + atomic_transitions[donor_idx][0];
+                        atom_configurations[donor_idx][1] = atom_configurations[donor_idx][1] + atomic_transitions[donor_idx][1];
+                        atom_configurations[donor_idx][2] = atom_configurations[donor_idx][2] + atomic_transitions[donor_idx][2];
+
+                        mdatoms->chargeA[donor_idx] = (double)((GS_configurations[donor_idx][0] - atom_configurations[donor_idx][0]) +
+                                                               (GS_configurations[donor_idx][1] - atom_configurations[donor_idx][1]) +
+                                                               (GS_configurations[donor_idx][2] - atom_configurations[donor_idx][2])); // minus means electron lost, + means got one
+                        if (logging)
+                        {
+                            fprintf(fp, " New state: [%lf, %lf, %lf]. With %i charge transfers occuring. Charge after: %lf \n", atom_configurations[R_min_idx][0], atom_configurations[R_min_idx][1], atom_configurations[R_min_idx][2], number_of_charge_transfers, mdatoms->chargeA[R_min_idx]);
+                            fclose(fp); // close the file
+                        }
+                    }
+                    else
+                    {
+                        atom_configurations[R_min_idx][0] = atom_configurations[R_min_idx][0] + atomic_transitions[R_min_idx][0];
+                        atom_configurations[R_min_idx][1] = atom_configurations[R_min_idx][1] + atomic_transitions[R_min_idx][1];
+                        atom_configurations[R_min_idx][2] = atom_configurations[R_min_idx][2] + atomic_transitions[R_min_idx][2];
+                    }
+                } // ATOM LOOP
+                free(idx_map);
             } // CHARGE TRANSFER IF
 
+            ///////////////////////////////////////////////////
+            ////                                           ////
+            ////       Charge Transfer Module END          ////
+            ////  Photon matter interaction Module START   ////
+            ////                                           ////
+            ///////////////////////////////////////////////////
 
-///////////////////////////////////////////////////
-////                                           ////
-////       Charge Transfer Module END          ////
-////  Photon matter interaction Module START   ////
-////                                           ////
-///////////////////////////////////////////////////
-            
             int currentNumRates;
             int currentNumColl;
-            struct Rate* currentRate;
-            struct Dictionary* currentDict;
-            struct Coll* currentColl;
+            struct Rate *currentRate;
+            struct Dictionary *currentDict;
+            struct Coll *currentColl;
             struct Weights currentWeights;
 
             radius_of_gyration = 0;
-            for (i=mdatoms->start; i <mdatoms->nr; i++) {
+            for (i = mdatoms->start; i < mdatoms->nr; i++)
+            {
                 // calculate radius of gyration for current timestep to estimate the expansion of the system
-                radius_of_gyration += mdatoms->massT[i]*(state->x[i][0]*state->x[i][0] + state->x[i][1]*state->x[i][1] + state->x[i][2]*state->x[i][2]);
-             }
-             radius_of_gyration = sqrt(radius_of_gyration/total_mass);
-             rg_factor = radius_of_gyration/radius_gyration_equilibrium;
-             CURRENT_VOLUME = sample_volume*rg_factor*rg_factor*rg_factor; // multiply by rg_factor^3 since sample volume is the volume of a sphere
-
-         int k;
-         int atomIdx;
-         for(k=mdatoms->start; (k<mdatoms->nr); k++) { // This is the big loop which handles the electronic states for each atom in the system  
-            DT_current = 0.0;
-
-            atomIdx = mass2idx((int)round(mdatoms->massT[k]));
-
-            currentDict     = atomData[atomIdx].energyLevels;
-            currentRate     = atomData[atomIdx].transitionRates;
-            currentNumRates = atomData[atomIdx].numRates;
-            currentColl     = atomData[atomIdx].collisions;
-            currentNumColl  = atomData[atomIdx].numColl;
-            currentWeights  = atomData[atomIdx].weights;
-
-            double DT_scale=0.0;
-            // do electronic stuff untill we reach timescales bigger than MD timestep
-            while (DT_current<ir->delta_t*1e-12) {
-
-
-            match[0] = atom_configurations[k][0];
-            match[1] = atom_configurations[k][1];
-            match[2] = atom_configurations[k][2];
-
-            found_match = 0;      
-            found_match_collisional =0 ;     
-            char state_str[20];
-            int* state_diff;
-            int* final_state;
-            double transition_rate;
-            double* collision_params; 
-            struct transition* possible_transitions;
-            int total_transitions;
-            int b;
-            int match_index,match_index_coll;
-
-            match_index = RatesStateIndex(currentRate, currentNumRates, match);
-            if (match_index != -1) found_match = 1;
-
-            if (do_coll) {
-                match_index_coll = CollStateIndex(currentColl, currentNumColl, match);
-                if (match_index_coll != -1) found_match_collisional = 1;
-            } else {
-                found_match_collisional = 1;
+                radius_of_gyration += mdatoms->massT[i] * (state->x[i][0] * state->x[i][0] + state->x[i][1] * state->x[i][1] + state->x[i][2] * state->x[i][2]);
             }
+            radius_of_gyration = sqrt(radius_of_gyration / total_mass);
+            rg_factor = radius_of_gyration / radius_gyration_equilibrium;
+            CURRENT_VOLUME = sample_volume * rg_factor * rg_factor * rg_factor; // multiply by rg_factor^3 since sample volume is the volume of a sphere
 
-            
-            // If there is any match
-            if (found_match && found_match_collisional) {  // we could change this to a && and not do 3 checks
-                if (do_coll) {
-                    total_transitions = (currentRate[match_index].num_transitions + currentColl[match_index_coll].num_transitions);
-                } else {
-                    total_transitions = currentRate[match_index].num_transitions;
-                }
-                possible_transitions = (struct transition*)malloc(total_transitions*sizeof(struct transition)); 
-                for (i = 0; i<total_transitions; i++) {
-                    possible_transitions[i].final_state = (int*)malloc(3*sizeof(int));
-                }
+            int k;
+            int atomIdx;
+            for (k = mdatoms->start; (k < mdatoms->nr); k++)
+            { // This is the big loop which handles the electronic states for each atom in the system
+                DT_current = 0.0;
 
-                state_diff = (int*)malloc(3*sizeof(int));
-                final_state = (int*)malloc(3*sizeof(int));
+                atomIdx = mass2idx((int)round(mdatoms->massT[k]));
 
-                for (i = 0; i < currentRate[match_index].num_transitions; i++) { // This loops over the "normal" possible transitions
+                currentDict = atomData[atomIdx].energyLevels;
+                currentRate = atomData[atomIdx].transitionRates;
+                currentNumRates = atomData[atomIdx].numRates;
+                currentColl = atomData[atomIdx].collisions;
+                currentNumColl = atomData[atomIdx].numColl;
+                currentWeights = atomData[atomIdx].weights;
 
-                    // Store current final state
-                    final_state[0] = currentRate[match_index].final_states[i][0];
-                    final_state[1] = currentRate[match_index].final_states[i][1];
-                    final_state[2] = currentRate[match_index].final_states[i][2];
-                    transition_rate = currentRate[match_index].rates[i];
+                int dt_loops = 0; // counter for the number of loops in the while loop, used to prevent infinite loops
+                double DT_scale = 0.0;
+                // do electronic stuff untill we reach timescales bigger than MD timestep or after 10 loops
 
-                    // Calculate the difference between the states
-                    state_diff[0] = (int)abs(match[0] - final_state[0]);
-                    state_diff[1] = (int)abs(match[1] - final_state[1]);
-                    state_diff[2] = (int)abs(match[2] - final_state[2]);
+                while (DT_current < ir->delta_t * 1e-12)
+                {
+                    dt_loops++;
 
-                    // Check for auger decay
-                    if ((state_diff[0] == 2) ||
-                        (state_diff[1] == 2) ||
-                        (state_diff[2] == 2)) {
+                    match[0] = atom_configurations[k][0];
+                    match[1] = atom_configurations[k][1];
+                    match[2] = atom_configurations[k][2];
 
-                        // The transition is Auger decay since the occupations in one shell differs by 2, so no need to scale by pulse profile //
-                        possible_transitions[i].final_state[0] = final_state[0];
-                        possible_transitions[i].final_state[1] = final_state[1];
-                        possible_transitions[i].final_state[2] = final_state[2];
-                        possible_transitions[i].rate = transition_rate;
-                        possible_transitions[i].type = 0; // auger is type 0
-                       
+                    found_match = 0;
+                    found_match_collisional = 0;
+                    char state_str[20];
+                    int *state_diff;
+                    int *final_state;
+                    double transition_rate;
+                    double *collision_params;
+                    struct transition *possible_transitions;
+                    int total_transitions;
+                    int b;
+                    int match_index, match_index_coll;
 
-                    } // Check for fluoresence 
-                    else if ((state_diff[0] + state_diff[1] + state_diff[2]) == 0) {
+                    match_index = RatesStateIndex(currentRate, currentNumRates, match);
+                    if (match_index != -1)
+                        found_match = 1;
 
-                        possible_transitions[i].final_state[0] = final_state[0];
-                        possible_transitions[i].final_state[1] = final_state[1];
-                        possible_transitions[i].final_state[2] = final_state[2];
-                        possible_transitions[i].rate = transition_rate;
-                        possible_transitions[i].type = 1; // flourecence is type 1
-                        
-
-                    } // If none of fluoresence or auger decay it is photoionization
-                    else {
-                        // This is a photoionization transition, since the difference is 1 in netcharge, we scale the rate by the pulse 
-                        possible_transitions[i].final_state[0] = final_state[0];
-                        possible_transitions[i].final_state[1] = final_state[1];
-                        possible_transitions[i].final_state[2] = final_state[2];
-                        possible_transitions[i].rate = INTENSITY*transition_rate;
-                        possible_transitions[i].type = 2; // Photoionization is type 2
-                        
+                    if (do_coll)
+                    {
+                        match_index_coll = CollStateIndex(currentColl, currentNumColl, match);
+                        if (match_index_coll != -1)
+                            found_match_collisional = 1;
                     }
-                }
+                    else
+                    {
+                        found_match_collisional = 1;
+                    }
 
-                free(state_diff);
-
-
-                deltaE = 200.0; // energy difference between the two levels
-                tev = thermalized_free_electron_energy; //50.0;
-                B = deltaE/tev;
-                electron_density = num_free_electrons/(CURRENT_VOLUME); //current_num_free_electrons/sample_volume;
-
-            int offset = currentRate[match_index].num_transitions;
-            for (i = offset; i < total_transitions; i++) { // This loops over 
-                    // Assign for ease of access
-                    final_state[0] = currentColl[match_index_coll].final_states[i-offset][0];
-                    final_state[1] = currentColl[match_index_coll].final_states[i-offset][1];
-                    final_state[2] = currentColl[match_index_coll].final_states[i-offset][2];
-                    collision_params = currentColl[match_index_coll].coll_rates;
-
-                    // Save the state of the transtion
-                    possible_transitions[i].final_state[0] = final_state[0];
-                    possible_transitions[i].final_state[1] = final_state[1];
-                    possible_transitions[i].final_state[2] = final_state[2];
-
-                    // This would be equivalent
-                    qb = (collision_params[0] + 
-                          collision_params[1]*sqrt(pi_const*B)*erfc(B)*exp(B*B) +
-                          collision_params[2]*B + 
-                          collision_params[3]*Exponential_Integral_Ei(B)*exp(B) * 
-                          collision_params[4]
-                          );
-
-                    // Weight initial state
-                    gi = getWeightForState(currentWeights,match);
-
-                    // Weight final state 
-                    gf = getWeightForState(currentWeights,currentColl[match_index_coll].final_states[i-offset]);
-            
-
-                    // Calculate the collisional transition rate based on the collisional parameters
-                    if (abs(current_num_free_electrons-0)<1e-5 || isnan(qb) || qb < 0.0) {
-                        sigma_collisional = 0.00001;
-                        sigma_recombination = 0.00001;
-                    } else {
-                        // This is probably the main case
-                        sigma_collisional = electron_density*(1.09*1e-6*qb*exp(-b))/(deltaE*sqrt(tev));
-                        sigma_recombination = sigma_collisional*1.66*1e-22*(gi/gf)*(electron_density/pow(tev, 1.5))*exp(-(deltaE)/(boltzmann*tev));
-                  
-                        if (sigma_collisional < 0 || abs(sigma_collisional)<1e-5) {
-                            sigma_collisional = 0.00001; 
+                    // If there is any match
+                    if (found_match && found_match_collisional)
+                    { // we could change this to a && and not do 3 checks
+                        if (do_coll)
+                        {
+                            total_transitions = (currentRate[match_index].num_transitions + currentColl[match_index_coll].num_transitions);
                         }
-                        if (sigma_recombination < 0 || abs(sigma_recombination)<1e-5) {
-                            sigma_recombination = 0.0001; 
+                        else
+                        {
+                            total_transitions = currentRate[match_index].num_transitions;
                         }
-                        if (sigma_collisional > 1e-3 || sigma_recombination> 1e-3) {
-                        // Nothing happens here?
+                        possible_transitions = (struct transition *)malloc(total_transitions * sizeof(struct transition));
+                        for (i = 0; i < total_transitions; i++)
+                        {
+                            possible_transitions[i].final_state = (int *)malloc(3 * sizeof(int));
+                        }
+
+                        state_diff = (int *)malloc(3 * sizeof(int));
+                        final_state = (int *)malloc(3 * sizeof(int));
+
+                        for (i = 0; i < currentRate[match_index].num_transitions; i++)
+                        { // This loops over the "normal" possible transitions
+
+                            // Store current final state
+                            final_state[0] = currentRate[match_index].final_states[i][0];
+                            final_state[1] = currentRate[match_index].final_states[i][1];
+                            final_state[2] = currentRate[match_index].final_states[i][2];
+                            transition_rate = currentRate[match_index].rates[i];
+                            possible_transitions[i].type = currentRate[match_index].types[i];
+
+                            possible_transitions[i].final_state[0] = final_state[0];
+                            possible_transitions[i].final_state[1] = final_state[1];
+                            possible_transitions[i].final_state[2] = final_state[2];
+
+                            // Scale photoionization rates by the pulse profile
+                            if (currentRate[match_index].types[i] == 2)
+                            {                                                               // photoionization
+                                possible_transitions[i].rate = INTENSITY * transition_rate; // scale by the pulse profile and the MD timestep
+                            }
+                            else
+                            {
+                                possible_transitions[i].rate = transition_rate; // Auger and fluorescence are not scaled
+                            }
+
+                            /* WE DO NOT NEED THIS PART ANYMORE SINCE WE READ THE TYPE FROM THE FILE
+                            // Calculate the difference between the states
+                            state_diff[0] = (int)abs(match[0] - final_state[0]);
+                            state_diff[1] = (int)abs(match[1] - final_state[1]);
+                            state_diff[2] = (int)abs(match[2] - final_state[2]);
+
+                            // Check for auger decay
+                            if ((state_diff[0] == 2) ||
+                                (state_diff[1] == 2) ||
+                                (state_diff[2] == 2)) {
+
+                                // The transition is Auger decay since the occupations in one shell differs by 2, so no need to scale by pulse profile //
+                                possible_transitions[i].final_state[0] = final_state[0];
+                                possible_transitions[i].final_state[1] = final_state[1];
+                                possible_transitions[i].final_state[2] = final_state[2];
+                                possible_transitions[i].rate = transition_rate;
+                                //possible_transitions[i].type = 0; // auger is type 0
+
+
+                            } // Check for fluoresence
+                            else if ((state_diff[0] + state_diff[1] + state_diff[2]) == 0) {
+
+                                possible_transitions[i].final_state[0] = final_state[0];
+                                possible_transitions[i].final_state[1] = final_state[1];
+                                possible_transitions[i].final_state[2] = final_state[2];
+                                possible_transitions[i].rate = transition_rate;
+                                //possible_transitions[i].type = 1; // flourecence is type 1
+
+
+                            } // If none of fluoresence or auger decay it is photoionization
+                            else {
+                                // This is a photoionization transition, since the difference is 1 in netcharge, we scale the rate by the pulse
+                                possible_transitions[i].final_state[0] = final_state[0];
+                                possible_transitions[i].final_state[1] = final_state[1];
+                                possible_transitions[i].final_state[2] = final_state[2];
+                                possible_transitions[i].rate = INTENSITY*transition_rate;
+                                //possible_transitions[i].type = 2; // Photoionization is type 2
+
+                            }
+                        }
+
+                        free(state_diff);
+                        */
+                        }
+
+                        deltaE = 200.0;                         // energy difference between the two levels
+                        tev = thermalized_free_electron_energy; // 50.0;
+                        B = deltaE / tev;
+                        electron_density = num_free_electrons / (CURRENT_VOLUME); // current_num_free_electrons/sample_volume;
+
+                        int offset = currentRate[match_index].num_transitions;
+                        for (i = offset; i < total_transitions; i++)
+                        { // This loops over
+                            // Assign for ease of access
+                            final_state[0] = currentColl[match_index_coll].final_states[i - offset][0];
+                            final_state[1] = currentColl[match_index_coll].final_states[i - offset][1];
+                            final_state[2] = currentColl[match_index_coll].final_states[i - offset][2];
+                            collision_params = currentColl[match_index_coll].coll_rates;
+
+                            // Save the state of the transtion
+                            possible_transitions[i].final_state[0] = final_state[0];
+                            possible_transitions[i].final_state[1] = final_state[1];
+                            possible_transitions[i].final_state[2] = final_state[2];
+
+                            // This would be equivalent
+                            qb = (collision_params[0] +
+                                  collision_params[1] * sqrt(pi_const * B) * erfc(B) * exp(B * B) +
+                                  collision_params[2] * B +
+                                  collision_params[3] * Exponential_Integral_Ei(B) * exp(B) *
+                                      collision_params[4]);
+
+                            // Weight initial state
+                            gi = getWeightForState(currentWeights, match);
+
+                            // Weight final state
+                            gf = getWeightForState(currentWeights, currentColl[match_index_coll].final_states[i - offset]);
+
+                            // Calculate the collisional transition rate based on the collisional parameters
+                            if (abs(current_num_free_electrons - 0) < 1e-5 || isnan(qb) || qb < 0.0)
+                            {
+                                sigma_collisional = 0.00001;
+                                sigma_recombination = 0.00001;
+                            }
+                            else
+                            {
+                                // This is probably the main case
+                                sigma_collisional = electron_density * (1.09 * 1e-6 * qb * exp(-b)) / (deltaE * sqrt(tev));
+                                sigma_recombination = sigma_collisional * 1.66 * 1e-22 * (gi / gf) * (electron_density / pow(tev, 1.5)) * exp(-(deltaE) / (boltzmann * tev));
+
+                                if (sigma_collisional < 0 || abs(sigma_collisional) < 1e-5)
+                                {
+                                    sigma_collisional = 0.00001;
+                                }
+                                if (sigma_recombination < 0 || abs(sigma_recombination) < 1e-5)
+                                {
+                                    sigma_recombination = 0.0001;
+                                }
+                                if (sigma_collisional > 1e-3 || sigma_recombination > 1e-3)
+                                {
+                                    // Nothing happens here?
+                                }
+                            }
+
+                            // save the final collsional rate
+                            if ((match[0] - final_state[0] +
+                                 match[1] - final_state[1] +
+                                 match[2] - final_state[2]) > 0)
+                            {
+                                // Collision
+                                possible_transitions[i].rate = sigma_collisional;
+                            }
+                            else
+                            {
+                                // Recombination
+                                possible_transitions[i].rate = sigma_recombination;
+                            }
+                            // Handle exception
+                            if (isinf(sigma_collisional) || isnan(sigma_collisional))
+                            {
+                                possible_transitions[i].rate;
+                            }
+
+                        } // For-loop ends here
+
+                        free(final_state);
+                        // Now read collisional ionization data ///
+                    }
+                    else
+                    { // I no match is found we go here
+
+                        if (atom_configurations[k][0] == 0 &&
+                            atom_configurations[k][1] == 0 &&
+                            atom_configurations[k][2] == 0)
+                        {
+                            printf("All is zero.. but still possible to get recombination.. keep this state (do not continue)\n");
+                        }
+                        else
+                        {
+                            printf("No match found for match[0]=%d, match[1]=%d, match[2]=%d, mass= %lf, k=%i\n",
+                                   atom_configurations[k][0],
+                                   atom_configurations[k][1],
+                                   atom_configurations[k][2],
+                                   mdatoms->massT[k],
+                                   k);
+                            exit(0);
                         }
                     }
 
-                    // save the final collsional rate
-                    if ((match[0] - final_state[0] +
-                        match[1] - final_state[1] + 
-                        match[2] - final_state[2]) > 0) {
-                        // Collision
-                        possible_transitions[i].rate = sigma_collisional;
-                    } else {
-                        // Recombination
-                        possible_transitions[i].rate = sigma_recombination;
+                    ionization_energy = 871.0;
+
+                    // Function to generate random array
+                    double *generate_random_array(int size, double t)
+                    {
+                        double *arr_rand = malloc(size * sizeof(double));
+
+                        for (i = 0; i < size; i++)
+                        {
+                            // srand(time(NULL)+1);  // Seed the random number generator
+                            arr_rand[i] = (double)rand() / (RAND_MAX + 1.0);
+
+                            // if (arr_rand[i] == 0) {
+                            //     arr_rand[i] = 1e-30;
+                            // }
+                        }
+                        return arr_rand;
                     }
-                    // Handle exception
-                    if (isinf(sigma_collisional) || isnan(sigma_collisional)) {
-                        possible_transitions[i].rate;
+
+                    double *arr_rand = generate_random_array(total_transitions, ir->delta_t); // Generate num_transitions random numbers.
+                    double *dt_processes = (double *)malloc(total_transitions * sizeof(double));
+
+                    min_value = 1.1 * ir->delta_t * 1e-12; // Set a bit bigger than MD timestep
+
+                    for (i = 0; i < total_transitions; i++)
+                    { // Loop over possible transitions
+                        if (possible_transitions[i].rate < 1e-100)
+                        {
+                            // if rate is zero, we set the DT to be large.. no transition should occur
+                            dt_processes[i] = 1e6;
+                        }
+                        else
+                        {
+                            double log_rand = log(arr_rand[i]);
+                            double log_rate = log(possible_transitions[i].rate);
+
+                            // dt_processes[i]= -1.0*(log_rand - log_rate); // This is the magical MC-step
+                            dt_processes[i] = (double)(-1.0 * log(arr_rand[i]) / possible_transitions[i].rate); // This is the magical MC-step
+                            // printf("log_rand is %lf and log_rate is %lf and dt_processes[%d] is %lf \n",log_rand,log_rate,i,dt_processes[i]);
+                        }
+
+                        if (dt_processes[i] < min_value)
+                        {
+                            min_value = dt_processes[i];
+                            min_value_index = i; // Index to transtion with minimum value
+                        }
+                        if (isinf(dt_processes[i]))
+                        {
+                            printf("DT is infinite. Exiting...\n");
+                            printf("Rate is %lf \n", possible_transitions[i].rate);
+                            printf("from state %d %d %d, mass= %lf, k=%d\n",
+                                   atom_configurations[k][0],
+                                   atom_configurations[k][1],
+                                   atom_configurations[k][2],
+                                   mdatoms->massT[k],
+                                   k);
+                            printf("%d to state %d %d %d \n", possible_transitions->type, possible_transitions->final_state[0], possible_transitions->final_state[1], possible_transitions->final_state[2]);
+                            printf("Current Intensity is %lf", INTENSITY);
+                            exit(0); // If DT is infinite we exit.
+                        }
+                    }
+                    // printf("DT_current is %e and md timestep is %e\n",DT_current,ir->delta_t*1e-12);
+                    DT_current += min_value;
+                    // printf("DT CURRENT is %lf \n",DT_current);
+                    if (DT_current > ir->delta_t * 1e-12)
+                    { // Break if we go over md timestep.
+                        free(dt_processes);
+                        free(arr_rand);
+                        for (i = 0; i < total_transitions; i++)
+                        {
+                            free(possible_transitions[i].final_state);
+                        }
+                        free(possible_transitions);
+                        break;
+                    }
+                    else
+                    {
+                        if (logging)
+                        {
+                            fp = fopen("./simulation_output/electronic_transition_log.txt", "a"); // open the file in write mode
+                            if (fp == NULL)
+                            {
+                                printf("Error: could not open file.\n");
+                                return 1;
+                            }
+                            fprintf(fp, "Making a transition, the time is %lf and current Monte-Carlo DT is: %e.\n", t, DT_current); // write transition to file
+                            fclose(fp);                                                                                              // close the file
+                        }
+
+                        if (isinf(DT_current))
+                        {
+                            printf("DT_current is infinite, this should not happen. Exiting...\n");
+                            exit(0);
+                        }
+                    }
+                    net_charge = (double)(match[0] - possible_transitions[min_value_index].final_state[0] +
+                                          match[1] - possible_transitions[min_value_index].final_state[1] +
+                                          match[2] - possible_transitions[min_value_index].final_state[2]);
+
+                    critical_potential = 100 * (elementary_charge * elementary_charge * 4 * pi_const * 9e9 * 1e9 * (escaped_photoelectrons / CURRENT_VOLUME) * state->box[XX][XX] * state->box[XX][XX]) / 3; // box XX is temporary radius
+                    if ((photon_energy - ionization_energy) * 1.60218e-19 > critical_potential)
+                    { // check if kinetic energy is enough for it to escape
+                        escaped_photoelectrons += 1;
+                    }
+                    else
+                    {
+
+                        num_free_electrons += net_charge;
+                        thermalized_free_electron_energy += net_charge * 25; // add the energy of the trapped electron to the total
                     }
 
-            } // For-loop ends here
-        
-            free(final_state);
-            // Now read collisional ionization data ///
+                    electron_density = num_free_electrons / (CURRENT_VOLUME); // multiply by rg_factor^3, since the volume is for a sphere
+                    electron_temperature = kelvin_to_ev * ((2.0 / (3.0 * boltzmann)) * ((ev_to_joule * thermalized_free_electron_energy) / num_free_electrons));
 
-            } else { // I no match is found we go here
+                    if (logging)
+                    {
+                        fp = fopen("./simulation_output/electronic_transition_log.txt", "a"); // open the file in write mode
+                        if (fp == NULL)
+                        {
+                            printf("Error: could not open file.\n");
+                            return 1;
+                        }
 
-                if (atom_configurations[k][0]==0 && 
-                    atom_configurations[k][1]==0 && 
-                    atom_configurations[k][2]==0) {
-                    printf("All is zero.. but still possible to get recombination.. keep this state (do not continue)\n");
-                } else {
-                    printf("No match found for match[0]=%d, match[1]=%d, match[2]=%d, mass= %lf, k=%i\n",
-                            atom_configurations[k][0], 
-                            atom_configurations[k][1],
-                            atom_configurations[k][2], 
-                            mdatoms->massT[k],
-                            k
-                            );
-                    exit(0);
-                }
-            }
-
-            ionization_energy = 871.0;
-
-            // Function to generate random array
-            double* generate_random_array(int size) {
-                double* arr_rand = malloc(size * sizeof(double));
-               // srand(time(NULL));  // Seed the random number generator
-                for (i = 0; i < size; i++) {
-                   // srand(time(NULL)+1);  // Seed the random number generator
-                    arr_rand[i] = (double) rand() / (RAND_MAX+1.0);
-                }
-                return arr_rand;
-            }
+                        fprintf(fp, "Transition of type %d \n",
+                                possible_transitions[min_value_index].type); // write transition to file
+                        /*fprintf(fp, "New transition: time is t: %lf, netcharge is: %lf. Previous state: [%d, %d, %d]. New state: [%d, %d, %d].\n",
+                                t,
+                                net_charge,
+                                match[0],
+                                match[1],
+                                match[2],
+                                possible_transitions[min_value_index].final_state[0],
+                                possible_transitions[min_value_index].final_state[1],
+                                possible_transitions[min_value_index].final_state[2]
+                                );  // write transition to file
 
 
-            double* arr_rand = generate_random_array(total_transitions); // Generate num_transitions random numbers.
-            double* dt_processes = (double*)malloc(total_transitions*sizeof(double));  
 
-            min_value= 1.1* ir->delta_t*1e-12; // Set a bit bigger than MD timestep
-
-            for (i = 0; i < total_transitions; i++) { // Loop over possible transitions
-                if (possible_transitions[i].rate<1e-7) {
-                // if rate is zero, we set the DT to be large.. no transition should occur
-                dt_processes[i]= 1000;
-                } else { 
-                dt_processes[i]= (double)(-1.0*(log(arr_rand[i])/possible_transitions[i].rate)); // This is the magical MC-step
-                }
-
-                if (dt_processes[i] < min_value) {
-                    min_value = dt_processes[i];
-                    min_value_index = i; // Index to transtion with minimum value
-                }
-                if (isinf(dt_processes[i])) {     
-                    printf("DT is infinite. Exiting...\n");
-                    exit(0); // If DT is infinite we exit.
-                }
-            }
-            //printf("DT_current is %e and md timestep is %e\n",DT_current,ir->delta_t*1e-12);
-            DT_current +=min_value;
-            if (DT_current>ir->delta_t*1e-12) { // Break if we go over md timestep.
-                free(dt_processes);
-                free(arr_rand);
-                for (i = 0; i<total_transitions; i++) {
-                    free(possible_transitions[i].final_state);
-                }
-                free(possible_transitions);
-                break;
-        
-             } else {
-                if (logging) {
-                    fp = fopen("./simulation_output/electronic_transition_log.txt", "a");  // open the file in write mode
-                    if (fp == NULL) {
-                        printf("Error: could not open file.\n");
-                        return 1;
+                        fprintf(fp, "Number of free electrons: %lf, electron_density: %lf and escaped electrons: %lf and electron temperature: %lf \n",
+                                num_free_electrons,
+                                electron_density,
+                                escaped_photoelectrons,
+                                electron_temperature
+                                );  // write current state of system to file
+                            */
+                        fclose(fp); // close the file
                     }
-                    fprintf(fp, "Making a transition, the time is %lf and current Monte-Carlo DT is: %e.\n", t, DT_current);  // write transition to file
-                    fclose(fp);  // close the file
-                }
+                    match[0] = possible_transitions[min_value_index].final_state[0];
+                    match[1] = possible_transitions[min_value_index].final_state[1];
+                    match[2] = possible_transitions[min_value_index].final_state[2];
 
-                if (isinf(DT_current)) {
-                    printf("DT_current is infinite, this should not happen. Exiting...\n");
-                    exit(0);
-                }
-            }
-            net_charge = (double)(match[0] - possible_transitions[min_value_index].final_state[0] +
-                          match[1] - possible_transitions[min_value_index].final_state[1] +
-                          match[2] - possible_transitions[min_value_index].final_state[2]);  
+                    // printf("TYPE????\n");
+                    // printf("%d\n",possible_transitions[min_value_index].type);
 
-            critical_potential = 100*(elementary_charge*elementary_charge*4*pi_const*9e9*1e9*(escaped_photoelectrons/CURRENT_VOLUME)*state->box[XX][XX]*state->box[XX][XX])/3; // box XX is temporary radius
-            if ((photon_energy-ionization_energy)*1.60218e-19 > critical_potential) {  // check if kinetic energy is enough for it to escape
-                escaped_photoelectrons+=1;
-            } else {
+                    atom_configurations[k][0] = match[0];
+                    atom_configurations[k][1] = match[1];
+                    atom_configurations[k][2] = match[2];
 
-                num_free_electrons+= net_charge;
-                thermalized_free_electron_energy += net_charge*25; // add the energy of the trapped electron to the total
-            }
+                    mdatoms->chargeA[k] += net_charge;
 
-            electron_density = num_free_electrons/(CURRENT_VOLUME); // multiply by rg_factor^3, since the volume is for a sphere
-            electron_temperature = kelvin_to_ev*((2.0/(3.0*boltzmann))*((ev_to_joule*thermalized_free_electron_energy)/num_free_electrons));
-
-            if (logging) {
-                fp = fopen("./simulation_output/electronic_transition_log.txt", "a");  // open the file in write mode
-                    if (fp == NULL) {
-                        printf("Error: could not open file.\n");
-                        return 1;
+                    if ((int)possible_transitions[min_value_index].type == 0)
+                    {
+                        count_auger += 1;
                     }
-                fprintf(fp, "New transition: time is t: %lf, netcharge is: %lf. Previous state: [%d, %d, %d]. New state: [%d, %d, %d].\n",
+                    if ((int)possible_transitions[min_value_index].type == 1)
+                    {
+                        count_flourecence += 1;
+                    }
+                    if ((int)possible_transitions[min_value_index].type == 2)
+                    {
+                        count_photoionization += 1;
+                    }
+
+                    free(dt_processes);
+                    free(arr_rand);
+                    for (i = 0; i < total_transitions; i++)
+                    {
+                        free(possible_transitions[i].final_state);
+                    }
+                    free(possible_transitions);
+
+                } // THIS IS THE DT WHILE LOOP for electronic transitions
+            } // THIS IS THE FOR LOOP for atoms
+
+            double mean_charge = 0;
+            double N_atoms;
+            for (i = 0; i < mdatoms->nr; i++)
+            {
+                mean_charge += mdatoms->chargeA[i];
+            }
+
+            N_atoms = (double)mdatoms->nr;
+            mean_charge = mean_charge / N_atoms;
+
+            if (logging)
+            {
+                // Save charges to file
+                fwrite(mdatoms->chargeA, sizeof(mdatoms->chargeA[0]), mdatoms->nr, fcharges);
+
+                fp = fopen("./simulation_output/mean_charge_vs_time.txt", "a"); // open the file in write mode
+                if (fp == NULL)
+                {
+                    printf("Error: could not open file.\n");
+                    return 1;
+                }
+                fprintf(fp, "%lf %lf\n", t, mean_charge); // write each element to the file
+                fclose(fp);                               // close the file
+
+                fp = fopen("./simulation_output/pulse_profile.txt", "a"); // open the file in write mode
+                if (fp == NULL)
+                {
+                    printf("Error: could not open file.\n");
+                    return 1;
+                }
+                fprintf(fp, "%lf %lf\n", t, INTENSITY); // write each element to the file
+                fclose(fp);                             // close the file
+
+                fp = fopen("./simulation_output/electron_data.txt", "a"); // open the file in write mode
+                if (fp == NULL)
+                {
+                    printf("Error: could not open file.\n");
+                    return 1;
+                }
+
+                fprintf(fp, "Time: %lf. e- density: %lf. e- temperature: %lf.  rg_factor: %lf.\n",
                         t,
-                        net_charge,
-                        match[0],
-                        match[1],
-                        match[2],
-                        possible_transitions[min_value_index].final_state[0], 
-                        possible_transitions[min_value_index].final_state[1],
-                        possible_transitions[min_value_index].final_state[2]
-                        );  // write transition to file
-
-                fprintf(fp, "Number of free electrons: %lf, electron_density: %lf and escaped electrons: %lf and electron temperature: %lf \n", 
-                        num_free_electrons, 
                         electron_density,
-                        escaped_photoelectrons,
-                        electron_temperature
-                        );  // write current state of system to file
+                        electron_temperature,
+                        rg_factor); // write each element to the file
 
-                fclose(fp);  // close the file
+                fclose(fp); // close the file
             }
-                match[0] = possible_transitions[min_value_index].final_state[0];
-                match[1] = possible_transitions[min_value_index].final_state[1];
-                match[2] = possible_transitions[min_value_index].final_state[2];
+        } // IONIZE IF STATEMENT
 
-                //printf("TYPE????\n");
-                //printf("%d\n",possible_transitions[min_value_index].type);
-
-                if ((int)possible_transitions[min_value_index].type == 0) {
-                    count_auger+=1;
-                }
-                if ((int)possible_transitions[min_value_index].type == 1) {
-                    count_flourecence+=1;
-                }
-                if ((int)possible_transitions[min_value_index].type == 2) {
-                    count_photoionization+=1;
-                }
-
-                atom_configurations[k][0] = match[0];
-                atom_configurations[k][1] = match[1];
-                atom_configurations[k][2] = match[2];
-
-                mdatoms->chargeA[k] += net_charge;
-
-                free(dt_processes);
-                free(arr_rand);
-                for (i = 0; i<total_transitions; i++) {
-                    free(possible_transitions[i].final_state);
-                }
-                free(possible_transitions);
-
-                
-            } // THIS IS THE DT WHILE LOOP p
-        } // THIS IS THE FOR LOOP
-     
-    
-       double mean_charge = 0;
-       double N_atoms;
-       for (i = 0; i <mdatoms->nr; i++) {
-            mean_charge+=mdatoms->chargeA[i];            
-        }
-    
-        N_atoms = (double)mdatoms->nr; 
-        mean_charge = mean_charge/N_atoms; 
-
-        if (logging) {
-            fp = fopen("./simulation_output/mean_charge_vs_time.txt", "a");  // open the file in write mode
-            if (fp == NULL) {
-                printf("Error: could not open file.\n");
-                return 1;
-            }
-            fprintf(fp, "%lf %lf\n", t, mean_charge);  // write each element to the file
-            fclose(fp);  // close the file
-
-            fp = fopen("./simulation_output/pulse_profile.txt", "a");  // open the file in write mode
-            if (fp == NULL) {
-                printf("Error: could not open file.\n");
-                return 1;
-            }
-            fprintf(fp, "%lf %lf\n", t, INTENSITY);  // write each element to the file
-            fclose(fp);  // close the file
-
-            fp = fopen("./simulation_output/electron_data.txt", "a");  // open the file in write mode
-            if (fp == NULL) {
-                printf("Error: could not open file.\n");
-                return 1;
-            }
-
-            fprintf(fp,"Time: %lf. e- density: %lf. e- temperature: %lf.  rg_factor: %lf.\n",
-                t,
-                electron_density,
-                electron_temperature,
-                rg_factor
-                );  // write each element to the file
-
-            fclose(fp);  // close the file
-        }
-    } // IONIZE IF STATEMENT
-
-///////////////////////////////////
-////                           ////
-////  End of electron dynamics ////
-////                           ////
-///////////////////////////////////        
-        
-
+        ///////////////////////////////////
+        ////                           ////
+        ////  End of electron dynamics ////
+        ////                           ////
+        ///////////////////////////////////
 
         /* Update force field in ffscan program */
         if (bFFscan)
         {
             if (update_forcefield(fplog,
-                                  nfile,fnm,fr,
-                                  mdatoms->nr,state->x,state->box)) {
+                                  nfile, fnm, fr,
+                                  mdatoms->nr, state->x, state->box))
+            {
                 if (gmx_parallel_env_initialized())
                 {
                     gmx_finalize();
@@ -4035,52 +4298,50 @@ void shuffle(int arr[], int size) {
         /* Determine the energy and pressure:
          * at nstcalcenergy steps and at energy output steps (set below).
          */
-        bNstEner = do_per_step(step,ir->nstcalcenergy);
+        bNstEner = do_per_step(step, ir->nstcalcenergy);
         bCalcEnerPres =
             (bNstEner ||
-             (ir->epc != epcNO && do_per_step(step,ir->nstpcouple)));
+             (ir->epc != epcNO && do_per_step(step, ir->nstpcouple)));
 
         /* Do we need global communication ? */
         bGStat = (bCalcEnerPres || bStopCM ||
-                  do_per_step(step,nstglobalcomm) ||
+                  do_per_step(step, nstglobalcomm) ||
                   (ir->nstlist == -1 && !bRerunMD && step >= nlh.step_nscheck));
 
-        do_ene = (do_per_step(step,ir->nstenergy) || bLastStep);
+        do_ene = (do_per_step(step, ir->nstenergy) || bLastStep);
 
         if (do_ene || do_log)
         {
             bCalcEnerPres = TRUE;
-            bGStat        = TRUE;
+            bGStat = TRUE;
         }
-        
+
         /* these CGLO_ options remain the same throughout the iteration */
         cglo_flags = ((bRerunMD ? CGLO_RERUNMD : 0) |
                       (bStopCM ? CGLO_STOPCM : 0) |
-                      (bGStat ? CGLO_GSTAT : 0)
-            );
-        
+                      (bGStat ? CGLO_GSTAT : 0));
+
         force_flags = (GMX_FORCE_STATECHANGED |
                        ((DYNAMIC_BOX(*ir) || bRerunMD) ? GMX_FORCE_DYNAMICBOX : 0) |
                        GMX_FORCE_ALLFORCES |
                        (bNStList ? GMX_FORCE_DOLR : 0) |
                        GMX_FORCE_SEPLRF |
                        (bCalcEnerPres ? GMX_FORCE_VIRIAL : 0) |
-                       (bDoDHDL ? GMX_FORCE_DHDL : 0)
-            );
-        
+                       (bDoDHDL ? GMX_FORCE_DHDL : 0));
+
         if (shellfc)
         {
             /* Now is the time to relax the shells */
-            count=relax_shell_flexcon(fplog,cr,bVerbose,bFFscan ? step+1 : step,
-                                      ir,bNS,force_flags,
-                                      bStopCM,top,top_global,
-                                      constr,enerd,fcd,
-                                      state,f,force_vir,mdatoms,
-                                      nrnb,wcycle,graph,groups,
-                                      shellfc,fr,bBornRadii,t,mu_tot,
-                                      state->natoms,&bConverged,vsite,
-                                      outf->fp_field);
-            tcount+=count;
+            count = relax_shell_flexcon(fplog, cr, bVerbose, bFFscan ? step + 1 : step,
+                                        ir, bNS, force_flags,
+                                        bStopCM, top, top_global,
+                                        constr, enerd, fcd,
+                                        state, f, force_vir, mdatoms,
+                                        nrnb, wcycle, graph, groups,
+                                        shellfc, fr, bBornRadii, t, mu_tot,
+                                        state->natoms, &bConverged, vsite,
+                                        outf->fp_field);
+            tcount += count;
 
             if (bConverged)
             {
@@ -4091,80 +4352,79 @@ void shuffle(int arr[], int size) {
         {
             /* The coordinates (x) are shifted (to get whole molecules)
              * in do_force.
-             * This is parallellized as well, and does communication too. 
+             * This is parallellized as well, and does communication too.
              * Check comments in sim_util.c
              */
-        
-            
-            
-            do_force(fplog,cr,ir,step,nrnb,wcycle,top,top_global,groups,
-                     state->box,state->x,&state->hist,
-                     f,force_vir,mdatoms,enerd,fcd,
-                     state->lambda,graph,
-                     fr,vsite,mu_tot,t,outf->fp_field,ed,bBornRadii,
+
+            do_force(fplog, cr, ir, step, nrnb, wcycle, top, top_global, groups,
+                     state->box, state->x, &state->hist,
+                     f, force_vir, mdatoms, enerd, fcd,
+                     state->lambda, graph,
+                     fr, vsite, mu_tot, t, outf->fp_field, ed, bBornRadii,
                      (bNS ? GMX_FORCE_NS : 0) | force_flags);
-
-
         }
-    
+
         GMX_BARRIER(cr->mpi_comm_mygroup);
-        
+
         if (bTCR)
         {
-            mu_aver = calc_mu_aver(cr,state->x,mdatoms->chargeA,
-                                   mu_tot,&top_global->mols,mdatoms,gnx,grpindex);
+            mu_aver = calc_mu_aver(cr, state->x, mdatoms->chargeA,
+                                   mu_tot, &top_global->mols, mdatoms, gnx, grpindex);
         }
-        
+
         if (bTCR && bFirstStep)
         {
-            tcr=init_coupling(fplog,nfile,fnm,cr,fr,mdatoms,&(top->idef));
-            fprintf(fplog,"Done init_coupling\n"); 
+            tcr = init_coupling(fplog, nfile, fnm, cr, fr, mdatoms, &(top->idef));
+            fprintf(fplog, "Done init_coupling\n");
             fflush(fplog);
         }
-        
+
         if (bVV && !bStartingFromCpt && !bRerunMD)
         /*  ############### START FIRST UPDATE HALF-STEP FOR VV METHODS############### */
         {
-            if (ir->eI==eiVV && bInitStep) 
+            if (ir->eI == eiVV && bInitStep)
             {
                 /* if using velocity verlet with full time step Ekin,
-                 * take the first half step only to compute the 
+                 * take the first half step only to compute the
                  * virial for the first step. From there,
                  * revert back to the initial coordinates
                  * so that the input is actually the initial step.
                  */
-                copy_rvecn(state->v,cbuf,0,state->natoms); /* should make this better for parallelizing? */
-            } else {
+                copy_rvecn(state->v, cbuf, 0, state->natoms); /* should make this better for parallelizing? */
+            }
+            else
+            {
                 /* this is for NHC in the Ekin(t+dt/2) version of vv */
-                trotter_update(ir,step,ekind,enerd,state,total_vir,mdatoms,&MassQ,trotter_seq,ettTSEQ1);            
+                trotter_update(ir, step, ekind, enerd, state, total_vir, mdatoms, &MassQ, trotter_seq, ettTSEQ1);
             }
 
-            update_coords(fplog,step,ir,mdatoms,state,
-                          f,fr->bTwinRange && bNStList,fr->f_twin,fcd,
-                          ekind,M,wcycle,upd,bInitStep,etrtVELOCITY1,
-                          cr,nrnb,constr,&top->idef);
-            
+            update_coords(fplog, step, ir, mdatoms, state,
+                          f, fr->bTwinRange && bNStList, fr->f_twin, fcd,
+                          ekind, M, wcycle, upd, bInitStep, etrtVELOCITY1,
+                          cr, nrnb, constr, &top->idef);
+
             if (bIterations)
             {
-                gmx_iterate_init(&iterate,bIterations && !bInitStep);
+                gmx_iterate_init(&iterate, bIterations && !bInitStep);
             }
             /* for iterations, we save these vectors, as we will be self-consistently iterating
                the calculations */
 
             /*#### UPDATE EXTENDED VARIABLES IN TROTTER FORMULATION */
-            
+
             /* save the state */
-            if (bIterations && iterate.bIterate) { 
-                copy_coupling_state(state,bufstate,ekind,ekind_save,&(ir->opts));
+            if (bIterations && iterate.bIterate)
+            {
+                copy_coupling_state(state, bufstate, ekind, ekind_save, &(ir->opts));
             }
-            
+
             bFirstIterate = TRUE;
             while (bFirstIterate || (bIterations && iterate.bIterate))
             {
-                if (bIterations && iterate.bIterate) 
+                if (bIterations && iterate.bIterate)
                 {
-                    copy_coupling_state(bufstate,state,ekind_save,ekind,&(ir->opts));
-                    if (bFirstIterate && bTrotter) 
+                    copy_coupling_state(bufstate, state, ekind_save, ekind, &(ir->opts));
+                    if (bFirstIterate && bTrotter)
                     {
                         /* The first time through, we need a decent first estimate
                            of veta(t+dt) to compute the constraints.  Do
@@ -4173,36 +4433,35 @@ void shuffle(int arr[], int size) {
                            should be changed by this routine here.  If
                            !(first time), we start with the previous value
                            of veta.  */
-                        
+
                         veta_save = state->veta;
-                        trotter_update(ir,step,ekind,enerd,state,total_vir,mdatoms,&MassQ,trotter_seq,ettTSEQ0);
+                        trotter_update(ir, step, ekind, enerd, state, total_vir, mdatoms, &MassQ, trotter_seq, ettTSEQ0);
                         vetanew = state->veta;
                         state->veta = veta_save;
-                    } 
-                } 
-                
+                    }
+                }
+
                 bOK = TRUE;
-                if ( !bRerunMD || rerun_fr.bV || bForceUpdate) {  /* Why is rerun_fr.bV here?  Unclear. */
+                if (!bRerunMD || rerun_fr.bV || bForceUpdate)
+                { /* Why is rerun_fr.bV here?  Unclear. */
                     dvdl = 0;
-                    
-                    update_constraints(fplog,step,&dvdl,ir,ekind,mdatoms,state,graph,f,
-                                       &top->idef,shake_vir,NULL,
-                                       cr,nrnb,wcycle,upd,constr,
-                                       bInitStep,TRUE,bCalcEnerPres,vetanew);
-                    
+
+                    update_constraints(fplog, step, &dvdl, ir, ekind, mdatoms, state, graph, f,
+                                       &top->idef, shake_vir, NULL,
+                                       cr, nrnb, wcycle, upd, constr,
+                                       bInitStep, TRUE, bCalcEnerPres, vetanew);
+
                     if (!bOK && !bFFscan)
                     {
-                        gmx_fatal(FARGS,"Constraint error: Shake, Lincs or Settle could not solve the constrains");
+                        gmx_fatal(FARGS, "Constraint error: Shake, Lincs or Settle could not solve the constrains");
                     }
-                    
-                } 
+                }
                 else if (graph)
                 { /* Need to unshift here if a do_force has been
                      called in the previous step */
-                    unshift_self(graph,state->box,state->x);
+                    unshift_self(graph, state->box, state->x);
                 }
-                
-                
+
                 /* if VV, compute the pressure and constraints */
                 /* For VV2, we strictly only need this if using pressure
                  * control, but we really would like to have accurate pressures
@@ -4211,94 +4470,90 @@ void shuffle(int arr[], int size) {
                  * For now, keep this choice in comments.
                  */
                 /*bPres = (ir->eI==eiVV || IR_NPT_TROTTER(ir)); */
-                    /*bTemp = ((ir->eI==eiVV &&(!bInitStep)) || (ir->eI==eiVVAK && IR_NPT_TROTTER(ir)));*/
+                /*bTemp = ((ir->eI==eiVV &&(!bInitStep)) || (ir->eI==eiVVAK && IR_NPT_TROTTER(ir)));*/
                 bPres = TRUE;
-                bTemp = ((ir->eI==eiVV &&(!bInitStep)) || (ir->eI==eiVVAK));
-                compute_globals(fplog,gstat,cr,ir,fr,ekind,state,state_global,mdatoms,nrnb,vcm,
-                                wcycle,enerd,force_vir,shake_vir,total_vir,pres,mu_tot,
-                                constr,NULL,FALSE,state->box,
-                                top_global,&pcurr,top_global->natoms,&bSumEkinhOld,
-                                cglo_flags 
-                                | CGLO_ENERGY 
-                                | (bTemp ? CGLO_TEMPERATURE:0) 
-                                | (bPres ? CGLO_PRESSURE : 0) 
-                                | (bPres ? CGLO_CONSTRAINT : 0)
-                                | ((bIterations && iterate.bIterate) ? CGLO_ITERATE : 0)  
-                                | (bFirstIterate ? CGLO_FIRSTITERATE : 0)
-                                | CGLO_SCALEEKIN 
-                    );
-                /* explanation of above: 
+                bTemp = ((ir->eI == eiVV && (!bInitStep)) || (ir->eI == eiVVAK));
+                compute_globals(fplog, gstat, cr, ir, fr, ekind, state, state_global, mdatoms, nrnb, vcm,
+                                wcycle, enerd, force_vir, shake_vir, total_vir, pres, mu_tot,
+                                constr, NULL, FALSE, state->box,
+                                top_global, &pcurr, top_global->natoms, &bSumEkinhOld,
+                                cglo_flags | CGLO_ENERGY | (bTemp ? CGLO_TEMPERATURE : 0) | (bPres ? CGLO_PRESSURE : 0) | (bPres ? CGLO_CONSTRAINT : 0) | ((bIterations && iterate.bIterate) ? CGLO_ITERATE : 0) | (bFirstIterate ? CGLO_FIRSTITERATE : 0) | CGLO_SCALEEKIN);
+                /* explanation of above:
                    a) We compute Ekin at the full time step
                    if 1) we are using the AveVel Ekin, and it's not the
                    initial step, or 2) if we are using AveEkin, but need the full
                    time step kinetic energy for the pressure (always true now, since we want accurate statistics).
-                   b) If we are using EkinAveEkin for the kinetic energy for the temperture control, we still feed in 
+                   b) If we are using EkinAveEkin for the kinetic energy for the temperture control, we still feed in
                    EkinAveVel because it's needed for the pressure */
-                
+
                 /* temperature scaling and pressure scaling to produce the extended variables at t+dt */
-                if (!bInitStep) 
+                if (!bInitStep)
                 {
                     if (bTrotter)
                     {
-                        trotter_update(ir,step,ekind,enerd,state,total_vir,mdatoms,&MassQ,trotter_seq,ettTSEQ2);
-                    } 
-                    else 
+                        trotter_update(ir, step, ekind, enerd, state, total_vir, mdatoms, &MassQ, trotter_seq, ettTSEQ2);
+                    }
+                    else
                     {
-                        update_tcouple(fplog,step,ir,state,ekind,wcycle,upd,&MassQ,mdatoms);
+                        update_tcouple(fplog, step, ir, state, ekind, wcycle, upd, &MassQ, mdatoms);
                     }
                 }
-                
+
                 if (bIterations &&
-                    done_iterating(cr,fplog,step,&iterate,bFirstIterate,
-                                   state->veta,&vetanew)) 
+                    done_iterating(cr, fplog, step, &iterate, bFirstIterate,
+                                   state->veta, &vetanew))
                 {
                     break;
                 }
                 bFirstIterate = FALSE;
             }
 
-            if (bTrotter && !bInitStep) {
-                copy_mat(shake_vir,state->svir_prev);
-                copy_mat(force_vir,state->fvir_prev);
-                if (IR_NVT_TROTTER(ir) && ir->eI==eiVV) {
+            if (bTrotter && !bInitStep)
+            {
+                copy_mat(shake_vir, state->svir_prev);
+                copy_mat(force_vir, state->fvir_prev);
+                if (IR_NVT_TROTTER(ir) && ir->eI == eiVV)
+                {
                     /* update temperature and kinetic energy now that step is over - this is the v(t+dt) point */
-                    enerd->term[F_TEMP] = sum_ekin(&(ir->opts),ekind,NULL,(ir->eI==eiVV),FALSE,FALSE);
+                    enerd->term[F_TEMP] = sum_ekin(&(ir->opts), ekind, NULL, (ir->eI == eiVV), FALSE, FALSE);
                     enerd->term[F_EKIN] = trace(ekind->ekin);
                 }
             }
             /* if it's the initial step, we performed this first step just to get the constraint virial */
-            if (bInitStep && ir->eI==eiVV) {
-                copy_rvecn(cbuf,state->v,0,state->natoms);
-            }
-            
-            if (fr->bSepDVDL && fplog && do_log) 
+            if (bInitStep && ir->eI == eiVV)
             {
-                fprintf(fplog,sepdvdlformat,"Constraint",0.0,dvdl);
+                copy_rvecn(cbuf, state->v, 0, state->natoms);
+            }
+
+            if (fr->bSepDVDL && fplog && do_log)
+            {
+                fprintf(fplog, sepdvdlformat, "Constraint", 0.0, dvdl);
             }
             enerd->term[F_DHDL_CON] += dvdl;
-            
+
             GMX_MPE_LOG(ev_timestep1);
         }
-    
+
         /* MRS -- now done iterating -- compute the conserved quantity */
-        if (bVV) {
-            saved_conserved_quantity = compute_conserved_from_auxiliary(ir,state,&MassQ);
-            if (ir->eI==eiVV) 
+        if (bVV)
+        {
+            saved_conserved_quantity = compute_conserved_from_auxiliary(ir, state, &MassQ);
+            if (ir->eI == eiVV)
             {
                 last_ekin = enerd->term[F_EKIN]; /* does this get preserved through checkpointing? */
             }
-            if ((ir->eDispCorr != edispcEnerPres) && (ir->eDispCorr != edispcAllEnerPres)) 
+            if ((ir->eDispCorr != edispcEnerPres) && (ir->eDispCorr != edispcAllEnerPres))
             {
                 saved_conserved_quantity -= enerd->term[F_DISPCORR];
             }
         }
-        
+
         /* ########  END FIRST UPDATE STEP  ############## */
         /* ########  If doing VV, we now have v(dt) ###### */
-        
+
         /* ################## START TRAJECTORY OUTPUT ################# */
-        
-        /* Now we have the energies and forces corresponding to the 
+
+        /* Now we have the energies and forces corresponding to the
          * coordinates at time t. We must output all of this before
          * the update.
          * for RerunMD t is read from input trajectory
@@ -4306,11 +4561,26 @@ void shuffle(int arr[], int size) {
         GMX_MPE_LOG(ev_output_start);
 
         mdof_flags = 0;
-        if (do_per_step(step,ir->nstxout)) { mdof_flags |= MDOF_X; }
-        if (do_per_step(step,ir->nstvout)) { mdof_flags |= MDOF_V; }
-        if (do_per_step(step,ir->nstfout)) { mdof_flags |= MDOF_F; }
-        if (do_per_step(step,ir->nstxtcout)) { mdof_flags |= MDOF_XTC; }
-        if (bCPT) { mdof_flags |= MDOF_CPT; };
+        if (do_per_step(step, ir->nstxout))
+        {
+            mdof_flags |= MDOF_X;
+        }
+        if (do_per_step(step, ir->nstvout))
+        {
+            mdof_flags |= MDOF_V;
+        }
+        if (do_per_step(step, ir->nstfout))
+        {
+            mdof_flags |= MDOF_F;
+        }
+        if (do_per_step(step, ir->nstxtcout))
+        {
+            mdof_flags |= MDOF_XTC;
+        }
+        if (bCPT)
+        {
+            mdof_flags |= MDOF_CPT;
+        };
 
 #if defined(GMX_FAHCORE) || defined(GMX_WRITELASTSTEP)
         if (bLastStep)
@@ -4321,21 +4591,21 @@ void shuffle(int arr[], int size) {
 #endif
 #ifdef GMX_FAHCORE
         if (MASTER(cr))
-            fcReportProgress( ir->nsteps, step );
+            fcReportProgress(ir->nsteps, step);
 
         /* sync bCPT and fc record-keeping */
         if (bCPT && MASTER(cr))
             fcRequestCheckPoint();
 #endif
-        
+
         if (mdof_flags != 0)
         {
-            wallcycle_start(wcycle,ewcTRAJ);
+            wallcycle_start(wcycle, ewcTRAJ);
             if (bCPT)
             {
-                if (state->flags & (1<<estLD_RNG))
+                if (state->flags & (1 << estLD_RNG))
                 {
-                    get_stochd_state(upd,state);
+                    get_stochd_state(upd, state);
                 }
                 if (MASTER(cr))
                 {
@@ -4345,14 +4615,14 @@ void shuffle(int arr[], int size) {
                     }
                     else
                     {
-                        update_ekinstate(&state_global->ekinstate,ekind);
+                        update_ekinstate(&state_global->ekinstate, ekind);
                         state_global->ekinstate.bUpToDate = TRUE;
                     }
-                    update_energyhistory(&state_global->enerhist,mdebin);
+                    update_energyhistory(&state_global->enerhist, mdebin);
                 }
             }
-            write_traj(fplog,cr,outf,mdof_flags,top_global,
-                       step,t,state,state_global,f,f_global,&n_xtc,&x_xtc);
+            write_traj(fplog, cr, outf, mdof_flags, top_global,
+                       step, t, state, state_global, f, f_global, &n_xtc, &x_xtc);
             if (bCPT)
             {
                 nchkpt++;
@@ -4367,79 +4637,79 @@ void shuffle(int arr[], int size) {
                  * because a checkpoint file will always be written
                  * at the last step.
                  */
-                fprintf(stderr,"\nWriting final coordinates.\n");
+                fprintf(stderr, "\nWriting final coordinates.\n");
                 if (ir->ePBC != epbcNONE && !ir->bPeriodicMols &&
                     DOMAINDECOMP(cr))
                 {
                     /* Make molecules whole only for confout writing */
-                    do_pbc_mtop(fplog,ir->ePBC,state->box,top_global,state_global->x);
+                    do_pbc_mtop(fplog, ir->ePBC, state->box, top_global, state_global->x);
                 }
-                write_sto_conf_mtop(ftp2fn(efSTO,nfile,fnm),
-                                    *top_global->name,top_global,
-                                    state_global->x,state_global->v,
-                                    ir->ePBC,state->box);
+                write_sto_conf_mtop(ftp2fn(efSTO, nfile, fnm),
+                                    *top_global->name, top_global,
+                                    state_global->x, state_global->v,
+                                    ir->ePBC, state->box);
                 debug_gmx();
             }
-            wallcycle_stop(wcycle,ewcTRAJ);
+            wallcycle_stop(wcycle, ewcTRAJ);
         }
         GMX_MPE_LOG(ev_output_finish);
-        
+
         /* kludge -- virial is lost with restart for NPT control. Must restart */
-        if (bStartingFromCpt && bVV) 
+        if (bStartingFromCpt && bVV)
         {
-            copy_mat(state->svir_prev,shake_vir);
-            copy_mat(state->fvir_prev,force_vir);
+            copy_mat(state->svir_prev, shake_vir);
+            copy_mat(state->fvir_prev, force_vir);
         }
         /*  ################## END TRAJECTORY OUTPUT ################ */
-        
+
         /* Determine the wallclock run time up till now */
         run_time = gmx_gettime() - (double)runtime->real;
 
-        /* Check whether everything is still allright */    
+        /* Check whether everything is still allright */
         if (((int)gmx_get_stop_condition() > handled_stop_condition)
 #ifdef GMX_THREADS
             && MASTER(cr)
 #endif
-            )
+        )
         {
-            /* this is just make gs.sig compatible with the hack 
+            /* this is just make gs.sig compatible with the hack
                of sending signals around by MPI_Reduce with together with
                other floats */
-            if ( gmx_get_stop_condition() == gmx_stop_cond_next_ns )
-                gs.sig[eglsSTOPCOND]=1;
-            if ( gmx_get_stop_condition() == gmx_stop_cond_next )
-                gs.sig[eglsSTOPCOND]=-1;
+            if (gmx_get_stop_condition() == gmx_stop_cond_next_ns)
+                gs.sig[eglsSTOPCOND] = 1;
+            if (gmx_get_stop_condition() == gmx_stop_cond_next)
+                gs.sig[eglsSTOPCOND] = -1;
             /* < 0 means stop at next step, > 0 means stop at next NS step */
             if (fplog)
             {
                 fprintf(fplog,
                         "\n\nReceived the %s signal, stopping at the next %sstep\n\n",
                         gmx_get_signal_name(),
-                        gs.sig[eglsSTOPCOND]==1 ? "NS " : "");
+                        gs.sig[eglsSTOPCOND] == 1 ? "NS " : "");
                 fflush(fplog);
             }
             fprintf(stderr,
                     "\n\nReceived the %s signal, stopping at the next %sstep\n\n",
                     gmx_get_signal_name(),
-                    gs.sig[eglsSTOPCOND]==1 ? "NS " : "");
+                    gs.sig[eglsSTOPCOND] == 1 ? "NS " : "");
             fflush(stderr);
-            handled_stop_condition=(int)gmx_get_stop_condition();
+            handled_stop_condition = (int)gmx_get_stop_condition();
         }
         else if (MASTER(cr) && (bNS || ir->nstlist <= 0) &&
-                 (max_hours > 0 && run_time > max_hours*60.0*60.0*0.99) &&
+                 (max_hours > 0 && run_time > max_hours * 60.0 * 60.0 * 0.99) &&
                  gs.sig[eglsSTOPCOND] == 0 && gs.set[eglsSTOPCOND] == 0)
         {
             /* Signal to terminate the run */
             gs.sig[eglsSTOPCOND] = 1;
             if (fplog)
             {
-                fprintf(fplog,"\nStep %s: Run time exceeded %.3f hours, will terminate the run\n",gmx_step_str(step,sbuf),max_hours*0.99);
+                fprintf(fplog, "\nStep %s: Run time exceeded %.3f hours, will terminate the run\n", gmx_step_str(step, sbuf), max_hours * 0.99);
             }
-            fprintf(stderr, "\nStep %s: Run time exceeded %.3f hours, will terminate the run\n",gmx_step_str(step,sbuf),max_hours*0.99);
+            fprintf(stderr, "\nStep %s: Run time exceeded %.3f hours, will terminate the run\n", gmx_step_str(step, sbuf), max_hours * 0.99);
         }
 
         if (bResetCountersHalfMaxH && MASTER(cr) &&
-            run_time > max_hours*60.0*60.0*0.495)
+            run_time > max_hours * 60.0 * 60.0 * 0.495)
         {
             gs.sig[eglsRESETCOUNTERS] = 1;
         }
@@ -4457,8 +4727,8 @@ void shuffle(int arr[], int size) {
              */
             if (step >= nlh.step_nscheck)
             {
-                nlh.nabnsb = natoms_beyond_ns_buffer(ir,fr,&top->cgs,
-                                                     nlh.scale_tot,state->x);
+                nlh.nabnsb = natoms_beyond_ns_buffer(ir, fr, &top->cgs,
+                                                     nlh.scale_tot, state->x);
             }
             else
             {
@@ -4473,37 +4743,34 @@ void shuffle(int arr[], int size) {
          * where we do global communication,
          *  otherwise the other nodes don't know.
          */
-        if (MASTER(cr) && ((bGStat || !PAR(cr)) &&
-                           cpt_period >= 0 &&
-                           (cpt_period == 0 || 
-                            run_time >= nchkpt*cpt_period*60.0)) &&
+        if (MASTER(cr) && ((bGStat || !PAR(cr)) && cpt_period >= 0 && (cpt_period == 0 || run_time >= nchkpt * cpt_period * 60.0)) &&
             gs.set[eglsCHKPT] == 0)
         {
             gs.sig[eglsCHKPT] = 1;
         }
-  
+
         if (bIterations)
         {
-            gmx_iterate_init(&iterate,bIterations);
+            gmx_iterate_init(&iterate, bIterations);
         }
-    
+
         /* for iterations, we save these vectors, as we will be redoing the calculations */
-        if (bIterations && iterate.bIterate) 
+        if (bIterations && iterate.bIterate)
         {
-            copy_coupling_state(state,bufstate,ekind,ekind_save,&(ir->opts));
+            copy_coupling_state(state, bufstate, ekind, ekind_save, &(ir->opts));
         }
         bFirstIterate = TRUE;
         while (bFirstIterate || (bIterations && iterate.bIterate))
         {
-            /* We now restore these vectors to redo the calculation with improved extended variables */    
-            if (bIterations) 
-            { 
-                copy_coupling_state(bufstate,state,ekind_save,ekind,&(ir->opts));
+            /* We now restore these vectors to redo the calculation with improved extended variables */
+            if (bIterations)
+            {
+                copy_coupling_state(bufstate, state, ekind_save, ekind, &(ir->opts));
             }
 
             /* We make the decision to break or not -after- the calculation of Ekin and Pressure,
                so scroll down for that logic */
-            
+
             /* #########   START SECOND UPDATE STEP ################# */
             GMX_MPE_LOG(ev_update_start);
             /* Box is changed in update() when we do pressure coupling,
@@ -4511,162 +4778,154 @@ void shuffle(int arr[], int size) {
              * writing it to the energy file, so it matches the trajectory files for
              * the same timestep above. Make a copy in a separate array.
              */
-            copy_mat(state->box,lastbox);
+            copy_mat(state->box, lastbox);
 
             bOK = TRUE;
             if (!(bRerunMD && !rerun_fr.bV && !bForceUpdate))
             {
-                wallcycle_start(wcycle,ewcUPDATE);
+                wallcycle_start(wcycle, ewcUPDATE);
                 dvdl = 0;
                 /* UPDATE PRESSURE VARIABLES IN TROTTER FORMULATION WITH CONSTRAINTS */
-                if (bTrotter) 
+                if (bTrotter)
                 {
-                    if (bIterations && iterate.bIterate) 
+                    if (bIterations && iterate.bIterate)
                     {
-                        if (bFirstIterate) 
+                        if (bFirstIterate)
                         {
                             scalevir = 1;
                         }
-                        else 
+                        else
                         {
                             /* we use a new value of scalevir to converge the iterations faster */
-                            scalevir = tracevir/trace(shake_vir);
+                            scalevir = tracevir / trace(shake_vir);
                         }
-                        msmul(shake_vir,scalevir,shake_vir); 
-                        m_add(force_vir,shake_vir,total_vir);
+                        msmul(shake_vir, scalevir, shake_vir);
+                        m_add(force_vir, shake_vir, total_vir);
                         clear_mat(shake_vir);
                     }
-                    trotter_update(ir,step,ekind,enerd,state,total_vir,mdatoms,&MassQ,trotter_seq,ettTSEQ3);
-                /* We can only do Berendsen coupling after we have summed
-                 * the kinetic energy or virial. Since the happens
-                 * in global_state after update, we should only do it at
-                 * step % nstlist = 1 with bGStatEveryStep=FALSE.
-                 */
+                    trotter_update(ir, step, ekind, enerd, state, total_vir, mdatoms, &MassQ, trotter_seq, ettTSEQ3);
+                    /* We can only do Berendsen coupling after we have summed
+                     * the kinetic energy or virial. Since the happens
+                     * in global_state after update, we should only do it at
+                     * step % nstlist = 1 with bGStatEveryStep=FALSE.
+                     */
                 }
-                else 
+                else
                 {
-                    update_tcouple(fplog,step,ir,state,ekind,wcycle,upd,&MassQ,mdatoms);
-                    update_pcouple(fplog,step,ir,state,pcoupl_mu,M,wcycle,
-                                   upd,bInitStep);
+                    update_tcouple(fplog, step, ir, state, ekind, wcycle, upd, &MassQ, mdatoms);
+                    update_pcouple(fplog, step, ir, state, pcoupl_mu, M, wcycle,
+                                   upd, bInitStep);
                 }
 
                 if (bVV)
                 {
                     /* velocity half-step update */
-                    update_coords(fplog,step,ir,mdatoms,state,f,
-                                  fr->bTwinRange && bNStList,fr->f_twin,fcd,
-                                  ekind,M,wcycle,upd,FALSE,etrtVELOCITY2,
-                                  cr,nrnb,constr,&top->idef);
+                    update_coords(fplog, step, ir, mdatoms, state, f,
+                                  fr->bTwinRange && bNStList, fr->f_twin, fcd,
+                                  ekind, M, wcycle, upd, FALSE, etrtVELOCITY2,
+                                  cr, nrnb, constr, &top->idef);
                 }
 
                 /* Above, initialize just copies ekinh into ekin,
                  * it doesn't copy position (for VV),
                  * and entire integrator for MD.
                  */
-                
-                if (ir->eI==eiVVAK) 
-                {
-                    copy_rvecn(state->x,cbuf,0,state->natoms);
-                }
-                
-                update_coords(fplog,step,ir,mdatoms,state,f,fr->bTwinRange && bNStList,fr->f_twin,fcd,
-                              ekind,M,wcycle,upd,bInitStep,etrtPOSITION,cr,nrnb,constr,&top->idef);
-                wallcycle_stop(wcycle,ewcUPDATE);
 
-                update_constraints(fplog,step,&dvdl,ir,ekind,mdatoms,state,graph,f,
-                                   &top->idef,shake_vir,force_vir,
-                                   cr,nrnb,wcycle,upd,constr,
-                                   bInitStep,FALSE,bCalcEnerPres,state->veta);  
-                
-                if (ir->eI==eiVVAK) 
+                if (ir->eI == eiVVAK)
+                {
+                    copy_rvecn(state->x, cbuf, 0, state->natoms);
+                }
+
+                update_coords(fplog, step, ir, mdatoms, state, f, fr->bTwinRange && bNStList, fr->f_twin, fcd,
+                              ekind, M, wcycle, upd, bInitStep, etrtPOSITION, cr, nrnb, constr, &top->idef);
+                wallcycle_stop(wcycle, ewcUPDATE);
+
+                update_constraints(fplog, step, &dvdl, ir, ekind, mdatoms, state, graph, f,
+                                   &top->idef, shake_vir, force_vir,
+                                   cr, nrnb, wcycle, upd, constr,
+                                   bInitStep, FALSE, bCalcEnerPres, state->veta);
+
+                if (ir->eI == eiVVAK)
                 {
                     /* erase F_EKIN and F_TEMP here? */
                     /* just compute the kinetic energy at the half step to perform a trotter step */
-                    compute_globals(fplog,gstat,cr,ir,fr,ekind,state,state_global,mdatoms,nrnb,vcm,
-                                    wcycle,enerd,force_vir,shake_vir,total_vir,pres,mu_tot,
-                                    constr,NULL,FALSE,lastbox,
-                                    top_global,&pcurr,top_global->natoms,&bSumEkinhOld,
-                                    cglo_flags | CGLO_TEMPERATURE    
-                        );
-                    wallcycle_start(wcycle,ewcUPDATE);
-                    trotter_update(ir,step,ekind,enerd,state,total_vir,mdatoms,&MassQ,trotter_seq,ettTSEQ4);            
+                    compute_globals(fplog, gstat, cr, ir, fr, ekind, state, state_global, mdatoms, nrnb, vcm,
+                                    wcycle, enerd, force_vir, shake_vir, total_vir, pres, mu_tot,
+                                    constr, NULL, FALSE, lastbox,
+                                    top_global, &pcurr, top_global->natoms, &bSumEkinhOld,
+                                    cglo_flags | CGLO_TEMPERATURE);
+                    wallcycle_start(wcycle, ewcUPDATE);
+                    trotter_update(ir, step, ekind, enerd, state, total_vir, mdatoms, &MassQ, trotter_seq, ettTSEQ4);
                     /* now we know the scaling, we can compute the positions again again */
-                    copy_rvecn(cbuf,state->x,0,state->natoms);
+                    copy_rvecn(cbuf, state->x, 0, state->natoms);
 
-                    update_coords(fplog,step,ir,mdatoms,state,f,fr->bTwinRange && bNStList,fr->f_twin,fcd,
-                                  ekind,M,wcycle,upd,bInitStep,etrtPOSITION,cr,nrnb,constr,&top->idef);
-                    wallcycle_stop(wcycle,ewcUPDATE);
+                    update_coords(fplog, step, ir, mdatoms, state, f, fr->bTwinRange && bNStList, fr->f_twin, fcd,
+                                  ekind, M, wcycle, upd, bInitStep, etrtPOSITION, cr, nrnb, constr, &top->idef);
+                    wallcycle_stop(wcycle, ewcUPDATE);
 
                     /* do we need an extra constraint here? just need to copy out of state->v to upd->xp? */
                     /* are the small terms in the shake_vir here due
                      * to numerical errors, or are they important
-                     * physically? I'm thinking they are just errors, but not completely sure. 
+                     * physically? I'm thinking they are just errors, but not completely sure.
                      * For now, will call without actually constraining, constr=NULL*/
-                    update_constraints(fplog,step,&dvdl,ir,ekind,mdatoms,state,graph,f,
-                                       &top->idef,tmp_vir,force_vir,
-                                       cr,nrnb,wcycle,upd,NULL,
-                                       bInitStep,FALSE,bCalcEnerPres,
-                                       state->veta);  
+                    update_constraints(fplog, step, &dvdl, ir, ekind, mdatoms, state, graph, f,
+                                       &top->idef, tmp_vir, force_vir,
+                                       cr, nrnb, wcycle, upd, NULL,
+                                       bInitStep, FALSE, bCalcEnerPres,
+                                       state->veta);
                 }
-                if (!bOK && !bFFscan) 
+                if (!bOK && !bFFscan)
                 {
-                    gmx_fatal(FARGS,"Constraint error: Shake, Lincs or Settle could not solve the constrains");
+                    gmx_fatal(FARGS, "Constraint error: Shake, Lincs or Settle could not solve the constrains");
                 }
-                
-                if (fr->bSepDVDL && fplog && do_log) 
+
+                if (fr->bSepDVDL && fplog && do_log)
                 {
-                    fprintf(fplog,sepdvdlformat,"Constraint",0.0,dvdl);
+                    fprintf(fplog, sepdvdlformat, "Constraint", 0.0, dvdl);
                 }
                 enerd->term[F_DHDL_CON] += dvdl;
-            } 
-            else if (graph) 
+            }
+            else if (graph)
             {
                 /* Need to unshift here */
-                unshift_self(graph,state->box,state->x);
+                unshift_self(graph, state->box, state->x);
             }
-            
+
             GMX_BARRIER(cr->mpi_comm_mygroup);
             GMX_MPE_LOG(ev_update_finish);
 
-            if (vsite != NULL) 
+            if (vsite != NULL)
             {
-                wallcycle_start(wcycle,ewcVSITECONSTR);
-                if (graph != NULL) 
+                wallcycle_start(wcycle, ewcVSITECONSTR);
+                if (graph != NULL)
                 {
-                    shift_self(graph,state->box,state->x);
+                    shift_self(graph, state->box, state->x);
                 }
-                construct_vsites(fplog,vsite,state->x,nrnb,ir->delta_t,state->v,
-                                 top->idef.iparams,top->idef.il,
-                                 fr->ePBC,fr->bMolPBC,graph,cr,state->box);
-                
-                if (graph != NULL) 
+                construct_vsites(fplog, vsite, state->x, nrnb, ir->delta_t, state->v,
+                                 top->idef.iparams, top->idef.il,
+                                 fr->ePBC, fr->bMolPBC, graph, cr, state->box);
+
+                if (graph != NULL)
                 {
-                    unshift_self(graph,state->box,state->x);
+                    unshift_self(graph, state->box, state->x);
                 }
-                wallcycle_stop(wcycle,ewcVSITECONSTR);
+                wallcycle_stop(wcycle, ewcVSITECONSTR);
             }
-            
+
             /* ############## IF NOT VV, Calculate globals HERE, also iterate constraints ############ */
             if (ir->nstlist == -1 && bFirstIterate)
             {
                 gs.sig[eglsNABNSB] = nlh.nabnsb;
             }
-            compute_globals(fplog,gstat,cr,ir,fr,ekind,state,state_global,mdatoms,nrnb,vcm,
-                            wcycle,enerd,force_vir,shake_vir,total_vir,pres,mu_tot,
+            compute_globals(fplog, gstat, cr, ir, fr, ekind, state, state_global, mdatoms, nrnb, vcm,
+                            wcycle, enerd, force_vir, shake_vir, total_vir, pres, mu_tot,
                             constr,
-                            bFirstIterate ? &gs : NULL, 
-                            (step_rel % gs.nstms == 0) && 
-                                (multisim_nsteps<0 || (step_rel<multisim_nsteps)),
+                            bFirstIterate ? &gs : NULL,
+                            (step_rel % gs.nstms == 0) &&
+                                (multisim_nsteps < 0 || (step_rel < multisim_nsteps)),
                             lastbox,
-                            top_global,&pcurr,top_global->natoms,&bSumEkinhOld,
-                            cglo_flags 
-                            | (!EI_VV(ir->eI) ? CGLO_ENERGY : 0) 
-                            | (!EI_VV(ir->eI) ? CGLO_TEMPERATURE : 0) 
-                            | (!EI_VV(ir->eI) || bRerunMD ? CGLO_PRESSURE : 0) 
-                            | (bIterations && iterate.bIterate ? CGLO_ITERATE : 0) 
-                            | (bFirstIterate ? CGLO_FIRSTITERATE : 0)
-                            | CGLO_CONSTRAINT 
-                );
+                            top_global, &pcurr, top_global->natoms, &bSumEkinhOld,
+                            cglo_flags | (!EI_VV(ir->eI) ? CGLO_ENERGY : 0) | (!EI_VV(ir->eI) ? CGLO_TEMPERATURE : 0) | (!EI_VV(ir->eI) || bRerunMD ? CGLO_PRESSURE : 0) | (bIterations && iterate.bIterate ? CGLO_ITERATE : 0) | (bFirstIterate ? CGLO_FIRSTITERATE : 0) | CGLO_CONSTRAINT);
             if (ir->nstlist == -1 && bFirstIterate)
             {
                 nlh.nabnsb = gs.set[eglsNABNSB];
@@ -4674,54 +4933,54 @@ void shuffle(int arr[], int size) {
             }
             /* bIterate is set to keep it from eliminating the old ekin kinetic energy terms */
             /* #############  END CALC EKIN AND PRESSURE ################# */
-        
+
             /* Note: this is OK, but there are some numerical precision issues with using the convergence of
                the virial that should probably be addressed eventually. state->veta has better properies,
                but what we actually need entering the new cycle is the new shake_vir value. Ideally, we could
                generate the new shake_vir, but test the veta value for convergence.  This will take some thought. */
 
-            if (bIterations && 
-                done_iterating(cr,fplog,step,&iterate,bFirstIterate,
-                               trace(shake_vir),&tracevir)) 
+            if (bIterations &&
+                done_iterating(cr, fplog, step, &iterate, bFirstIterate,
+                               trace(shake_vir), &tracevir))
             {
                 break;
             }
             bFirstIterate = FALSE;
         }
 
-        update_box(fplog,step,ir,mdatoms,state,graph,f,
-                   ir->nstlist==-1 ? &nlh.scale_tot : NULL,pcoupl_mu,nrnb,wcycle,upd,bInitStep,FALSE);
-        
+        update_box(fplog, step, ir, mdatoms, state, graph, f,
+                   ir->nstlist == -1 ? &nlh.scale_tot : NULL, pcoupl_mu, nrnb, wcycle, upd, bInitStep, FALSE);
+
         /* ################# END UPDATE STEP 2 ################# */
         /* #### We now have r(t+dt) and v(t+dt/2)  ############# */
-    
+
         /* The coordinates (x) were unshifted in update */
-        if (bFFscan && (shellfc==NULL || bConverged))
+        if (bFFscan && (shellfc == NULL || bConverged))
         {
-            if (print_forcefield(fplog,enerd->term,mdatoms->homenr,
-                                 f,NULL,xcopy,
-                                 &(top_global->mols),mdatoms->massT,pres))
+            if (print_forcefield(fplog, enerd->term, mdatoms->homenr,
+                                 f, NULL, xcopy,
+                                 &(top_global->mols), mdatoms->massT, pres))
             {
                 if (gmx_parallel_env_initialized())
                 {
                     gmx_finalize();
                 }
-                fprintf(stderr,"\n");
+                fprintf(stderr, "\n");
                 exit(0);
             }
         }
         if (!bGStat)
         {
-            /* We will not sum ekinh_old,                                                            
-             * so signal that we still have to do it.                                                
+            /* We will not sum ekinh_old,
+             * so signal that we still have to do it.
              */
             bSumEkinhOld = TRUE;
         }
-        
+
         if (bTCR)
         {
             /* Only do GCT when the relaxation of shells (minimization) has converged,
-             * otherwise we might be coupling to bogus energies. 
+             * otherwise we might be coupling to bogus energies.
              * In parallel we must always do this, because the other sims might
              * update the FF.
              */
@@ -4729,22 +4988,22 @@ void shuffle(int arr[], int size) {
             /* Since this is called with the new coordinates state->x, I assume
              * we want the new box state->box too. / EL 20040121
              */
-            do_coupling(fplog,oenv,nfile,fnm,tcr,t,step,enerd->term,fr,
-                        ir,MASTER(cr),
-                        mdatoms,&(top->idef),mu_aver,
-                        top_global->mols.nr,cr,
-                        state->box,total_vir,pres,
-                        mu_tot,state->x,f,bConverged);
+            do_coupling(fplog, oenv, nfile, fnm, tcr, t, step, enerd->term, fr,
+                        ir, MASTER(cr),
+                        mdatoms, &(top->idef), mu_aver,
+                        top_global->mols.nr, cr,
+                        state->box, total_vir, pres,
+                        mu_tot, state->x, f, bConverged);
             debug_gmx();
         }
 
         /* #########  BEGIN PREPARING EDR OUTPUT  ###########  */
-        
+
         /* sum up the foreign energy and dhdl terms */
-        sum_dhdl(enerd,state->lambda,ir);
+        sum_dhdl(enerd, state->lambda, ir);
 
         /* use the directly determined last velocity, not actually the averaged half steps */
-        if (bTrotter && ir->eI==eiVV) 
+        if (bTrotter && ir->eI == eiVV)
         {
             enerd->term[F_EKIN] = last_ekin;
         }
@@ -4757,114 +5016,112 @@ void shuffle(int arr[], int size) {
         // Calculate the ratio
         double ratio = E_kin / E_tot;
 
-        if (ratio > threshold && step > 10000 && USERINT1 && ir->userint3) {
+        if (ratio > threshold && step > 10000 && USERINT1 && ir->userint3)
+        {
             // Signal that this is the last step
-            printf("\nSimulation terminated: Ratio %f is over threshold %f\n",ratio, threshold);
+            printf("\nSimulation terminated: Ratio %f is over threshold %f\n", ratio, threshold);
             bLastStep = TRUE;
         }
 
-
-        
         if (bVV)
         {
             enerd->term[F_ECONSERVED] = enerd->term[F_ETOT] + saved_conserved_quantity;
         }
-        else 
+        else
         {
-            enerd->term[F_ECONSERVED] = enerd->term[F_ETOT] + compute_conserved_from_auxiliary(ir,state,&MassQ);
+            enerd->term[F_ECONSERVED] = enerd->term[F_ETOT] + compute_conserved_from_auxiliary(ir, state, &MassQ);
         }
         /* Check for excessively large energies */
-        if (bIonize) 
+        if (bIonize)
         {
 #ifdef GMX_DOUBLE
             real etot_max = 1e200;
 #else
             real etot_max = 1e30;
 #endif
-            if (fabs(enerd->term[F_ETOT]) > etot_max) 
+            if (fabs(enerd->term[F_ETOT]) > etot_max)
             {
-                fprintf(stderr,"Energy too large (%g), giving up\n",
+                fprintf(stderr, "Energy too large (%g), giving up\n",
                         enerd->term[F_ETOT]);
             }
         }
         /* #########  END PREPARING EDR OUTPUT  ###########  */
-        
+
         /* Time for performance */
-        if (((step % stepout) == 0) || bLastStep) 
+        if (((step % stepout) == 0) || bLastStep)
         {
             runtime_upd_proc(runtime);
         }
-        
+
         /* Output stuff */
         if (MASTER(cr))
         {
-            gmx_bool do_dr,do_or;
-            
-            if (!(bStartingFromCpt && (EI_VV(ir->eI)))) 
+            gmx_bool do_dr, do_or;
+
+            if (!(bStartingFromCpt && (EI_VV(ir->eI))))
             {
                 if (bNstEner)
                 {
-                    upd_mdebin(mdebin,bDoDHDL, TRUE,
-                               t,mdatoms->tmass,enerd,state,lastbox,
-                               shake_vir,force_vir,total_vir,pres,
-                               ekind,mu_tot,constr);
+                    upd_mdebin(mdebin, bDoDHDL, TRUE,
+                               t, mdatoms->tmass, enerd, state, lastbox,
+                               shake_vir, force_vir, total_vir, pres,
+                               ekind, mu_tot, constr);
                 }
                 else
                 {
                     upd_mdebin_step(mdebin);
                 }
-                
-                do_dr  = do_per_step(step,ir->nstdisreout);
-                do_or  = do_per_step(step,ir->nstorireout);
-                
-                print_ebin(outf->fp_ene,do_ene,do_dr,do_or,do_log?fplog:NULL,
-                           step,t,
-                           eprNORMAL,bCompact,mdebin,fcd,groups,&(ir->opts));
+
+                do_dr = do_per_step(step, ir->nstdisreout);
+                do_or = do_per_step(step, ir->nstorireout);
+
+                print_ebin(outf->fp_ene, do_ene, do_dr, do_or, do_log ? fplog : NULL,
+                           step, t,
+                           eprNORMAL, bCompact, mdebin, fcd, groups, &(ir->opts));
             }
             if (ir->ePull != epullNO)
             {
-                pull_print_output(ir->pull,step,t);
+                pull_print_output(ir->pull, step, t);
             }
-            
-            if (do_per_step(step,ir->nstlog))
+
+            if (do_per_step(step, ir->nstlog))
             {
-                if(fflush(fplog) != 0)
+                if (fflush(fplog) != 0)
                 {
-                    gmx_fatal(FARGS,"Cannot flush logfile - maybe you are out of quota?");
+                    gmx_fatal(FARGS, "Cannot flush logfile - maybe you are out of quota?");
                 }
             }
         }
 
-
         /* Remaining runtime */
-        if (MULTIMASTER(cr) && (do_verbose || gmx_got_usr_signal() ))
+        if (MULTIMASTER(cr) && (do_verbose || gmx_got_usr_signal()))
         {
-            if (shellfc) 
+            if (shellfc)
             {
-                fprintf(stderr,"\n");
+                fprintf(stderr, "\n");
             }
-            print_time(stderr,runtime,step,ir,cr);
+            print_time(stderr, runtime, step, ir, cr);
         }
 
         /* Replica exchange */
         bExchanged = FALSE;
         if ((repl_ex_nst > 0) && (step > 0) && !bLastStep &&
-            do_per_step(step,repl_ex_nst)) 
+            do_per_step(step, repl_ex_nst))
         {
-            bExchanged = replica_exchange(fplog,cr,repl_ex,
-                                          state_global,enerd->term,
-                                          state,step,t);
+            bExchanged = replica_exchange(fplog, cr, repl_ex,
+                                          state_global, enerd->term,
+                                          state, step, t);
 
-            if (bExchanged && DOMAINDECOMP(cr)) 
+            if (bExchanged && DOMAINDECOMP(cr))
             {
-                dd_partition_system(fplog,step,cr,TRUE,1,
-                                    state_global,top_global,ir,
-                                    state,&f,mdatoms,top,fr,
-                                    vsite,shellfc,constr,
-                                    nrnb,wcycle,FALSE);
+                dd_partition_system(fplog, step, cr, TRUE, 1,
+                                    state_global, top_global, ir,
+                                    state, &f, mdatoms, top, fr,
+                                    vsite, shellfc, constr,
+                                    nrnb, wcycle, FALSE);
             }
         }
-        
+
         bFirstStep = FALSE;
         bInitStep = FALSE;
         bStartingFromCpt = FALSE;
@@ -4873,121 +5130,119 @@ void shuffle(int arr[], int size) {
         /* With all integrators, except VV, we need to retain the pressure
          * at the current step for coupling at the next step.
          */
-        if ((state->flags & (1<<estPRES_PREV)) &&
+        if ((state->flags & (1 << estPRES_PREV)) &&
             (bGStatEveryStep ||
              (ir->nstpcouple > 0 && step % ir->nstpcouple == 0)))
         {
             /* Store the pressure in t_state for pressure coupling
              * at the next MD step.
              */
-            copy_mat(pres,state->pres_prev);
+            copy_mat(pres, state->pres_prev);
         }
-        
+
         /* #######  END SET VARIABLES FOR NEXT ITERATION ###### */
-        
-        if (bRerunMD) 
+
+        if (bRerunMD)
         {
             if (MASTER(cr))
             {
                 /* read next frame from input trajectory */
-                bNotLastFrame = read_next_frame(oenv,status,&rerun_fr);
+                bNotLastFrame = read_next_frame(oenv, status, &rerun_fr);
             }
 
             if (PAR(cr))
             {
-                rerun_parallel_comm(cr,&rerun_fr,&bNotLastFrame);
+                rerun_parallel_comm(cr, &rerun_fr, &bNotLastFrame);
             }
         }
-        
+
         if (!bRerunMD || !rerun_fr.bStep)
         {
             /* increase the MD step number */
             step++;
             step_rel++;
         }
-        
-        cycles = wallcycle_stop(wcycle,ewcSTEP);
+
+        cycles = wallcycle_stop(wcycle, ewcSTEP);
         if (DOMAINDECOMP(cr) && wcycle)
         {
-            dd_cycles_add(cr->dd,cycles,ddCyclStep);
+            dd_cycles_add(cr->dd, cycles, ddCyclStep);
         }
-        
+
         if (step_rel == wcycle_get_reset_counters(wcycle) ||
             gs.set[eglsRESETCOUNTERS] != 0)
         {
             /* Reset all the counters related to performance over the run */
-            reset_all_counters(fplog,cr,step,&step_rel,ir,wcycle,nrnb,runtime);
-            wcycle_set_reset_counters(wcycle,-1);
+            reset_all_counters(fplog, cr, step, &step_rel, ir, wcycle, nrnb, runtime);
+            wcycle_set_reset_counters(wcycle, -1);
             /* Correct max_hours for the elapsed time */
-            max_hours -= run_time/(60.0*60.0);
+            max_hours -= run_time / (60.0 * 60.0);
             bResetCountersHalfMaxH = FALSE;
             gs.set[eglsRESETCOUNTERS] = 0;
         }
-
-
-
     }
     /* End of main MD loop */
-    if (bIonize) {
-        int n = top_global->natoms; 
+    if (bIonize)
+    {
+        int n = top_global->natoms;
 
         // Write final atom configurations
-        FILE* fp = fopen("configurations.bin", "wb");
-        if (fp == NULL) {
+        FILE *fp = fopen("configurations.bin", "wb");
+        if (fp == NULL)
+        {
             printf("Error: could not open file for writing.\n");
             exit(1);
         }
-        for (i = 0; i < n; i++) {
-            fwrite(atom_configurations[i], sizeof(int), 3, fp);  // write each subarray
+        for (i = 0; i < n; i++)
+        {
+            fwrite(atom_configurations[i], sizeof(int), 3, fp); // write each subarray
         }
         fclose(fp);
-
 
         // Write process statistics
 
-        fp = fopen("./simulation_output/procces_statistics.txt", "a");  // open the file in write mode
-            if (fp == NULL) {
-                printf("Error: could not open file.\n");
-                return 1;
-            }
-
-        fprintf(fp,"Processes during the simulation \n| Auger decay | Flourecence | Photo-ionization | charge transfer |\n");
-        fprintf(fp,"%d %d %d %d",count_auger,count_flourecence,count_flourecence, count_chargetransfer);
-
-        fclose(fp);
-
-
-        fp = fopen("./simulation_output/charges.txt", "a");  // open the file in write mode
-            if (fp == NULL) {
-                printf("Error: could not open file.\n");
-                return 1;
-            }
-        for (i = 1; i < n+1; i++) {
-            fprintf(fp,"%d %d\n",i,(int)mdatoms->chargeA[i-1]);
+        fp = fopen("./simulation_output/procces_statistics.txt", "a"); // open the file in write mode
+        if (fp == NULL)
+        {
+            printf("Error: could not open file.\n");
+            return 1;
         }
 
+        fprintf(fp, "Processes during the simulation \n| Auger decay | Fluorescence | Photo-ionization | charge transfer |\n");
+        fprintf(fp, "%d %d %d %d", count_auger, count_flourecence, count_photoionization, count_chargetransfer);
 
         fclose(fp);
 
+        fp = fopen("./simulation_output/charges.txt", "a"); // open the file in write mode
+        if (fp == NULL)
+        {
+            printf("Error: could not open file.\n");
+            return 1;
+        }
+        for (i = 1; i < n + 1; i++)
+        {
+            fprintf(fp, "%d %d\n", i, (int)mdatoms->chargeA[i - 1]);
+        }
 
-
-
+        fclose(fp);
 
         // Write the charges of the atoms
         fp = fopen("charges.bin", "wb");
-        if (fp == NULL) {
+        if (fp == NULL)
+        {
             printf("Error: could not open file for writing.\n");
             exit(1);
         }
 
-        for (i = 0; i < n; i++) {
-            fwrite(&mdatoms->chargeA[i], sizeof(double), 1, fp);  // write each charge
+        for (i = 0; i < n; i++)
+        {
+            fwrite(&mdatoms->chargeA[i], sizeof(double), 1, fp); // write each charge
         }
         fclose(fp);
 
-
         // Free each sub-array
-        for (i = 0; i<top_global->natoms; i++){
+        for (i = 0; i < top_global->natoms; i++)
+        {
             free(atom_configurations[i]);
             free(GS_configurations[i]);
             free(atomic_transitions[i]);
@@ -4995,34 +5250,30 @@ void shuffle(int arr[], int size) {
         free(atom_configurations);
         free(GS_configurations);
         free(atomic_transitions);
-
     }
 
-
-
-
     debug_gmx();
-    
+
     /* Stop the time */
     runtime_end(runtime);
-    
+
     if (bRerunMD && MASTER(cr))
     {
         close_trj(status);
     }
-    
+
     if (!(cr->duty & DUTY_PME))
     {
         /* Tell the PME only node to finish */
         gmx_pme_finish(cr);
     }
-    
+
     if (MASTER(cr))
     {
-        if (ir->nstcalcenergy > 0 && !bRerunMD) 
+        if (ir->nstcalcenergy > 0 && !bRerunMD)
         {
-            print_ebin(outf->fp_ene,FALSE,FALSE,FALSE,fplog,step,t,
-                       eprAVER,FALSE,mdebin,fcd,groups,&(ir->opts));
+            print_ebin(outf->fp_ene, FALSE, FALSE, FALSE, fplog, step, t,
+                       eprAVER, FALSE, mdebin, fcd, groups, &(ir->opts));
         }
     }
 
@@ -5032,38 +5283,39 @@ void shuffle(int arr[], int size) {
 
     if (ir->nstlist == -1 && nlh.nns > 0 && fplog)
     {
-        fprintf(fplog,"Average neighborlist lifetime: %.1f steps, std.dev.: %.1f steps\n",nlh.s1/nlh.nns,sqrt(nlh.s2/nlh.nns - sqr(nlh.s1/nlh.nns)));
-        fprintf(fplog,"Average number of atoms that crossed the half buffer length: %.1f\n\n",nlh.ab/nlh.nns);
+        fprintf(fplog, "Average neighborlist lifetime: %.1f steps, std.dev.: %.1f steps\n", nlh.s1 / nlh.nns, sqrt(nlh.s2 / nlh.nns - sqr(nlh.s1 / nlh.nns)));
+        fprintf(fplog, "Average number of atoms that crossed the half buffer length: %.1f\n\n", nlh.ab / nlh.nns);
     }
-    
+
     if (shellfc && fplog)
     {
-        fprintf(fplog,"Fraction of iterations that converged:           %.2f %%\n",
-                (nconverged*100.0)/step_rel);
-        fprintf(fplog,"Average number of force evaluations per MD step: %.2f\n\n",
-                tcount/step_rel);
+        fprintf(fplog, "Fraction of iterations that converged:           %.2f %%\n",
+                (nconverged * 100.0) / step_rel);
+        fprintf(fplog, "Average number of force evaluations per MD step: %.2f\n\n",
+                tcount / step_rel);
     }
-    
+
     if (repl_ex_nst > 0 && MASTER(cr))
     {
-        print_replica_exchange_statistics(fplog,repl_ex);
+        print_replica_exchange_statistics(fplog, repl_ex);
     }
-    
+
     runtime->nsteps_done = step_rel;
 
+    fclose(fcharges);
 
     // FREE STUFF
     free(hydrogen_idx);
-/*
-    for (i=0;i<ATOM_TABLE_SIZE;i++) {
-        if (counts[i]>0) {
-            freeDictionary(atomData[i].energyLevels);
-            freeRatesArray(atomData[i].transitionRates,atomData[i].numRates);
-            freeCollArray(atomData[i].collisions,atomData[i].numColl);
-            freeWeights(atomData[i].weights);
-        } 
-    }
-    */
+    /*
+        for (i=0;i<ATOM_TABLE_SIZE;i++) {
+            if (counts[i]>0) {
+                freeDictionary(atomData[i].energyLevels);
+                freeRatesArray(atomData[i].transitionRates,atomData[i].numRates);
+                freeCollArray(atomData[i].collisions,atomData[i].numColl);
+                freeWeights(atomData[i].weights);
+            }
+        }
+        */
 
     return 0;
 }

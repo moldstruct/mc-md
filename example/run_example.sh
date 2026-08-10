@@ -1,9 +1,9 @@
 # Path to gromacs bin (Change to install location)
-path='/home/tomas/programs/gromacs-mc/bin'
+path='/path/to/gromacs/bin'
 
 mkdir simulation_output
 
-$path/pdb2gmx -f 1aki.pdb -ff "charmm27" -water "SPCE"
+$path/pdb2gmx -f 1aki.pdb -ff "charmm27"
 
 # Configure and run explosion sim
 $path/grompp -f exp.mdp -c conf.gro -p topol.top -o explode.tpr

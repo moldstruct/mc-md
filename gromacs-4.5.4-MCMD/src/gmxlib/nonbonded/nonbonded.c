@@ -70,7 +70,11 @@
 #include "nb_kernel_c/nb_kernel110.h"
 
 /* 1,4 interactions uses kernel 330 directly */
-#include "nb_kernel_c/nb_kernel330.h" 
+#include "nb_kernel_c/nb_kernel330.h"
+
+/* Ionization helpers, defined in gmxlib/bondfree.c */
+extern int    USERINT1;
+extern double ionization_factor(double x);
 
 #ifdef GMX_PPC_ALTIVEC   
 #include "nb_kernel_ppc_altivec/nb_kernel_ppc_altivec.h"
@@ -647,6 +651,7 @@ do_listed_vdw_q(int ftype,int nbonds,
 {
     static    gmx_bool bWarn=FALSE;
     real      eps,r2,*tab,rtab2=0;
+    double    average_charge_14,ionization_factor_14;
     rvec      dx,x14[2],f14[2];
     int       i,ai,aj,itype;
     int       typeA[2]={0,0},typeB[2]={0,1};
@@ -756,6 +761,19 @@ do_listed_vdw_q(int ftype,int nbonds,
                   iparams[itype].lj14.c12A != iparams[itype].lj14.c12B));
             chargeA[0] = md->chargeA[ai];
             chargeA[1] = md->chargeA[aj];
+            /* fudgeQQ exists to avoid double counting the 1-4 Coulomb against
+             * the bonded terms.  Once the atoms are ionised the bonded terms
+             * are suppressed, so the 1-4 Coulomb is interpolated back up to
+             * its full unscaled strength:
+             *   neutral  -> eps = epsfac*fudgeQQ  (unchanged force field)
+             *   ionised  -> eps = epsfac          (full Coulomb)
+             * Only the Coulomb part is touched; the 1-4 LJ is left alone.
+             */
+            if (USERINT1 == 1) {
+                average_charge_14    = (md->chargeA[ai] + md->chargeA[aj])/2.0;
+                ionization_factor_14 = ionization_factor(average_charge_14);
+                eps = fr->epsfac*(1.0 - (1.0 - fr->fudgeQQ)*ionization_factor_14);
+            }
             nbfp = (real *)&(iparams[itype].lj14.c6A);
             break;
         case F_LJC14_Q:

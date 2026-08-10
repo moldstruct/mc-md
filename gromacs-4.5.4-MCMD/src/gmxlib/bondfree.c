@@ -83,6 +83,142 @@ double ionization_factor(double x) {
   return min(1,max(1-x,0));
 }
 
+/* =====================================================================
+ * Irreversible bond breaking (enabled by USERINT1 only)
+ * =====================================================================
+ *
+ * A bond that has been stretched past the breaking threshold is recorded
+ * permanently.  The record is keyed on the *global* atom pair rather than
+ * on the position of the bond in the local interaction list, because under
+ * domain decomposition that list changes length and ordering at every
+ * neighbour search - a positional index would silently point at a
+ * different bond after every reshuffle, and an array sized from the first
+ * call would overflow.
+ *
+ * Breaking is irreversible, so the registry only ever grows and a small
+ * open-addressed hash set is enough.  Morse (1-2) and Urey-Bradley (1-3)
+ * pairs are kept in separate sets: in a three-membered ring the same atom
+ * pair can be both.
+ *
+ * Restart behaviour: the registry is not written to the checkpoint.  A bond
+ * that is still beyond the threshold re-registers on the first step after a
+ * restart, so only bonds that broke and then came back inside the threshold
+ * are forgotten.
+ *
+ * Threading: not thread safe.  GROMACS 4.5.4 evaluates the bonded terms
+ * serially on each rank; a lock is needed here before calc_bonds is
+ * threaded.
+ */
+
+#define BROKEN_EMPTY_KEY 0xFFFFFFFFFFFFFFFFULL
+
+/* Morse bond breaks once beta*(r-b0) exceeds this: ~7% of the peak restoring
+ * force left, ~96% of the well depth already paid, independent of bond type. */
+#define MORSE_BREAK_BETA_DR 4.0
+
+/* The Urey-Bradley 1-3 spring is harmonic and has no intrinsic decay length,
+ * so its threshold stays geometric.  It is deliberately loose: a 1-3 distance
+ * of twice r13 means the angle it braces has already been destroyed, and a
+ * thermally fluctuating UB spring never gets close to it. */
+#define UB_BREAK_R13_FACTOR 2.0
+
+typedef struct {
+  unsigned long long *keys;
+  int                 mask;   /* table size - 1, size is a power of two */
+  int                 count;
+} t_broken_set;
+
+static t_broken_set morse_broken_set = { NULL, 0, 0 };
+static t_broken_set ub_broken_set    = { NULL, 0, 0 };
+
+/* LJ parameters of the real force field, captured in calc_bonds() so that
+ * the broken-bond repulsion can use the actual pair c12 instead of one
+ * universal constant. */
+static const real *bonded_nbfp  = NULL;
+static int         bonded_ntype = 0;
+
+static unsigned long long broken_key(int ga,int gb)
+{
+  unsigned long long lo,hi;
+
+  if (ga < gb) {
+    lo = (unsigned long long)ga; hi = (unsigned long long)gb;
+  } else {
+    lo = (unsigned long long)gb; hi = (unsigned long long)ga;
+  }
+  return (hi << 32) | lo;
+}
+
+static unsigned int broken_hash(unsigned long long k)
+{
+  k ^= k >> 33; k *= 0xff51afd7ed558ccdULL;
+  k ^= k >> 33; k *= 0xc4ceb9fe1a85ec53ULL;
+  k ^= k >> 33;
+  return (unsigned int)k;
+}
+
+static void broken_rehash(t_broken_set *s)
+{
+  unsigned long long *old  = s->keys;
+  int oldsize = (old == NULL) ? 0 : s->mask + 1;
+  int newsize = (oldsize == 0) ? 1024 : 2*oldsize;
+  int i;
+  unsigned int j;
+
+  s->keys = (unsigned long long *)malloc(newsize*sizeof(*s->keys));
+  if (s->keys == NULL)
+    gmx_fatal(FARGS,"Could not allocate broken-bond registry (%d entries)",newsize);
+  for (i = 0; i < newsize; i++)
+    s->keys[i] = BROKEN_EMPTY_KEY;
+  s->mask = newsize - 1;
+
+  if (old != NULL) {
+    for (i = 0; i < oldsize; i++) {
+      if (old[i] != BROKEN_EMPTY_KEY) {
+	j = broken_hash(old[i]) & s->mask;
+	while (s->keys[j] != BROKEN_EMPTY_KEY)
+	  j = (j + 1) & s->mask;
+	s->keys[j] = old[i];
+      }
+    }
+    free(old);
+  }
+}
+
+static gmx_bool broken_is_set(t_broken_set *s,unsigned long long key)
+{
+  unsigned int i;
+
+  if (s->count == 0)
+    return FALSE;
+  i = broken_hash(key) & s->mask;
+  while (s->keys[i] != BROKEN_EMPTY_KEY) {
+    if (s->keys[i] == key)
+      return TRUE;
+    i = (i + 1) & s->mask;
+  }
+  return FALSE;
+}
+
+static void broken_add(t_broken_set *s,unsigned long long key)
+{
+  unsigned int i;
+
+  if (s->keys == NULL)
+    broken_rehash(s);
+  i = broken_hash(key) & s->mask;
+  while (s->keys[i] != BROKEN_EMPTY_KEY) {
+    if (s->keys[i] == key)
+      return;
+    i = (i + 1) & s->mask;
+  }
+  s->keys[i] = key;
+  s->count++;
+  /* keep the load factor below 1/2 */
+  if (2*s->count > s->mask)
+    broken_rehash(s);
+}
+
 int glatnr(int *global_atom_index,int i)
 {
     int atnr;
@@ -131,7 +267,6 @@ real morse_bonds(int nbonds,
 
   double morse_term;
   double coulomb_term;
-  
 
   const real one=1.0;
   const real two=2.0;
@@ -140,12 +275,15 @@ real morse_bonds(int nbonds,
   int   i,m,ki,type,ai,aj;
   ivec  dt;
   double morse_ionization_factor; // For deciding if we should have screened Coulomb force also or not.
+  gmx_bool bBroken;
+  unsigned long long key;
+  real   c12,inv_r6,lj_fscale;
 
 
    if (USERINT1 == 1) {
     morse_ionization_factor = 1.0;
   }
-    
+
   else {
     morse_ionization_factor  = 0.0;
     }
@@ -173,12 +311,54 @@ real morse_bonds(int nbonds,
     cbomtemp = cb*omtemp;                              /*   1          */
     vbond    = cbomtemp*omtemp;                        /*   1          */
 
-    morse_term = -two*be*temp*cbomtemp*gmx_invsqrt(dr2);
+    /* Irreversible breaking.  The threshold is expressed in units of the
+     * Morse decay length 1/beta rather than as a multiple of b0, so that it
+     * fires at the same point on the dissociation curve for every bond type.
+     * A multiple of b0 is much more aggressive for short bonds: 2*b0 leaves
+     * ~43% of the peak restoring force on a C-H bond but only ~20% on C-C.
+     * At beta*(r-b0) = 4 the restoring force is ~7% of its peak and ~96% of
+     * the well depth has already been paid, for any bond type.
+     */
+    bBroken = FALSE;
+    if (USERINT1 == 1) {
+      key = broken_key(glatnr(global_atom_index,ai),glatnr(global_atom_index,aj));
+      if (be*(dr-b0) > MORSE_BREAK_BETA_DR)
+	broken_add(&morse_broken_set,key);
+      bBroken = broken_is_set(&morse_broken_set,key);
+    }
+
+    lj_fscale = 0.0;
+    if (bBroken) {
+      /* The Morse term is gone for good. */
+      morse_term = 0.0;
+
+      /* GROMACS exclusion lists are static, so this pair stays excluded from
+       * the non-bonded engine for the rest of the run and would otherwise be
+       * free to re-approach at any distance.  Put back the pair's own
+       * repulsive wall, using the real c12 of the two atom types.  Only the
+       * r^-12 term: the r^-6 dispersion is meaningless between stripped ions
+       * and leaving it out keeps the added term strictly repulsive.
+       *
+       * Because the bond breaks at r = b0 + 4/beta, which is at or beyond the
+       * LJ sigma of a typical pair, the term switches on at ~4*epsilon (order
+       * 1 kJ/mol) rather than in the steep part of the wall.
+       */
+      if (bonded_nbfp != NULL) {
+	c12 = C12(bonded_nbfp,bonded_ntype,md->typeA[ai],md->typeA[aj]);
+	if (c12 > 0) {
+	  inv_r6     = one/(dr2*dr2*dr2);
+	  vtot      += c12*inv_r6*inv_r6;
+	  lj_fscale  = 12.0*c12*inv_r6*inv_r6/dr2;
+	}
+      }
+    } else {
+      morse_term = -two*be*temp*cbomtemp*gmx_invsqrt(dr2);
+      vtot      += vbond;       /* 1 */
+    }
     coulomb_term = md->chargeA[aj]*md->chargeA[ai]*ONE_4PI_EPS0*gmx_invsqrt(dr2)*gmx_invsqrt(dr2)*gmx_invsqrt(dr2)*morse_ionization_factor;
 
-    fbond    =  morse_term + coulomb_term;      /*   9          */
-    vtot    += vbond;       /* 1 */
-    
+    fbond    =  morse_term + coulomb_term + lj_fscale;      /*   9          */
+
     if (g) {
       ivec_sub(SHIFT_IVEC(g,ai),SHIFT_IVEC(g,aj),dt);
       ki = IVEC2IS(dt);
@@ -763,31 +943,48 @@ real angles(int nbonds,
 	    const t_mdatoms *md,t_fcdata *fcd,
 	    int *global_atom_index)
 {
-  int  i,ai,aj,ak,t1,t2,type;
-  rvec r_ij,r_kj;
+  int  i,m,ai,aj,ak,t1,t2,type,ki2;
+  rvec r_ij,r_kj,r_ik;
   real cos_theta,cos_theta2,theta,dVdt,va,vtot;
-  ivec jt,dt_ij,dt_kj;
-  
+  ivec jt,dt_ij,dt_kj,dt_ik;
+  double angle_ionization_factor;
+  double average_charge_of_angle;
+  real qq_13,inv_r_ik,dr2_ik,fik_13;
+
   vtot = 0.0;
   for(i=0; (i<nbonds); ) {
     type = forceatoms[i++];
     ai   = forceatoms[i++];
     aj   = forceatoms[i++];
     ak   = forceatoms[i++];
-    
+
+    /* Ionization scaling of the harmonic angle term.  The harmonic angle
+     * force has no exponential attenuation with distance, so it has to be
+     * suppressed explicitly as the atoms ionise.  Same treatment as the
+     * angle part of urey_bradley().
+     */
+    if (USERINT1 == 1) {
+      average_charge_of_angle = (md->chargeA[ai] + md->chargeA[aj] +
+				 md->chargeA[ak])/3.0;
+      angle_ionization_factor = ionization_factor(average_charge_of_angle);
+    } else {
+      angle_ionization_factor = 1.0;
+    }
+
     theta  = bond_angle(x[ai],x[aj],x[ak],pbc,
 			r_ij,r_kj,&cos_theta,&t1,&t2);	/*  41		*/
-  
+
     *dvdlambda += harmonic(forceparams[type].harmonic.krA,
 			   forceparams[type].harmonic.krB,
 			   forceparams[type].harmonic.rA*DEG2RAD,
 			   forceparams[type].harmonic.rB*DEG2RAD,
 			   theta,lambda,&va,&dVdt);  /*  21  */
-    vtot += va;
-    
+    /* Energy scaled with the same factor as the force: the factor does not
+     * depend on the coordinates, so F = -d(f*V)/dr = f*(-dV/dr) holds. */
+    vtot += va*angle_ionization_factor;
+
     cos_theta2 = sqr(cos_theta);
     if (cos_theta2 < 1) {
-      int  m;
       real st,sth;
       real cik,cii,ckk;
       real nrkj2,nrij2;
@@ -811,22 +1008,54 @@ real angles(int nbonds,
 	f_i[m]=-(cik*r_kj[m]-cii*r_ij[m]);
 	f_k[m]=-(cik*r_ij[m]-ckk*r_kj[m]);
 	f_j[m]=-f_i[m]-f_k[m];
-	f[ai][m]+=f_i[m];
-	f[aj][m]+=f_j[m];
-	f[ak][m]+=f_k[m];
+	f[ai][m]+=f_i[m]*angle_ionization_factor;
+	f[aj][m]+=f_j[m]*angle_ionization_factor;
+	f[ak][m]+=f_k[m]*angle_ionization_factor;
       }
       if (g) {
 	copy_ivec(SHIFT_IVEC(g,aj),jt);
-      
+
 	ivec_sub(SHIFT_IVEC(g,ai),jt,dt_ij);
 	ivec_sub(SHIFT_IVEC(g,ak),jt,dt_kj);
 	t1=IVEC2IS(dt_ij);
 	t2=IVEC2IS(dt_kj);
       }
-      rvec_inc(fshift[t1],f_i);
-      rvec_inc(fshift[CENTRAL],f_j);
-      rvec_inc(fshift[t2],f_k);
+      /* fshift must carry the same scaling as the forces, otherwise the
+       * virial and hence the pressure tensor are inconsistent. */
+      for (m=0; (m<DIM); m++) {
+	fshift[t1][m]      += f_i[m]*angle_ionization_factor;
+	fshift[CENTRAL][m] += f_j[m]*angle_ionization_factor;
+	fshift[t2][m]      += f_k[m]*angle_ionization_factor;
+      }
     }                                           /* 161 TOTAL	*/
+
+    /* Explicit 1-3 Coulomb.  With nrexcl = 3 the terminal atoms of an angle
+     * are excluded from the non-bonded engine, so once the bonded terms fade
+     * on ionisation there is nothing left to push them apart.  Add the
+     * interaction here, as a genuine potential: the energy goes into vtot
+     * alongside the force, and the signed charge product is used so that the
+     * term stays a Coulomb interaction rather than a repulsion-only fudge.
+     */
+    if (USERINT1 == 1) {
+      qq_13 = md->chargeA[ai]*md->chargeA[ak]*ONE_4PI_EPS0;
+      if (qq_13 != 0) {
+	ki2      = pbc_rvec_sub(pbc,x[ai],x[ak],r_ik);
+	dr2_ik   = iprod(r_ik,r_ik);
+	inv_r_ik = gmx_invsqrt(dr2_ik);
+	vtot    += qq_13*inv_r_ik;
+	if (g) {
+	  ivec_sub(SHIFT_IVEC(g,ai),SHIFT_IVEC(g,ak),dt_ik);
+	  ki2 = IVEC2IS(dt_ik);
+	}
+	for (m=0; (m<DIM); m++) {
+	  fik_13 = qq_13*inv_r_ik*inv_r_ik*inv_r_ik*r_ik[m];
+	  f[ai][m]           += fik_13;
+	  f[ak][m]           -= fik_13;
+	  fshift[ki2][m]     += fik_13;
+	  fshift[CENTRAL][m] -= fik_13;
+	}
+      }
+    }
   }
   return vtot;
 }
@@ -845,10 +1074,12 @@ real urey_bradley(int nbonds,
   real dVdt,va,vtot,kth,th0,kUB,r13,dr,dr2,vbond,fbond,fik;
   ivec jt,dt_ij,dt_kj,dt_ik;
   double urey_bradley_ionization_factor;
-  double urey_bradley_coulomb_factor;
   double average_charge_of_molecule;
   double angle_term;
   double coulomb_term;
+  real   qq_13,inv_r_ik;
+  gmx_bool bUBBroken;
+  unsigned long long key;
 
   vtot = 0.0;
   for(i=0; (i<nbonds); ) {
@@ -861,23 +1092,38 @@ real urey_bradley(int nbonds,
     r13  = forceparams[type].u_b.r13;
     kUB  = forceparams[type].u_b.kUB;
 
-  if (USERINT1 == 1) {
-    average_charge_of_molecule = (md->chargeA[ai] + md->chargeA[aj] + md->chargeA[ak])/3.0;
-    urey_bradley_ionization_factor = ionization_factor(average_charge_of_molecule);
-  } else {
+    /* NB: the old urey_bradley_coulomb_factor is gone.  It was assigned only
+     * in the USERINT1 == 0 branch and read unconditionally below, so with
+     * USERINT1 == 1 it was an uninitialised read.  The 1-3 Coulomb is now
+     * computed explicitly further down, with its energy. */
+    if (USERINT1 == 1) {
+      average_charge_of_molecule = (md->chargeA[ai] + md->chargeA[aj] + md->chargeA[ak])/3.0;
+      urey_bradley_ionization_factor = ionization_factor(average_charge_of_molecule);
+    } else {
       urey_bradley_ionization_factor  = 1.0;
-      urey_bradley_coulomb_factor = 0.0; 
     }
-    
+
     theta  = bond_angle(x[ai],x[aj],x[ak],pbc,
 			r_ij,r_kj,&cos_theta,&t1,&t2);	/*  41		*/
-  
+
     *dvdlambda += harmonic(kth,kth,th0,th0,theta,lambda,&va,&dVdt);  /*  21  */
-    vtot += va;//*urey_bradley_ionization_factor;
-    
+    /* Energy scaled to match the scaled angle force below. */
+    vtot += va*urey_bradley_ionization_factor;
+
     ki   = pbc_rvec_sub(pbc,x[ai],x[ak],r_ik);	/*   3 		*/
     dr2  = iprod(r_ik,r_ik);			/*   5		*/
     dr   = dr2*gmx_invsqrt(dr2);		        /*  10		*/
+
+    /* Irreversible breaking of the 1-3 spring, keyed on the global atom pair
+     * so the flag survives domain decomposition.  See the registry at the top
+     * of this file. */
+    bUBBroken = FALSE;
+    if (USERINT1 == 1) {
+      key = broken_key(glatnr(global_atom_index,ai),glatnr(global_atom_index,ak));
+      if (dr > UB_BREAK_R13_FACTOR*r13)
+	broken_add(&ub_broken_set,key);
+      bUBBroken = broken_is_set(&ub_broken_set,key);
+    }
 
     *dvdlambda += harmonic(kUB,kUB,r13,r13,dr,lambda,&vbond,&fbond); /*  19  */
 
@@ -918,29 +1164,53 @@ real urey_bradley(int nbonds,
 	t1=IVEC2IS(dt_ij);
 	t2=IVEC2IS(dt_kj);
       }
-      rvec_inc(fshift[t1],f_i);
-      rvec_inc(fshift[CENTRAL],f_j);
-      rvec_inc(fshift[t2],f_k);
+      /* fshift must carry the same scaling as the forces, otherwise the
+       * virial and hence the pressure tensor are inconsistent. */
+      for (m=0; (m<DIM); m++) {
+	fshift[t1][m]      += f_i[m]*urey_bradley_ionization_factor;
+	fshift[CENTRAL][m] += f_j[m]*urey_bradley_ionization_factor;
+	fshift[t2][m]      += f_k[m]*urey_bradley_ionization_factor;
+      }
     }                                           /* 161 TOTAL	*/
     /* Time for the bond calculations */
+    /* BUG FIX: this used to read
+     *     if (dr2 == 0.0)
+     *       exit(0);
+     *       continue;
+     * where the continue is NOT guarded by the if, so it ran on every
+     * iteration and the whole remainder of the loop body - the Urey-Bradley
+     * 1-3 spring, its force and the 1-3 Coulomb - was unreachable.  CHARMM
+     * fits its angle force constants together with the UB term, so the
+     * force field was incomplete.  Restores the stock GROMACS 4.5.4 guard.
+     */
     if (dr2 == 0.0)
-      exit(0);
       continue;
 
-    vtot  += vbond*urey_bradley_ionization_factor;  /* 1*/
-    fbond *= gmx_invsqrt(dr2);	// angle potential
-    
+    inv_r_ik = gmx_invsqrt(dr2);
+
+    /* UB spring energy, dropped for good once the spring has broken. */
+    vtot  += bUBBroken ? 0.0 : vbond*urey_bradley_ionization_factor;  /* 1*/
+    fbond *= inv_r_ik;	// angle potential
+
+    /* Explicit 1-3 Coulomb, as a genuine potential: signed charge product and
+     * its energy added to vtot.  See the matching block in angles(). */
+    qq_13 = 0.0;
+    if (USERINT1 == 1) {
+      qq_13 = md->chargeA[ai]*md->chargeA[ak]*ONE_4PI_EPS0;
+      vtot += qq_13*inv_r_ik;
+    }
+
     if (g) {
       ivec_sub(SHIFT_IVEC(g,ai),SHIFT_IVEC(g,ak),dt_ik);
       ki=IVEC2IS(dt_ik);
-    } 
+    }
 
 
-    for (m=0; (m<DIM); m++) {	
-      angle_term = fbond*r_ik[m]*urey_bradley_ionization_factor;
-      coulomb_term = md->chargeA[ak]*md->chargeA[ai]*ONE_4PI_EPS0*r_ik[m]*urey_bradley_coulomb_factor*gmx_invsqrt(dr2)*gmx_invsqrt(dr2)*gmx_invsqrt(dr2);
+    for (m=0; (m<DIM); m++) {
+      angle_term = bUBBroken ? 0.0 : fbond*r_ik[m]*urey_bradley_ionization_factor;
+      coulomb_term = qq_13*r_ik[m]*inv_r_ik*inv_r_ik*inv_r_ik;
       fik= angle_term + coulomb_term;
-      f[ai][m]+=fik; 
+      f[ai][m]+=fik;
       f[ak][m]-=fik;
       fshift[ki][m]+=fik;
       fshift[CENTRAL][m]-=fik;
@@ -1586,7 +1856,9 @@ real rbdihs(int nbonds,
   real cosfac,vtot;
   real L1   = 1.0-lambda;
   real dvdl=0;
-  
+  double rb_ionization_factor;
+  double average_charge_of_dihedral;
+
   vtot = 0.0;
   for(i=0; (i<nbonds); ) {
     type = forceatoms[i++];
@@ -1594,6 +1866,17 @@ real rbdihs(int nbonds,
     aj   = forceatoms[i++];
     ak   = forceatoms[i++];
     al   = forceatoms[i++];
+
+    /* Ionization scaling of the Ryckaert-Bellemans torsion, matching the
+     * scaling that pdihs() and idihs() already apply.  Without this the
+     * OPLS-AA torsions stay at full stiffness for ionised atoms. */
+    if (USERINT1 == 1) {
+      average_charge_of_dihedral = (md->chargeA[ai] + md->chargeA[aj] +
+				    md->chargeA[ak] + md->chargeA[al])/4.0;
+      rb_ionization_factor = ionization_factor(average_charge_of_dihedral);
+    } else {
+      rb_ionization_factor = 1.0;
+    }
 
       phi=dih_angle(x[ai],x[aj],x[ak],x[al],pbc,r_ij,r_kj,r_kl,m,n,
                     &sign,&t1,&t2,&t3);			/*  84		*/
@@ -1655,10 +1938,10 @@ real rbdihs(int nbonds,
    
     ddphi = -ddphi*sin_phi;				/*  11		*/
     
-    do_dih_fup(ai,aj,ak,al,ddphi,r_ij,r_kj,r_kl,m,n,
+    do_dih_fup(ai,aj,ak,al,ddphi*rb_ionization_factor,r_ij,r_kj,r_kl,m,n,
 	       f,fshift,pbc,g,x,t1,t2,t3, 1.0);		/* 112		*/
-    vtot += v;
-  }  
+    vtot += v*rb_ionization_factor;
+  }
   *dvdlambda += dvdl;
 
   return vtot;
@@ -2700,6 +2983,11 @@ void calc_bonds(FILE *fplog,const gmx_multisim_t *ms,
   real   *epot,v,dvdl;
   const  t_pbc *pbc_null;
   char   buf[22];
+
+  /* Make the real force-field LJ parameters reachable from morse_bonds(),
+   * which does not get a t_forcerec of its own. */
+  bonded_nbfp  = fr->nbfp;
+  bonded_ntype = fr->ntype;
 
   if (fr->bMolPBC)
     pbc_null = pbc;
