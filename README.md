@@ -262,3 +262,7 @@ Currently the simulation can only utilize one core. One can of course run many s
 For high ionization we get huge forces, this can make the numerical integration unstable.
 If you suspect this check the kinetic and potential energy of the system. As long as they look relativly smooth it should be okay.
 The work around is usually to lower the stepsize. We recommend a step size of 1 as.
+
+### Compatibility
+
+Has only been tested on Linux systems.
