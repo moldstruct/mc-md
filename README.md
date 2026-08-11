@@ -102,13 +102,20 @@ So for hydrogen two rows of the file might look like this:
 ### `rate_transitions_X.txt`
 
 This file contains all possible transitions for an atomic species. Each initial state has its own row and has the format
-`initial state ; final state transition_rate transition-type`, or
+
+`initial state ; final state transition_rate transition-type`,
+
+or
+
 `a b c ; a' b' c' transition_rate transition-type ;`.
+
 `transition-type` is 0, 1 or 2, corresponding to Auger-Meitner decay, fluorescence and
 photoionization respectively. Only type 2 has its rate scaled by the pulse profile;
 Auger and fluorescence rates are used as given.
 Here a `;` is used to separate the initial and final states. In the case of multiple possible final states, we add one more final state, rate, and type after the first one like
+
 `a b c ; a' b' c' transition_rate' transition-type' ; a'' b'' c'' transition_rate'' transition-type'' ;`.
+
 This pattern continues for more final states.
 We look at hydrogen again. These are the first two rows of the `rate_transitions_H.txt`
 shipped with the example, generated for 1000 eV:
