@@ -1811,28 +1811,50 @@ void mcionize_step(t_mcionize *mc, FILE *fplog, const t_inputrec *ir,
 }
 
 gmx_bool mcionize_autostop(const t_mcionize *mc, const t_inputrec *ir,
-                           double E_kin, double E_tot, gmx_large_int_t step)
+                           double E_kin, double E_tot, gmx_large_int_t step,
+                           gmx_bool bEnergiesGlobal, const t_commrec *cr)
 {
-    double ratio;
+    int stop = 0;
 
     /* mc == NULL already means -ionize was not given, which is what gates the
-     * whole module, so no separate force-field test is needed here. */
+     * whole module.  All three of these tests are rank-independent, so every
+     * rank returns here together and none is left behind at the broadcast. */
     if (mc == NULL || ir->mcmd_autostop == 0)
     {
         return FALSE;
     }
 
-    ratio = E_kin / E_tot;
-
-    if (ratio > ir->mcmd_autostop_threshold && step > 10000)
+    /* enerd->term[] is only summed across ranks on global-communication
+     * steps.  On any other step it carries this rank's own partial energies,
+     * and the ratio computed from them is not the system's - under particle
+     * decomposition that made the test fire on one rank and not the others. */
+    if (!bEnergiesGlobal)
     {
-        fprintf(stderr,
-                "\nSimulation terminated: Ratio %f is over threshold %f\n",
-                ratio, ir->mcmd_autostop_threshold);
-        return TRUE;
+        return FALSE;
     }
 
-    return FALSE;
+    if (MASTER(cr))
+    {
+        double ratio = E_kin / E_tot;
+
+        if (ratio > ir->mcmd_autostop_threshold && step > 10000)
+        {
+            fprintf(stderr,
+                    "\nSimulation terminated: ratio %f is over threshold %f\n",
+                    ratio, (double)ir->mcmd_autostop_threshold);
+            stop = 1;
+        }
+    }
+
+    /* Decide once and tell everyone.  The threshold is crossed by a hair
+     * (0.990001 against 0.990000 in the shipped example), so even identical
+     * inputs cannot be relied on to give every rank the same answer. */
+    if (PAR(cr))
+    {
+        gmx_bcast(sizeof(stop), &stop, cr);
+    }
+
+    return (stop != 0);
 }
 
 void mcionize_done(t_mcionize *mc, t_mdatoms *mdatoms, const t_commrec *cr)

@@ -315,54 +315,50 @@ All observables are in the same units as the other files.
 
 ## Example
 
-To help with getting started here is a simple example of running a simple explosion simulaiton, check the `example` folder.
-In this example we will blow up a lysozyme protein, the structure is given in `1aki.pdb`.
-To run the sim we must first make sure that we have all required atomic data, in this case the data is already provided in the `Atomic_data` folder this is generated for 1000 eV photon energy, matching `mcmd-pulse-photon-energy` in the provided `exp.mdp`.
+`example/` contains a complete worked run: hen egg-white lysozyme (PDB 1AKI,
+1960 atoms) in vacuum, exploded by a 1e11-photon, 2.94 fs pulse at 1000 eV.
 
-With the prerequisite data present, the rest of the procedure is very similar to a normal Gromacs run.
-
-#### Generate topology
-
-To generate a topology we can run
-
-```
-path/to/gromacs/bin/pdb2gmx -f 1aki.pdb -ff "charmm27"
+```bash
+cd example
+# edit run_example.sh to point at your gromacs bin directory, then
+bash run_example.sh
 ```
 
-In case of a system with water, avoid using models with dummy-particles.
+which is just:
 
-#### Configure
-
-We call the preprocessor on our parameter file, at the end of it you can see the new parameters, feel free to play around with them to see how it influences the system. However, changing the photon energy would require new atomic data.
-
-```
-path/to/gromacs/bin/grompp -f exp.mdp -c conf.gro -p topol.top -o explode.tpr
+```bash
+pdb2gmx -f 1aki.pdb -ff "charmm27" -water none
+grompp  -f exp.mdp -c conf.gro -p topol.top -o explode.tpr
+mdrun   -deffnm explode -v -nt 1 -ionize
 ```
 
-#### Run!
-
-Finally we can run the simulation by calling the following command:
-
-```
-path/to/gromacs/bin/mdrun -deffnm explode -v -nt 1 -ionize
-```
+Add `-pd` and raise `-nt` to use more cores (`-nt 8 -pd`) - `-pd` is required
+whenever `-nt` > 1, because domain decomposition renumbers atoms into
+rank-local indices and the charge-transfer pass needs a global search over all
+positions. It is refused with a clear error rather than producing wrong
+answers. Results are independent of the number of ranks.
 
 The `-ionize` flag must be given, or none of the ionization code runs and the
 simulation behaves as unmodified GROMACS 4.5.4.
 
-To use more than one core, add `-pd` (particle decomposition):
+The atomic data in `example/Atomic_data` is generated for 1000 eV, matching
+`mcmd-pulse-photon-energy` in `exp.mdp`. Changing the photon energy requires
+regenerating it (see "Supplying atomic data"); the other parameters can be
+played with freely.
+
+30000 steps at dt = 1 as covers 30 fs, with the pulse peaking at t = 0. On a
+completed run every atom ends up at least singly charged:
 
 ```
-path/to/gromacs/bin/mdrun -deffnm explode -v -nt 8 -pd -ionize
+min 1   mean 3.23   max 14   neutral atoms: 0/1960
+
 ```
 
-`-pd` is required whenever `-nt` is greater than 1. Domain decomposition (the
-default for `-nt > 1`) is **not** supported and is refused with an error: the
-charge transfer module needs a global search over all atomic positions, and
-domain decomposition renumbers atoms into rank-local indices. Results are
-independent of the number of ranks.
+The exact numbers vary run to run, because the Monte Carlo draws are seeded
+from the clock - set `GMX_MCMD_SEED` to pin them.
 
-There is also a simple bash-script provided for running all commands.
+Output lands in `simulation_output/` (see above); `charges.txt` holds the
+final per-atom charges and `procces_statistics.txt` the event counts.
 
 ## Limitations
 

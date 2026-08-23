@@ -54,11 +54,19 @@ void mcionize_step(t_mcionize *mc, FILE *fplog, const t_inputrec *ir,
                    t_mdatoms *mdatoms, t_state *state,
                    double t, const t_commrec *cr, t_nrnb *nrnb);
 
-/* Autostop test (userint3): TRUE once E_kin/E_tot exceeds userreal6.  Kept
- * out of the step function because do_md only knows the energies later in
- * the step. */
+/* Autostop test (mcmd-autostop): TRUE once E_kin/E_tot exceeds
+ * mcmd-autostop-threshold.  Kept out of the step function because do_md only
+ * knows the energies later in the step.
+ *
+ * bEnergiesGlobal must be do_md's bGStat: enerd->term[] is only reduced
+ * across ranks on global-communication steps, and on every other step it
+ * holds this rank's partial sums, so the ratio is not the system's.  The
+ * decision is taken on one rank and broadcast, because every rank has to
+ * reach the same answer - if one leaves the MD loop and the others do not,
+ * they hang in the next collective. */
 gmx_bool mcionize_autostop(const t_mcionize *mc, const t_inputrec *ir,
-                           double E_kin, double E_tot, gmx_large_int_t step);
+                           double E_kin, double E_tot, gmx_large_int_t step,
+                           gmx_bool bEnergiesGlobal, const t_commrec *cr);
 
 /* Write the end-of-run output (process statistics, final charges and
  * configurations) and release everything.  Safe to call with mc == NULL. */

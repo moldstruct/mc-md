@@ -2708,7 +2708,7 @@ double do_md(FILE *fplog, t_commrec *cr, int nfile, const t_filenm fnm[],
         enerd->term[F_ETOT] = enerd->term[F_EPOT] + enerd->term[F_EKIN];
 
         if (mcionize_autostop(mcion, ir, enerd->term[F_EKIN],
-                              enerd->term[F_ETOT], step))
+                              enerd->term[F_ETOT], step, bGStat, cr))
         {
             bLastStep = TRUE;
         }
