@@ -56,15 +56,19 @@
 #include "force.h"
 #include "nonbonded.h"
 #include "mdrun.h"
-/* Non-zero selects the MolDStruct force-field terms below.  Set by
- * mcionize_init() when mdrun is given -ionize, and zero otherwise, so a run
+/* Non-zero selects the MolDStruct force-field terms below.  Set to 1 by the
+ * ionization module when mdrun is given -ionize, and zero otherwise, so a run
  * without -ionize uses stock GROMACS 4.5.4 bonded interactions.
  *
- * Defined here, in libgmx, because that is where it is read; mcionize.c only
- * writes it and declares it extern.  It used to be tentatively defined in
- * both, which linked only because the build accepts common symbols and is an
- * error under -fno-common (the GCC 10+ default). */
-int mcmd_altered_ff = 0;
+ * Defined here, in libgmx, because that is where it is read; the ionization
+ * module only writes it and declares it extern.  It used to be tentatively
+ * defined in both, which linked only because the build accepts common symbols
+ * and is an error under -fno-common (the GCC 10+ default).
+ *
+ * Named after neither build: this file is kept byte-identical between the
+ * gromacs-mc and sf-md trees, so the symbol has to mean the same thing in
+ * both.  Port changes wholesale rather than editing one tree alone. */
+int moldstruct_altered_ff = 0;
 
 /* Find a better place for this? */
 const int cmap_coeff_matrix[] = {
@@ -92,7 +96,7 @@ double ionization_factor(double x) {
 }
 
 /* =====================================================================
- * Irreversible bond breaking (enabled by mcmd_altered_ff only)
+ * Irreversible bond breaking (enabled by moldstruct_altered_ff only)
  * =====================================================================
  *
  * A bond that has been stretched past the breaking threshold is recorded
@@ -299,7 +303,7 @@ real morse_bonds(int nbonds,
   real   c12,inv_r6,lj_fscale;
 
 
-   if (mcmd_altered_ff == 1) {
+   if (moldstruct_altered_ff == 1) {
     morse_ionization_factor = 1.0;
   }
 
@@ -339,7 +343,7 @@ real morse_bonds(int nbonds,
      * the well depth has already been paid, for any bond type.
      */
     bBroken = FALSE;
-    if (mcmd_altered_ff == 1) {
+    if (moldstruct_altered_ff == 1) {
       key = broken_key(glatnr(global_atom_index,ai),glatnr(global_atom_index,aj));
       if (be*(dr-b0) > MORSE_BREAK_BETA_DR)
 	broken_add(&morse_broken_set,key);
@@ -982,7 +986,7 @@ real angles(int nbonds,
      * suppressed explicitly as the atoms ionise.  Same treatment as the
      * angle part of urey_bradley().
      */
-    if (mcmd_altered_ff == 1) {
+    if (moldstruct_altered_ff == 1) {
       average_charge_of_angle = (md->chargeA[ai] + md->chargeA[aj] +
 				 md->chargeA[ak])/3.0;
       angle_ionization_factor = ionization_factor(average_charge_of_angle);
@@ -1055,7 +1059,7 @@ real angles(int nbonds,
      * alongside the force, and the signed charge product is used so that the
      * term stays a Coulomb interaction rather than a repulsion-only fudge.
      */
-    if (mcmd_altered_ff == 1) {
+    if (moldstruct_altered_ff == 1) {
       qq_13 = md->chargeA[ai]*md->chargeA[ak]*ONE_4PI_EPS0;
       if (qq_13 != 0) {
 	ki2      = pbc_rvec_sub(pbc,x[ai],x[ak],r_ik);
@@ -1112,10 +1116,10 @@ real urey_bradley(int nbonds,
     kUB  = forceparams[type].u_b.kUB;
 
     /* NB: the old urey_bradley_coulomb_factor is gone.  It was assigned only
-     * in the mcmd_altered_ff == 0 branch and read unconditionally below, so with
-     * mcmd_altered_ff == 1 it was an uninitialised read.  The 1-3 Coulomb is now
+     * in the moldstruct_altered_ff == 0 branch and read unconditionally below, so with
+     * moldstruct_altered_ff == 1 it was an uninitialised read.  The 1-3 Coulomb is now
      * computed explicitly further down, with its energy. */
-    if (mcmd_altered_ff == 1) {
+    if (moldstruct_altered_ff == 1) {
       average_charge_of_molecule = (md->chargeA[ai] + md->chargeA[aj] + md->chargeA[ak])/3.0;
       urey_bradley_ionization_factor = ionization_factor(average_charge_of_molecule);
     } else {
@@ -1137,7 +1141,7 @@ real urey_bradley(int nbonds,
      * so the flag survives domain decomposition.  See the registry at the top
      * of this file. */
     bUBBroken = FALSE;
-    if (mcmd_altered_ff == 1) {
+    if (moldstruct_altered_ff == 1) {
       key = broken_key(glatnr(global_atom_index,ai),glatnr(global_atom_index,ak));
       if (dr > UB_BREAK_R13_FACTOR*r13)
 	broken_add(&ub_broken_set,key);
@@ -1214,7 +1218,7 @@ real urey_bradley(int nbonds,
     /* Explicit 1-3 Coulomb, as a genuine potential: signed charge product and
      * its energy added to vtot.  See the matching block in angles(). */
     qq_13 = 0.0;
-    if (mcmd_altered_ff == 1) {
+    if (moldstruct_altered_ff == 1) {
       qq_13 = md->chargeA[ai]*md->chargeA[ak]*ONE_4PI_EPS0;
       vtot += qq_13*inv_r_ik;
     }
@@ -1500,7 +1504,7 @@ real pdihs(int nbonds,
     ak   = forceatoms[i++];
     al   = forceatoms[i++];
 
-     if (mcmd_altered_ff == 1) {
+     if (moldstruct_altered_ff == 1) {
     // adapt FF based on net charge
 
     average_charge_dihedral = (md->chargeA[ai] + md->chargeA[aj] + md->chargeA[ak] + md->chargeA[al])/4.0;
@@ -1562,7 +1566,7 @@ real idihs(int nbonds,
     ak   = forceatoms[i++];
     al   = forceatoms[i++];
 
-  if (mcmd_altered_ff == 1) {
+  if (moldstruct_altered_ff == 1) {
       average_charge_improper_dihedral = (md->chargeA[ai] + md->chargeA[aj] + md->chargeA[ak] + md->chargeA[al])/4.0 ;
       improper_dihedral_ionization_factor = ionization_factor(average_charge_improper_dihedral);
   } else {
@@ -1889,7 +1893,7 @@ real rbdihs(int nbonds,
     /* Ionization scaling of the Ryckaert-Bellemans torsion, matching the
      * scaling that pdihs() and idihs() already apply.  Without this the
      * OPLS-AA torsions stay at full stiffness for ionised atoms. */
-    if (mcmd_altered_ff == 1) {
+    if (moldstruct_altered_ff == 1) {
       average_charge_of_dihedral = (md->chargeA[ai] + md->chargeA[aj] +
 				    md->chargeA[ak] + md->chargeA[al])/4.0;
       rb_ionization_factor = ionization_factor(average_charge_of_dihedral);
@@ -2026,7 +2030,7 @@ real cmap_dihs(int nbonds,
   double cmap_ionization_factor;
   double average_charge_cmap;
 
-  if (mcmd_altered_ff == 1) {
+  if (moldstruct_altered_ff == 1) {
     // adapt FF based on net charge
     cmap_ionization_factor  = 0.0;
   }
@@ -2076,7 +2080,7 @@ real cmap_dihs(int nbonds,
 		al     = forceatoms[n++];
 		am     = forceatoms[n++];
 
-     if (mcmd_altered_ff == 1) {
+     if (moldstruct_altered_ff == 1) {
       average_charge_cmap = (md->chargeA[ai] + md->chargeA[aj] + md->chargeA[ak] + md->chargeA[al] + md->chargeA[am])/5.0 ;
     // adapt FF based on net charge
      if ( average_charge_cmap >=1.0) {

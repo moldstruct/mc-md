@@ -41,7 +41,7 @@
 /* Defined in gmxlib/bondfree.c, where it is read.  Set to 1 by
  * mcionize_init() when the module is active, i.e. under mdrun -ionize, which
  * is what selects the MolDStruct force-field terms. */
-extern int mcmd_altered_ff;
+extern int moldstruct_altered_ff;
 
 /* ---------------------------------------------------------------- *
  * Physical constants and model parameters
@@ -1506,7 +1506,7 @@ t_mcionize *mcionize_init(FILE *fplog, const t_inputrec *ir,
      * be a separate mdp switch (userint1); it is now implied by -ionize,
      * which is the only way to reach this function.  Set here rather than in
      * mcionize_step() so it is in place before the first do_force(). */
-    mcmd_altered_ff = 1;
+    moldstruct_altered_ff = 1;
 
     /* Idle skipping for the charge-transfer pass.  0 means "use the built-in
      * default", which is also what a tpr generated before these two knobs

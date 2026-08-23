@@ -101,6 +101,7 @@ This one gates **all** per-step output, not just the transition log:
 
 With it off you get only the end-of-run `charges.txt` and
 `procces_statistics.txt`, so turn it on for any run you intend to analyse.
+These files can become VERY large as it output data each step.
 
 It is off by default because it is not free. `charges_over_time.bin` is one
 `real` per atom per frame and dominates everything else, so it is written
