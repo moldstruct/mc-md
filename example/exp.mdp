@@ -239,19 +239,17 @@ E-yt                 =
 E-z                  = 
 E-zt                 = 
 
-; User defined thingies
-userint1             = 1        ; Alter forcefield. If set to zero everything should run as unmodifed gromacs 4.5.4
-userint2             = 1        ; Do charge transfer. Enables the charge transfer module
-userint3             = 1        ; Enable autostop of sim after threshold energy is reached (userreal6)
-userint4             = 0        ; Read electronic states from file. Useful for continued sims (experimental)
-userint5             = 0        ; Enable logging of electronic dynamics. Big performance drop due to I/O.
-userint6             = 0        ; Enable collisional ionization. (Not implemented yet). Requires collisional data.
-userint9             = 0        ; Enable charge initialization, if 1 read charge from a charges.txt file, if zero init all charges to 0.
-
-
-userreal1            = 0        ;0.005; Peak of the gaussian [ps]
-userreal2            = 1e11     ; Total number of photons in the pulse
-userreal3            = 0.00125  ; Width of the peak (sigma values of gaussian) [ps]
-userreal4            = 100      ; Diameter of the focal spot [nm]
-userreal5            = 1000     ; Photon energy [eV]
-userreal6            = 0.99     ; Energy threshold for stopping (enable/disable userint3)
+; MolDStruct ionization.  These only take effect with mdrun -ionize, which
+; also enables the altered force field.  Note times are in FEMTOSECONDS.
+mcmd-charge-transfer         = 1        ; classical over-the-barrier charge transfer
+mcmd-pulse-peak-time         = 0        ; centre of the Gaussian pulse [fs]
+mcmd-pulse-fwhm              = 2.9435   ; pulse duration, FWHM [fs]
+mcmd-pulse-photons           = 1e11     ; total photons in the pulse
+mcmd-pulse-focal-diameter    = 100      ; focal spot diameter [nm]
+mcmd-pulse-photon-energy     = 1000     ; photon energy [eV]
+mcmd-autostop                = 1        ; stop once E_kin/E_tot passes the threshold
+mcmd-autostop-threshold      = 0.99
+mcmd-initial-charges         = 0        ; read starting charges from charges.txt
+mcmd-detailed-output         = 0        ; per-step analysis output; see README
+mcmd-charge-output-stride    = 50       ; steps between charges_over_time.bin frames
+mcmd-collisional-ionization  = 0        ; NOT IMPLEMENTED

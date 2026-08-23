@@ -73,7 +73,7 @@
 #include "nb_kernel_c/nb_kernel330.h"
 
 /* Ionization helpers, defined in gmxlib/bondfree.c */
-extern int    USERINT1;
+extern int    mcmd_altered_ff;
 extern double ionization_factor(double x);
 
 #ifdef GMX_PPC_ALTIVEC   
@@ -769,7 +769,7 @@ do_listed_vdw_q(int ftype,int nbonds,
              *   ionised  -> eps = epsfac          (full Coulomb)
              * Only the Coulomb part is touched; the 1-4 LJ is left alone.
              */
-            if (USERINT1 == 1) {
+            if (mcmd_altered_ff == 1) {
                 average_charge_14    = (md->chargeA[ai] + md->chargeA[aj])/2.0;
                 ionization_factor_14 = ionization_factor(average_charge_14);
                 eps = fr->epsfac*(1.0 - (1.0 - fr->fudgeQQ)*ionization_factor_14);

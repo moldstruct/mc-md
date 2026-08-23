@@ -273,21 +273,30 @@ typedef struct {
   int  userint2;
   int  userint3;
   int  userint4;
-  int  userint5;        /* User determined parameters                   */
-  int  userint6;
-  int  userint7;
-  int  userint8;
-  int  userint9;
-
   real userreal1;
   real userreal2;
   real userreal3;
   real userreal4;
-  real userreal5;
-  real userreal6;
-  real userreal7;
-  real userreal8;
-  real userreal9;
+
+  /* MolDStruct (MCMD) ionization parameters.  Set in the mdp as mcmd-*,
+   * consumed by src/kernel/mcionize.c.  These replace the userint5-9 /
+   * userreal5-9 slots the module used before 2026-08-23; the whole module is
+   * gated on mdrun -ionize, so there is no separate enable switch. */
+  int  mcmd_charge_transfer;           /* boolean                          */
+  int  mcmd_autostop;                  /* boolean                          */
+  int  mcmd_detailed_output;           /* boolean                          */
+  int  mcmd_collisional_ionization;    /* boolean, NOT IMPLEMENTED         */
+  int  mcmd_charge_transfer_idle;      /* steps                            */
+  int  mcmd_charge_transfer_recheck;   /* steps                            */
+  int  mcmd_initial_charges;           /* boolean                          */
+  int  mcmd_charge_output_stride;      /* steps between charge dumps       */
+
+  real mcmd_pulse_peak_time;           /* fs                               */
+  real mcmd_pulse_photons;             /* total photons in the pulse       */
+  real mcmd_pulse_fwhm;                /* fs, full width at half maximum   */
+  real mcmd_pulse_focal_diameter;      /* nm                               */
+  real mcmd_pulse_photon_energy;       /* eV                               */
+  real mcmd_autostop_threshold;        /* E_kin/E_tot ratio                */
 
   t_grpopts opts;	/* Group options				*/
   t_cosines ex[DIM];	/* Electric field stuff	(spatial part)		*/

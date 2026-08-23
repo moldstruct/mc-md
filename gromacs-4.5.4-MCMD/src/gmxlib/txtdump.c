@@ -672,21 +672,28 @@ void pr_inputrec(FILE *fp,int indent,const char *title,t_inputrec *ir,
     PI("userint2",ir->userint2);
     PI("userint3",ir->userint3);
     PI("userint4",ir->userint4);
-    PI("userint5",ir->userint5);
-    PI("userint6",ir->userint6);
-    PI("userint7",ir->userint7);
-    PI("userint8",ir->userint8);
-    PI("userint9",ir->userint9);
+
     
     PR("userreal1",ir->userreal1);
     PR("userreal2",ir->userreal2);
     PR("userreal3",ir->userreal3);
     PR("userreal4",ir->userreal4);
-    PR("userreal5",ir->userreal5);
-    PR("userreal6",ir->userreal6);
-    PR("userreal7",ir->userreal7);
-    PR("userreal8",ir->userreal8);
-    PR("userreal8",ir->userreal9);
+
+    /* MolDStruct ionization parameters */
+    PI("mcmd-charge-transfer",ir->mcmd_charge_transfer);
+    PI("mcmd-charge-transfer-idle",ir->mcmd_charge_transfer_idle);
+    PI("mcmd-charge-transfer-recheck",ir->mcmd_charge_transfer_recheck);
+    PI("mcmd-autostop",ir->mcmd_autostop);
+    PR("mcmd-autostop-threshold",ir->mcmd_autostop_threshold);
+    PI("mcmd-initial-charges",ir->mcmd_initial_charges);
+    PI("mcmd-charge-output-stride",ir->mcmd_charge_output_stride);
+    PI("mcmd-detailed-output",ir->mcmd_detailed_output);
+    PI("mcmd-collisional-ionization",ir->mcmd_collisional_ionization);
+    PR("mcmd-pulse-peak-time",ir->mcmd_pulse_peak_time);
+    PR("mcmd-pulse-fwhm",ir->mcmd_pulse_fwhm);
+    PR("mcmd-pulse-photons",ir->mcmd_pulse_photons);
+    PR("mcmd-pulse-focal-diameter",ir->mcmd_pulse_focal_diameter);
+    PR("mcmd-pulse-photon-energy",ir->mcmd_pulse_photon_energy);
     
     pr_grp_opts(fp,indent,"grpopts",&(ir->opts),bMDPformat);
     pr_cosine(fp,indent,"efield-x",&(ir->ex[XX]),bMDPformat);

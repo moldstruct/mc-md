@@ -800,6 +800,132 @@ static void add_wall_energrps(gmx_groups_t *groups,int nwall,t_symtab *symtab)
   }
 }
 
+/* Reject a misspelled mcmd-* option rather than letting it fall silently back
+ * to its default.  GROMACS already notices unread mdp entries, but only as a
+ * warning from write_inpfile(), and the run scripts pass -maxwarn, so it is
+ * swallowed.  These options set the physics - a typo in the photon energy or
+ * the pulse width would quietly produce a different simulation.  This is how
+ * example/exp.mdp came to keep a pre-rename name unnoticed.
+ *
+ * Must run after the get_e*() calls below, which is what sets bSet. */
+static void check_mcmd_unknown_entries(int ninp, t_inpfile *inp)
+{
+    static const char *known[] = {
+        "mcmd-charge-transfer", "mcmd-charge-transfer-idle",
+        "mcmd-charge-transfer-recheck", "mcmd-autostop",
+        "mcmd-autostop-threshold", "mcmd-initial-charges",
+        "mcmd-detailed-output", "mcmd-charge-output-stride",
+        "mcmd-collisional-ionization", "mcmd-pulse-peak-time",
+        "mcmd-pulse-fwhm", "mcmd-pulse-photons",
+        "mcmd-pulse-focal-diameter", "mcmd-pulse-photon-energy",
+        NULL
+    };
+    int  i, k;
+    char list[1024];
+
+    for (i = 0; i < ninp; i++)
+    {
+        if (inp[i].bSet || inp[i].bObsolete || inp[i].name == NULL)
+        {
+            continue;
+        }
+        if (gmx_strncasecmp(inp[i].name, "mcmd-", 5) != 0)
+        {
+            continue;   /* not ours; the generic warning still applies */
+        }
+
+        list[0] = '\0';
+        for (k = 0; known[k] != NULL; k++)
+        {
+            if (strlen(list) + strlen(known[k]) + 4 < sizeof(list))
+            {
+                strcat(list, "  ");
+                strcat(list, known[k]);
+                strcat(list, "\n");
+            }
+        }
+        gmx_fatal(FARGS,
+                  "Unknown MolDStruct option '%s' in the mdp file. The "
+                  "recognised ones are:\n%s",
+                  inp[i].name, list);
+    }
+}
+
+/* The MolDStruct ionization parameters used to live in the generic userint5-9
+ * and userreal5-9 slots.  Renaming them silently would be dangerous: an old
+ * mdp still parses, the old names are simply ignored, and the run proceeds
+ * with default ionization settings that look plausible in the log.  Worse,
+ * the pulse parameters also changed meaning - the width is now the FWHM in
+ * femtoseconds where it used to be the standard deviation in picoseconds, a
+ * factor of 2354.8 - so a mechanical rename without conversion would give a
+ * pulse three orders of magnitude too short.
+ *
+ * So refuse the file outright and say what each entry became.  A warning
+ * would not do: the run scripts pass -maxwarn, which would swallow it. */
+static void check_mcmd_legacy_entries(int ninp, t_inpfile *inp)
+{
+    static const char *legacy[][2] = {
+        { "userint1", "removed - the altered force field and the autostop are "
+                      "now gated on 'mdrun -ionize' alone" },
+        { "userint2", "mcmd-charge-transfer" },
+        { "userint3", "mcmd-autostop" },
+        { "userint4", "removed - use 'mdrun -cpi' to continue a run" },
+        { "userint5", "mcmd-detailed-output" },
+        { "userint6", "mcmd-collisional-ionization" },
+        { "userint7", "mcmd-charge-transfer-idle" },
+        { "userint8", "mcmd-charge-transfer-recheck" },
+        { "userint9", "mcmd-initial-charges" },
+        { "userreal1", "mcmd-pulse-peak-time, IN FEMTOSECONDS (was ps): "
+                       "multiply the old value by 1000" },
+        { "userreal2", "mcmd-pulse-photons" },
+        { "userreal3", "mcmd-pulse-fwhm, THE FWHM IN FEMTOSECONDS (was the "
+                       "standard deviation in ps): multiply the old value by "
+                       "2354.82" },
+        { "userreal4", "mcmd-pulse-focal-diameter" },
+        { "userreal5", "mcmd-pulse-photon-energy" },
+        { "userreal6", "mcmd-autostop-threshold" },
+        { NULL, NULL }
+    };
+    int  i, k;
+    char found[4096];
+    int  nfound = 0;
+
+    found[0] = '\0';
+
+    for (k = 0; legacy[k][0] != NULL; k++)
+    {
+        for (i = 0; i < ninp; i++)
+        {
+            if (gmx_strcasecmp_min(legacy[k][0], inp[i].name) == 0)
+            {
+                if (strlen(found) + strlen(legacy[k][0]) +
+                    strlen(legacy[k][1]) + 8 < sizeof(found))
+                {
+                    strcat(found, "  ");
+                    strcat(found, legacy[k][0]);
+                    strcat(found, " -> ");
+                    strcat(found, legacy[k][1]);
+                    strcat(found, "\n");
+                }
+                nfound++;
+                break;
+            }
+        }
+    }
+
+    if (nfound > 0)
+    {
+        gmx_fatal(FARGS,
+                  "This mdp file uses the old MolDStruct parameter names, "
+                  "which were replaced by named mcmd-* options.  Update it:\n"
+                  "%s\n"
+                  "Note the unit changes on the pulse parameters - a "
+                  "mechanical rename will give the wrong pulse.  See the "
+                  "'Parameters' section of the MolDStruct README.",
+                  found);
+    }
+}
+
 void get_ir(const char *mdparin,const char *mdparout,
             t_inputrec *ir,t_gromppopts *opts,
             warninp_t wi)
@@ -812,6 +938,12 @@ void get_ir(const char *mdparin,const char *mdparout,
   char      warn_buf[STRLEN];
   
   inp = read_inpfile(mdparin, &ninp, NULL, wi);
+
+  /* Must run here, against what the file actually contains: the get_e*()
+   * calls below insert every registered option into inp with its default, so
+   * after them userint1-4 are always present whether the user wrote them or
+   * not. */
+  check_mcmd_legacy_entries(ninp, inp);
 
   snew(dumstr[0],STRLEN);
   snew(dumstr[1],STRLEN);
@@ -1151,26 +1283,38 @@ void get_ir(const char *mdparin,const char *mdparout,
   STYPE ("user1-grps",  user1,          NULL);
   STYPE ("user2-grps",  user2,          NULL);
 
-  ITYPE ("userint1",    ir->userint1,   1); // Enable altererd forcefields 
-  ITYPE ("userint2",    ir->userint2,   1); // Do charge transfer
-  ITYPE ("userint3",    ir->userint3,   0); // Enable stopping when threshgold is reached (userreal6)
-  ITYPE ("userint4",    ir->userint4,   0); // Read states from previous sim
-  ITYPE ("userint5",    ir->userint5,   0); // Enable logging
-  ITYPE ("userint6",    ir->userint6,   0); // Enable collsional ionization (Not implemented)
-  ITYPE ("userint7",    ir->userint7,   0); // FREE
-  ITYPE ("userint8",    ir->userint8,   0); // FREE
-  ITYPE ("userint9",    ir->userint9,   0); // Read charges from file
+  ITYPE ("userint1",    ir->userint1,   0);
+  ITYPE ("userint2",    ir->userint2,   0);
+  ITYPE ("userint3",    ir->userint3,   0);
+  ITYPE ("userint4",    ir->userint4,   0);
+  RTYPE ("userreal1",   ir->userreal1,  0);
+  RTYPE ("userreal2",   ir->userreal2,  0);
+  RTYPE ("userreal3",   ir->userreal3,  0);
+  RTYPE ("userreal4",   ir->userreal4,  0);
 
+  /* MolDStruct ionization parameters.  All of these only take effect when
+   * mdrun is given -ionize; without it the run is unmodified GROMACS 4.5.4.
+   * Times are in femtoseconds, unlike the rest of the mdp, because XFEL
+   * pulses are a few fs long. */
+  CCTYPE ("MOLDSTRUCT IONIZATION (mdrun -ionize)");
+  ITYPE ("mcmd-charge-transfer",         ir->mcmd_charge_transfer,         1);
+  ITYPE ("mcmd-charge-transfer-idle",    ir->mcmd_charge_transfer_idle,    2000);
+  ITYPE ("mcmd-charge-transfer-recheck", ir->mcmd_charge_transfer_recheck, 100);
+  ITYPE ("mcmd-autostop",                ir->mcmd_autostop,                0);
+  RTYPE ("mcmd-autostop-threshold",      ir->mcmd_autostop_threshold,      0.99);
+  ITYPE ("mcmd-initial-charges",         ir->mcmd_initial_charges,         0);
+  ITYPE ("mcmd-detailed-output",         ir->mcmd_detailed_output,         0);
+  ITYPE ("mcmd-charge-output-stride",    ir->mcmd_charge_output_stride,    50);
+  ITYPE ("mcmd-collisional-ionization",  ir->mcmd_collisional_ionization,  0);
+  RTYPE ("mcmd-pulse-peak-time",         ir->mcmd_pulse_peak_time,         0);
+  RTYPE ("mcmd-pulse-fwhm",              ir->mcmd_pulse_fwhm,              0);
+  RTYPE ("mcmd-pulse-photons",           ir->mcmd_pulse_photons,           0);
+  RTYPE ("mcmd-pulse-focal-diameter",    ir->mcmd_pulse_focal_diameter,    0);
+  RTYPE ("mcmd-pulse-photon-energy",     ir->mcmd_pulse_photon_energy,     0);
 
-  RTYPE ("userreal1",   ir->userreal1,  0); // Gaussian peak in ps
-  RTYPE ("userreal2",   ir->userreal2,  0); // Number of photons
-  RTYPE ("userreal3",   ir->userreal3,  0); // Sigma value of gaussian
-  RTYPE ("userreal4",   ir->userreal4,  0); // Focal diamater
-  RTYPE ("userreal5",   ir->userreal5,  0); // Photon energy
-  RTYPE ("userreal6",   ir->userreal6,  0.99); // Threshold for stopping sim. userint3 must be turned on.
-  RTYPE ("userreal7",   ir->userreal7,  0);
-  RTYPE ("userreal8",   ir->userreal8,  0);
-  RTYPE ("userreal9",   ir->userreal9,  0);
+  /* Every mcmd-* option has now been read out, so anything still unread and
+   * carrying that prefix is a typo. */
+  check_mcmd_unknown_entries(ninp, inp);
 
 
 #undef CTYPE
