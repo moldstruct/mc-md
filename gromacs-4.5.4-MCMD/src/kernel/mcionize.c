@@ -1035,9 +1035,18 @@ static void mcmd_monte_carlo(t_mcionize *mc, const t_inputrec *ir,
             {
                 double u = (double)rand() / (RAND_MAX + 1.0);
 
-                if (possible_transitions[i].rate < 1e-100)
+                /* rand() can return 0, so u is drawn from [0,1) inclusive of
+                 * zero, and -log(0) is +inf.  A zero deviate formally means an
+                 * infinite waiting time -- the same "never fires" outcome as a
+                 * zero rate -- so it is folded into that branch rather than
+                 * clamped to an epsilon.  Rare per draw (4.7e-10 at
+                 * RAND_MAX = 2^31-1) but near-certain over a large system: a
+                 * 50000-atom run draws ~2e5 deviates per step and expects
+                 * ~3 zeros in 30000 steps.  The isinf() check below stays as
+                 * an invariant on the remaining arithmetic. */
+                if (possible_transitions[i].rate < 1e-100 || u <= 0.0)
                 {
-                    /* Rate of zero: this channel never fires. */
+                    /* Rate of zero, or a zero deviate: never fires. */
                     dt_processes[i] = 1e6;
                 }
                 else
