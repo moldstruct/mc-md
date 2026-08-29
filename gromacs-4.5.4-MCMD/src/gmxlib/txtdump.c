@@ -681,6 +681,8 @@ void pr_inputrec(FILE *fp,int indent,const char *title,t_inputrec *ir,
 
     /* MolDStruct ionization parameters */
     PI("mcmd-charge-transfer",ir->mcmd_charge_transfer);
+    PI("mcmd-allow-h-ct",ir->mcmd_allow_H_CT);
+    PI("mcmd-charge-transfer-downhill",ir->mcmd_charge_transfer_downhill);
     PI("mcmd-charge-transfer-idle",ir->mcmd_charge_transfer_idle);
     PI("mcmd-charge-transfer-recheck",ir->mcmd_charge_transfer_recheck);
     PI("mcmd-autostop",ir->mcmd_autostop);

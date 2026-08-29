@@ -242,6 +242,8 @@ E-zt                 =
 ; MolDStruct ionization.  These only take effect with mdrun -ionize, which
 ; also enables the altered force field.  Note times are in FEMTOSECONDS.
 mcmd-charge-transfer         = 1        ; classical over-the-barrier charge transfer
+mcmd-allow-h-ct              = 0        ; allow H-H transfer (resonant; see README)
+mcmd-charge-transfer-downhill = 0       ; require charge transfer to be downhill
 mcmd-pulse-peak-time         = 0        ; centre of the Gaussian pulse [fs]
 mcmd-pulse-fwhm              = 2.9435   ; pulse duration, FWHM [fs]
 mcmd-pulse-photons           = 1e11     ; total photons in the pulse

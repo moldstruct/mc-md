@@ -24,6 +24,7 @@
 
 /* Directories are relative to the directory mdrun is started from. */
 #define MCMD_PATH_ENERGY "./Atomic_data/energy_levels_"
+#define MCMD_PATH_TOTAL  "./Atomic_data/total_energies_"
 #define MCMD_PATH_RATES  "./Atomic_data/rate_transitions_"
 #define MCMD_PATH_COLL   "./Atomic_data/collisional_parameters_"
 #define MCMD_PATH_WEIGHT "./Atomic_data/statistical_weight_"
@@ -221,7 +222,7 @@ double mcmd_dict_get(const t_mcmd_dict *dict, const int state[MCMD_NSHELL])
     return MCMD_NOT_FOUND;
 }
 
-static t_mcmd_dict *mcmd_dict_read(const char *path)
+static t_mcmd_dict *mcmd_dict_read(const char *path, gmx_bool bRequired)
 {
     t_mcmd_dict *dict;
     FILE        *fp;
@@ -232,6 +233,13 @@ static t_mcmd_dict *mcmd_dict_read(const char *path)
     fp = fopen(path, "r");
     if (fp == NULL)
     {
+        if (!bRequired)
+        {
+            /* An optional table: absent is a supported configuration, not an
+             * error.  The caller falls back to what it did before the file
+             * existed. */
+            return NULL;
+        }
         gmx_fatal(FARGS, "Could not open the energy level file '%s'.", path);
     }
 
@@ -726,9 +734,10 @@ void mcmd_atomdata_read(t_mcmd_atomdata *ad, int elem_idx,
 
     ad->mass          = mcmd_idx2mass(elem_idx);
     ad->bPresent      = TRUE;
-    ad->energy_levels = NULL;
-    ad->rates         = NULL;
-    ad->num_rates     = 0;
+    ad->energy_levels  = NULL;
+    ad->total_energies = NULL;
+    ad->rates          = NULL;
+    ad->num_rates      = 0;
     ad->coll          = NULL;
     ad->num_coll      = 0;
     ad->weights.states     = NULL;
@@ -744,7 +753,11 @@ void mcmd_atomdata_read(t_mcmd_atomdata *ad, int elem_idx,
     }
 
     path = mcmd_data_path(MCMD_PATH_ENERGY, ad->mass);
-    ad->energy_levels = mcmd_dict_read(path);
+    ad->energy_levels = mcmd_dict_read(path, TRUE);
+    sfree(path);
+
+    path = mcmd_data_path(MCMD_PATH_TOTAL, ad->mass);
+    ad->total_energies = mcmd_dict_read(path, FALSE);
     sfree(path);
 
     path = mcmd_data_path(MCMD_PATH_RATES, ad->mass);
@@ -807,6 +820,10 @@ void mcmd_atomdata_done(t_mcmd_atomdata *ad, gmx_bool bCollisional)
     }
 
     mcmd_dict_done(ad->energy_levels);
+    if (ad->total_energies != NULL)
+    {
+        mcmd_dict_done(ad->total_energies);
+    }
     mcmd_rates_done(ad->rates, ad->num_rates);
 
     if (bCollisional)
@@ -820,10 +837,11 @@ void mcmd_atomdata_done(t_mcmd_atomdata *ad, gmx_bool bCollisional)
     mcmd_state_index_clear(&ad->rate_index);
     mcmd_state_index_clear(&ad->coll_index);
 
-    ad->bPresent      = FALSE;
-    ad->energy_levels = NULL;
-    ad->rates         = NULL;
-    ad->coll          = NULL;
+    ad->bPresent       = FALSE;
+    ad->energy_levels  = NULL;
+    ad->total_energies = NULL;
+    ad->rates          = NULL;
+    ad->coll           = NULL;
 }
 
 /* ================================================================ *

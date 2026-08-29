@@ -1298,6 +1298,8 @@ void get_ir(const char *mdparin,const char *mdparout,
    * pulses are a few fs long. */
   CCTYPE ("MOLDSTRUCT IONIZATION (mdrun -ionize)");
   ITYPE ("mcmd-charge-transfer",         ir->mcmd_charge_transfer,         1);
+  ITYPE ("mcmd-allow-h-ct",              ir->mcmd_allow_H_CT,              0);
+  ITYPE ("mcmd-charge-transfer-downhill", ir->mcmd_charge_transfer_downhill, 0);
   ITYPE ("mcmd-charge-transfer-idle",    ir->mcmd_charge_transfer_idle,    2000);
   ITYPE ("mcmd-charge-transfer-recheck", ir->mcmd_charge_transfer_recheck, 100);
   ITYPE ("mcmd-autostop",                ir->mcmd_autostop,                0);

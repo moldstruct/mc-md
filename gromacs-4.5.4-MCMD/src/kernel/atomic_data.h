@@ -129,6 +129,13 @@ typedef struct
     int             mass;
     gmx_bool        bPresent; /* FALSE if this element is not in the system */
     t_mcmd_dict    *energy_levels;
+
+    /* Total electronic binding energy per configuration, from
+     * total_energies_X.txt.  Optional: NULL when the file is absent, which is
+     * every Atomic_data directory generated before it existed.  Where it is
+     * present the charge-transfer criterion can score an electron entering
+     * any shell, as T(c + e_s) - T(c), instead of only the outermost one. */
+    t_mcmd_dict    *total_energies;
     t_mcmd_rate    *rates;
     int             num_rates;
     t_mcmd_coll    *coll;

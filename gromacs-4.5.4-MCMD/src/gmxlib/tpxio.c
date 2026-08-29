@@ -70,7 +70,7 @@
  * indistinguishable from a stock one yet had a different layout - anything
  * else reading it misparsed everything past userint4 in silence.  The bump
  * makes that detectable; tprs written by the old build must be regenerated. */
-static const int tpx_version = 74;
+static const int tpx_version = 76;
 
 /* This number should only be increased when you edit the TOPOLOGY section
  * of the tpx format. This way we can maintain forward compatibility too
@@ -770,8 +770,25 @@ static void do_inputrec(t_fileio *fio, t_inputrec *ir,gmx_bool bRead,
       gmx_fio_do_real(fio,ir->mcmd_pulse_photons);
       gmx_fio_do_real(fio,ir->mcmd_pulse_focal_diameter);
       gmx_fio_do_real(fio,ir->mcmd_pulse_photon_energy);
+
+      /* Added after version 74, so it needs its own guard: a tpr written by
+       * the version-74 build has the block above but not this value. */
+      if (file_version >= 75) {
+        gmx_fio_do_int(fio,ir->mcmd_allow_H_CT);
+      } else if (bRead) {
+        ir->mcmd_allow_H_CT = 0;
+      }
+
+      /* Added after version 75; same reasoning as the guard above. */
+      if (file_version >= 76) {
+        gmx_fio_do_int(fio,ir->mcmd_charge_transfer_downhill);
+      } else if (bRead) {
+        ir->mcmd_charge_transfer_downhill = 0;
+      }
     } else if (bRead) {
       ir->mcmd_charge_transfer         = 1;
+      ir->mcmd_allow_H_CT              = 0;
+      ir->mcmd_charge_transfer_downhill = 0;
       ir->mcmd_charge_transfer_idle    = 2000;
       ir->mcmd_charge_transfer_recheck = 100;
       ir->mcmd_autostop                = 0;

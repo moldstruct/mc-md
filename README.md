@@ -48,6 +48,13 @@ They are all named `mcmd-*` and take effect only when `mdrun` is given
 ```
 mcmd-charge-transfer         (default = 1)    Classical over-the-barrier charge
                                               transfer between any pair of atoms.
+mcmd-allow-h-ct              (default = 0)    Allow charge transfer between two
+                                              hydrogens. Resonant, so it moves no
+                                              net charge; off by default.
+mcmd-charge-transfer-downhill (default = 0)   Require a transfer to leave the
+                                              electron more tightly bound,
+                                              counting the Coulomb energy the
+                                              pair releases. Off by default.
 mcmd-charge-transfer-idle    (default = 2000) Steps without a transfer before the
                                               pass goes idle and is only sampled
                                               periodically. 0 uses the default,
@@ -77,27 +84,26 @@ mcmd-pulse-focal-diameter    (default = 0)    Focal spot diameter [nm]
 mcmd-pulse-photon-energy     (default = 0)    Photon energy [eV]
 ```
 
-`mcmd-charge-transfer-idle` and `mcmd-charge-transfer-recheck` are performance
-knobs: they change how often the charge-transfer pass runs, not the physics it
-computes. The defaults are tuned; see "Charge transfer cost" below before
-changing them.
+`mcmd-charge-transfer-idle` and `mcmd-charge-transfer-recheck` change how often
+the charge-transfer pass runs. Because transfer is applied per step rather than
+at a rate, that also changes how many transfers happen, so they are not purely
+performance knobs. See "Charge transfer cost" below before changing them.
 
-To allow for custom parameters in GROMACS the `.tpr` format version was raised from 73 to 74 at the same time. 
+To allow for custom parameters in GROMACS the `.tpr` format version was raised from 73 to 76. Each added option bumped it by one, and the reader keeps handling the older versions, so a `.tpr` written by an earlier MolDStruct build still loads.
 This means a stock GROMACS tool would read a MolDStruct `.tpr` and
 silently misparse everything after `userint4`. So when doing a MolDStruct run, use the `grompp` from the MolDStruct install to generate the `.tpr`
-
 
 ### mcmd-detailed-output
 
 This one gates **all** per-step output, not just the transition log:
 
-| file | contents |
-|---|---|
-| `mean_charge_vs_time.txt` | time [ps], mean charge |
-| `pulse_profile.txt` | time [ps], pulse intensity |
-| `electron_data.txt` | time [ps], electron density, temperature, R_g/R_g(0) |
-| `charges_over_time.bin` | every atom's charge, every step |
-| `electronic_transition_log.txt` | one entry per electronic transition |
+| file                            | contents                                             |
+| ------------------------------- | ---------------------------------------------------- |
+| `mean_charge_vs_time.txt`       | time [ps], mean charge                               |
+| `pulse_profile.txt`             | time [ps], pulse intensity                           |
+| `electron_data.txt`             | time [ps], electron density, temperature, R_g/R_g(0) |
+| `charges_over_time.bin`         | every atom's charge, every step                      |
+| `electronic_transition_log.txt` | one entry per electronic transition                  |
 
 With it off you get only the end-of-run `charges.txt` and
 `procces_statistics.txt`, so turn it on for any run you intend to analyse.
@@ -107,16 +113,16 @@ It is off by default because it is not free. `charges_over_time.bin` is one
 `real` per atom per frame and dominates everything else, so it is written
 every `mcmd-charge-output-stride` steps (default 50) rather than every step:
 
-| system | per 5000 steps, stride 1 | stride 50 |
-|---|---|---|
-| 1960 atoms | 40 MB | 1.2 MB |
-| 10000 atoms | 200 MB | 4.4 MB |
-| 50000 atoms | 1000 MB | 21 MB |
+| system      | per 5000 steps, stride 1 | stride 50 |
+| ----------- | ------------------------ | --------- |
+| 1960 atoms  | 40 MB                    | 1.2 MB    |
+| 10000 atoms | 200 MB                   | 4.4 MB    |
+| 50000 atoms | 1000 MB                  | 21 MB     |
 
 The three text files stay per-step, since together they are under 100 bytes a
 step and they are what the mean-charge and pulse curves are plotted from.
 **This means `charges_over_time.bin` no longer has one frame per row of
-`mean_charge_vs_time.txt`**: frame *k* is step *k* x stride, so take every
+`mean_charge_vs_time.txt`**: frame _k_ is step _k_ x stride, so take every
 stride'th row of the text file to get the matching times. Set the stride to 1
 for the old frame-per-step behaviour.
 
@@ -127,8 +133,6 @@ and the Auger cascades follow within a few hundred steps.
 
 All five files are written through buffered handles and flushed every 1000
 steps, so they can be tailed during a run without costing a file open per step.
-
-
 
 ### Reproducible runs
 
@@ -155,7 +159,6 @@ the electronic dynamics continue rather than resetting to the ground state.
 The file must be present to restart; the reference radius of gyration in
 particular cannot be recovered from an already-expanded structure, and silently
 re-deriving it would rescale the plasma volume.
-
 
 ## Regression test
 
@@ -200,6 +203,10 @@ For each atomic species present in the system we require 2 files. They are
 - `energy_levels_X.txt`
 - `rate_transitions_X.txt`
 
+and a third that charge transfer requires,
+
+- `total_energies_X.txt`
+
 where `X` is replaced with a the periodic table symbol in upper case,
 Ex.
 
@@ -224,6 +231,14 @@ So for hydrogen two rows of the file might look like this:
 0 0 0 0.0
 1 0 0 13.5984
 ```
+
+### `total_energies_X.txt`
+
+This file contains the total electronic binding energy of each state, that is the energy needed to remove all of its electrons, where `energy_levels_X.txt` gives only the binding energy of the outermost one. Charge transfer uses it to price an electron entering any shell of the acceptor, as `T(a b c + one electron in that shell) - T(a b c)`.
+
+The format is the same, the state `a b c` followed by the energy, thus `a b c T` with a single space as delimiter. It must cover every state `energy_levels_X.txt` does.
+
+The file is required whenever `mcmd-charge-transfer = 1`, and `mdrun` stops with an error if it is missing. A run with `mcmd-charge-transfer = 0` never reads it.
 
 ### `rate_transitions_X.txt`
 
@@ -467,27 +482,27 @@ The work around is usually to lower the stepsize. We recommend a step size of 1 
 
 Has only been tested on Linux systems.
 
-
 ### Renamed parameters
+
 Previous versions used the default GROMACS userints and userreals. Current version uses custom parmeter names. These old ones are kept here as a reference.
 These options used to be the generic `userint*`/`userreal*` slots. `grompp`
 rejects an `.mdp` that still uses the old names and prints the replacement for
 each one, because two of them also changed meaning:
 
-| old | new |
-|---|---|
-| `userint1` | removed - `-ionize` alone enables the altered force field |
-| `userint2` | `mcmd-charge-transfer` |
-| `userint3` | `mcmd-autostop` |
-| `userint4` | removed - use `mdrun -cpi`, see "Continuing a run" |
-| `userint5` | `mcmd-detailed-output` |
-| `userint6` | `mcmd-collisional-ionization` |
-| `userint7` | `mcmd-charge-transfer-idle` |
-| `userint8` | `mcmd-charge-transfer-recheck` |
-| `userint9` | `mcmd-initial-charges` |
-| `userreal1` | `mcmd-pulse-peak-time` - **now fs**, multiply by 1000 |
-| `userreal2` | `mcmd-pulse-photons` |
+| old         | new                                                             |
+| ----------- | --------------------------------------------------------------- |
+| `userint1`  | removed - `-ionize` alone enables the altered force field       |
+| `userint2`  | `mcmd-charge-transfer`                                          |
+| `userint3`  | `mcmd-autostop`                                                 |
+| `userint4`  | removed - use `mdrun -cpi`, see "Continuing a run"              |
+| `userint5`  | `mcmd-detailed-output`                                          |
+| `userint6`  | `mcmd-collisional-ionization`                                   |
+| `userint7`  | `mcmd-charge-transfer-idle`                                     |
+| `userint8`  | `mcmd-charge-transfer-recheck`                                  |
+| `userint9`  | `mcmd-initial-charges`                                          |
+| `userreal1` | `mcmd-pulse-peak-time` - **now fs**, multiply by 1000           |
+| `userreal2` | `mcmd-pulse-photons`                                            |
 | `userreal3` | `mcmd-pulse-fwhm` - **now the FWHM in fs**, multiply by 2354.82 |
-| `userreal4` | `mcmd-pulse-focal-diameter` |
-| `userreal5` | `mcmd-pulse-photon-energy` |
-| `userreal6` | `mcmd-autostop-threshold` |
+| `userreal4` | `mcmd-pulse-focal-diameter`                                     |
+| `userreal5` | `mcmd-pulse-photon-energy`                                      |
+| `userreal6` | `mcmd-autostop-threshold`                                       |

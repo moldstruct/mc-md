@@ -283,6 +283,8 @@ typedef struct {
    * userreal5-9 slots the module used before 2026-08-23; the whole module is
    * gated on mdrun -ionize, so there is no separate enable switch. */
   int  mcmd_charge_transfer;           /* boolean                          */
+  int  mcmd_allow_H_CT;                /* boolean, H-H charge transfer     */
+  int  mcmd_charge_transfer_downhill;  /* boolean, require downhill CT     */
   int  mcmd_autostop;                  /* boolean                          */
   int  mcmd_detailed_output;           /* boolean                          */
   int  mcmd_collisional_ionization;    /* boolean, NOT IMPLEMENTED         */

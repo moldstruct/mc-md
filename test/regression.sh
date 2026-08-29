@@ -8,6 +8,8 @@
 #   1. the four event counts match a stored reference exactly
 #   2. net charge is conserved: sum(charges) == photoionizations + Auger
 #   3. a run without -ionize writes no ionization output at all
+#   4. total_energies_X.txt is required when charge transfer is on, and not
+#      required when it is off
 #
 # (1) is a bitwise check and is the point of the test: the module is
 # stochastic, but with GMX_MCMD_SEED set it is deterministic, so any change
@@ -19,6 +21,11 @@
 # (2) holds regardless of build: every electron removed from an atom is either
 # a photoionization or an Auger event, and charge transfer only moves charge
 # between atoms. A failure here is a real bug, not a platform difference.
+#
+# (4) guards a failure mode that used to be silent: without total energies the
+# module could only score an acceptor's outermost shell, which refuses anything
+# holding an inner-shell hole and suppresses charge transfer heavily while
+# still producing plausible numbers. It must now stop instead.
 #
 # Usage:
 #   test/regression.sh [--bindir DIR] [--steps N] [--update] [--keep]
@@ -118,6 +125,33 @@ if [ -d simulation_output ]; then
 else
     echo "    PASS"
 fi
+
+echo "--- 4. total_energies_X.txt required only when charge transfer is on"
+mkdir -p saved_total
+mv Atomic_data/total_energies_*.txt saved_total/
+rm -rf simulation_output
+if "$BINDIR/mdrun" -deffnm notot -s run.tpr -nt 1 -ionize >notot.log 2>&1; then
+    echo "    FAIL  ran without total_energies_X.txt instead of stopping"
+    FAILED=1
+elif grep -q total_energies notot.log; then
+    echo "    PASS  charge transfer on: refused, naming the missing file"
+else
+    echo "    FAIL  stopped, but not with a total_energies error:"
+    sed -n '/Fatal error/,+2p' notot.log | sed 's/^/          /'
+    FAILED=1
+fi
+
+sed -e "s/^mcmd-charge-transfer  *=.*/mcmd-charge-transfer = 0/" run.mdp > noct.mdp
+run "$BINDIR/grompp" -f noct.mdp -c conf.gro -p topol.top -o noct.tpr -po noct.out.mdp -maxwarn 30
+rm -rf simulation_output
+if "$BINDIR/mdrun" -deffnm noct -s noct.tpr -nt 1 -ionize >noct.log 2>&1; then
+    echo "    PASS  charge transfer off: runs without it"
+else
+    echo "    FAIL  charge transfer off: refused, though the file is unused"
+    KEEP=1
+    FAILED=1
+fi
+mv saved_total/total_energies_*.txt Atomic_data/
 
 echo
 if [ "$FAILED" = 0 ]; then echo "OK"; else echo "FAILURES"; KEEP=1; fi

@@ -53,21 +53,38 @@ extern int moldstruct_altered_ff;
 #define MCMD_KELVIN_TO_EV     8.61732814974493e-5
 #define MCMD_PI               3.1415
 
+/* e^2 / (4 pi eps0), in eV nm.
+ *
+ * The classical over-the-barrier expression for R_crit below is the
+ * atomic-unit form: a binding energy in Hartree gives a radius in bohr.  This
+ * module carries binding energies in eV (straight out of energy_levels_X.txt)
+ * and positions in nm, so the expression needs the Coulomb constant in those
+ * units to be dimensionally a length at all.  Without it R_crit came out a
+ * factor 1.44 too small - and the capture volume a factor three too small -
+ * for every pair.  H donating to a bare proton, for instance, gave 0.220 nm
+ * against the correct 0.317 nm (6 bohr). */
+#define MCMD_COULOMB_EV_NM 1.43996454
+
 /* Charge transfer is only considered between atoms closer than this, in nm.
  *
  * This is a pre-filter, not physics: the real criterion is R_crit, and a pair
- * is only ever used if R_crit exceeds its separation.  R_crit is
- * (Q_D + 1 + 2 sqrt((Q_D + 1) Q_A)) / E_donor with E_donor in eV, which for
- * real charge states comes out well under a nanometre - measured over a full
+ * is only ever used if R_crit exceeds its separation.  Measured over a full
  * lysozyme run at 1000 eV, the largest separation of any pair actually used
- * was 0.509 nm (median 0.204, 99.9th percentile 0.478).  The cutoff used to
- * be 6 nm, which is larger than the whole sample, so it rejected nothing and
- * every pair reached the R_crit test.  1 nm leaves roughly a factor two of
- * headroom over the observed maximum and makes the pair search far cheaper.
+ * was 0.509 nm (median 0.204, 99.9th percentile 0.478) - but that was with
+ * R_crit missing the conversion above, so those numbers all scale by 1.44,
+ * putting the observed maximum near 0.73 nm.  The cutoff used to be 6 nm,
+ * which is larger than the whole sample, so it rejected nothing; 1 nm was
+ * then chosen for headroom over the uncorrected maximum and is too tight
+ * once it is corrected.  1.5 nm restores roughly the same factor two of
+ * headroom at 3.4x the search volume rather than the 27x a 3 nm cutoff would
+ * cost.
  *
- * If a system ever pushes transfers out towards this radius, the warning in
- * mcionize_done() will say so; raise the cutoff if it fires. */
-#define MCMD_CT_CUTOFF_NM 1.0
+ * The tail of the distribution reaches further than that in principle: a
+ * donor in a weakly bound excited state next to a heavily charged acceptor
+ * can push R_crit past 2 nm.  Those states are rare, and the warning in
+ * mcionize_done() reports the largest separation actually used, so raise the
+ * cutoff if it fires. */
+#define MCMD_CT_CUTOFF_NM 1.5
 
 /* Charge transfer dies out long before the run does: the pulse stops, the
  * Auger cascades that keep manufacturing charge differences finish, and the
@@ -145,6 +162,8 @@ struct t_mcionize
 {
     /* Configuration, cached from the inputrec */
     gmx_bool bChargeTransfer; /* mcmd-charge-transfer                  */
+    gmx_bool bAllowHCT;       /* mcmd-allow-h-ct                       */
+    gmx_bool bDownhill;       /* mcmd-charge-transfer-downhill         */
     gmx_bool bCollisional;    /* mcmd-collisional-ionization, see below */
     gmx_bool bInitCharges;    /* mcmd-initial-charges                  */
     gmx_bool bDetailedOutput; /* mcmd-detailed-output                */
@@ -173,6 +192,11 @@ struct t_mcionize
      * is resolved once instead of doing floor(mass + 0.5) and a scan of the
      * element table once per atom per step. */
     int *elem_of_atom;
+
+    /* Element index of hydrogen, resolved once from the element table rather
+     * than assumed, so reordering mcmd_elements[] cannot silently break the
+     * H-H charge transfer test. */
+    int elem_H;
 
     /* Outermost occupied shell of each atom, or -1 for a fully stripped one.
      * Maintained alongside atom_configurations so the charge-transfer inner
@@ -582,6 +606,139 @@ static void mcmd_cell_sync(t_mcionize *mc, const t_mdatoms *mdatoms, int atom)
     ca->shell = mc->outermost_shell[atom];
 }
 
+/* Pick the acceptor orbital the transferred electron enters.
+ *
+ * Boll et al., Nat. Phys. 18, 423 (2022) put the electron not into the
+ * acceptor's outermost occupied shell, nor even into its outermost vacancy,
+ * but into whichever vacancy has the binding energy closest to that of the
+ * donor orbital the electron came from.
+ *
+ * The binding energy an electron would have in shell s is a difference of
+ * total energies, T(c + e_s) - T(c), which is defined for every shell and
+ * every configuration - including the autoionizing ones energy_levels_X.txt
+ * can only mark with a placeholder.  That is why total_energies_X.txt is
+ * required whenever charge transfer is on: priced from energy_levels_X.txt
+ * instead, an acceptor holding an inner-shell hole cannot be scored at all
+ * and is refused, which at hard photon energies is most of them.
+ *
+ * A deeper vacancy - a K hole under an occupied L shell - is skipped either
+ * way.  Without total energies it would read back the L binding energy, two
+ * orders of magnitude too small, making every K hole look like an ideal match
+ * for any valence donor.  With them it could be priced correctly but stays
+ * excluded on physics: it is the exclusion the paper applies by hand to the M
+ * and N shells of iodine, because refilling the shell that absorbed the
+ * photon short-circuits the Auger cascade the rate data already models.
+ *
+ * On top of the match, mcmd-charge-transfer-downhill optionally requires the
+ * transfer to be downhill.  It is off by default: the paper imposes no such
+ * condition, and on the lysozyme example turning it on changes the transfer
+ * count by an order of magnitude without moving any observable.  Charge
+ * transfer there saturates, so the extra firings only reshuffle a
+ * distribution the energetics have already fixed.  The switch is kept because
+ * that is a property of the regime rather than a theorem.
+ *
+ * "Downhill" is not E_acceptor > E_donor.  Those are isolated-atom binding
+ * energies, and the electron is moving between two ions a fraction of a
+ * nanometre apart, so the change in their mutual Coulomb energy is part of
+ * the balance: the pair goes from Q_D Q_A to (Q_D + 1)(Q_A - 1), releasing
+ * (Q_A - Q_D - 1) e^2 / R.  Comparing the bare binding energies instead makes
+ * transfer to a highly charged acceptor look endothermic whenever its outer
+ * shell is shallower than the donor's, which is the opposite of what the
+ * over-the-barrier picture describes.
+ *
+ * The role assignment upstream guarantees Q_A > Q_D, so the term is never
+ * negative: it can only permit a transfer the bare comparison refused.  It
+ * vanishes exactly when Q_A = Q_D + 1, the resonant case, where the acceptor
+ * ends up in precisely the state the donor left - so resonant pairs cancel to
+ * E_acceptor = E_donor and are excluded whenever the option is on.
+ *
+ * Returns the chosen shell, or -1 if no vacancy is both scorable and
+ * downhill. */
+static int mcmd_acceptor_shell(t_mcionize *mc, const t_mdatoms *mdatoms,
+                               int acceptor, double E_donor, double dE_coul)
+{
+    int          elem = mcmd_atom_element(mc, mdatoms, acceptor);
+    int         *cfg  = mc->atom_configurations[acceptor];
+    t_mcmd_dict *total = mc->atomdata[elem].total_energies;
+    int          best = -1;
+    double       best_gap = 0;
+    double       T_now = 0;
+    int          s;
+
+    T_now = mcmd_dict_get(total, cfg);
+
+    if ((int)T_now == -1)
+    {
+        /* The two tables are generated together from one model, so a state
+         * present in energy_levels_X.txt and absent here means the pair does
+         * not match.  Silently mispricing the acceptor would be worse. */
+        gmx_fatal(FARGS,
+                  "No total energy for atom %d (mass %g) in state %d %d %d.  "
+                  "total_energies_X.txt and energy_levels_X.txt must be "
+                  "generated from the same atomic model.",
+                  acceptor + 1, mdatoms->massT[acceptor],
+                  cfg[0], cfg[1], cfg[2]);
+    }
+
+    for (s = 0; s < MCMD_NSHELL; s++)
+    {
+        int    trial[MCMD_NSHELL];
+        int    k;
+        double E_acceptor, gap;
+
+        if (cfg[s] + 1 > mc->GS_configurations[acceptor][s])
+        {
+            continue;   /* shell is already full: no vacancy here */
+        }
+
+        for (k = 0; k < MCMD_NSHELL; k++)
+        {
+            trial[k] = cfg[k];
+        }
+        trial[s] += 1;
+
+        if (mcmd_outermost_occupied(trial) != s)
+        {
+            continue;   /* deeper vacancy; see above */
+        }
+
+        {
+            double T_new = mcmd_dict_get(total, trial);
+
+            if ((int)T_new == -1)
+            {
+                continue;
+            }
+
+            /* What the electron gains by being bound here, whatever shell
+             * this is and whether or not the result autoionizes. */
+            E_acceptor = T_new - T_now;
+        }
+
+
+        /* Downhill only, counting the Coulomb release; see the header.  Off
+         * by default: the reference method does not impose it, and measured
+         * on a 30 fs lysozyme run it changes the transfer count twelvefold
+         * while leaving every observable alone. */
+        if (mc->bDownhill && E_acceptor + dE_coul <= E_donor)
+        {
+            continue;
+        }
+
+        /* The same shift applies to the effective depth of every shell on
+         * this acceptor, so it belongs in the matched quantity too. */
+        gap = fabs(E_acceptor + dE_coul - E_donor);
+
+        if (best < 0 || gap < best_gap)
+        {
+            best     = s;
+            best_gap = gap;
+        }
+    }
+
+    return best;
+}
+
 static void mcmd_charge_transfer(t_mcionize *mc, t_mdatoms *mdatoms,
                                  t_state *state, double t)
 {
@@ -611,13 +768,19 @@ static void mcmd_charge_transfer(t_mcionize *mc, t_mdatoms *mdatoms,
         double R_min = 1e7;
         int    R_min_idx = -1; /* acceptor of the closest qualifying pair */
         int    donor_idx  = -1; /* and its donor - the two must stay paired */
+        int    R_min_shell = -1; /* and the orbital settled on for it */
         int    INDEX1 = 100, INDEX2 = 100;
         int    shell;
 
         int  jc[3], dx, dy, dz, cj;
         real xj, yj, zj, qj;
+        gmx_bool bJisH;
 
         j = idx_map[j2];
+
+        /* Fixed for this atom's whole search, so it is resolved once here
+         * rather than per candidate. */
+        bJisH = (mc->elem_of_atom[j] == mc->elem_H);
 
         /* Nothing is applied until this atom's search finishes, so its own
          * position and charge are fixed for the duration and can be hoisted
@@ -658,7 +821,7 @@ static void mcmd_charge_transfer(t_mcionize *mc, t_mdatoms *mdatoms,
         {
             const t_mcmd_cell_atom *ca = &mc->cell_sorted[n];
             double Q_D, Q_A, R_cob, R_crit, E_donor, dr2;
-            int    cand_donor, cand_acceptor;
+            int    cand_donor, cand_acceptor, cand_shell;
 
             i = ca->idx;
 
@@ -667,11 +830,14 @@ static void mcmd_charge_transfer(t_mcionize *mc, t_mdatoms *mdatoms,
                 continue;
             }
 
-            /* A fully stripped atom has nothing to give.  The gathered copy
-             * puts this, the charge and the position on the same cache line,
-             * so a rejected candidate costs one line rather than four
-             * scattered loads. */
-            if (ca->shell < 0)
+            /* A fully stripped atom has nothing to give, but it can still
+             * receive: a bare nucleus is all vacancy.  So it is only useless
+             * as a candidate when the pairing below would cast it as the
+             * donor, which is exactly when it is the less charged of the two.
+             * The gathered copy puts shell, charge and position on the same
+             * cache line, so a rejected candidate costs one line rather than
+             * four scattered loads. */
+            if (ca->shell < 0 && ca->q < qj)
             {
                 continue;
             }
@@ -696,6 +862,25 @@ static void mcmd_charge_transfer(t_mcionize *mc, t_mdatoms *mdatoms,
 
             R_cob = sqrt(dr2);
 
+            /* Hydrogen-hydrogen transfer between two ground-state
+             * hydrogens moves an electron between wells of identical depth,
+             * so it is resonant: the pair swaps roles and the charge
+             * distribution is unchanged.  Since transfer is applied whenever
+             * the over-the-barrier geometry allows rather than at a physical
+             * rate, such a pair fires every step, and it dominates the
+             * transfer count for no effect.
+             *
+             * Off by default on that cost argument.  It is not currently a
+             * physics argument: on the lysozyme example enabling it moves no
+             * observable, because hydrogen ionizes fully within about a
+             * femtosecond and there are then no neutral hydrogens left to
+             * shuffle.  Set mcmd-allow-h-ct = 1 to enable. */
+            if (!mc->bAllowHCT && bJisH &&
+                mc->elem_of_atom[i] == mc->elem_H)
+            {
+                continue;
+            }
+
             /* The more charged atom is the acceptor.  Which of the pair
              * donates therefore depends on their charges, so the "has an
              * electron to give" test has to be applied after this, not just
@@ -719,28 +904,53 @@ static void mcmd_charge_transfer(t_mcionize *mc, t_mdatoms *mdatoms,
              * energy is 0, which would make R_crit infinite and let the pair
              * win the nearest-partner contest at any distance only to be
              * rejected later - blocking a transfer another partner could
-             * have supplied.  Likewise an acceptor with no occupied shell
-             * has nowhere to put the electron. */
-            if (mc->outermost_shell[cand_donor] < 0 ||
-                mc->outermost_shell[cand_acceptor] < 0)
+             * have supplied.
+             *
+             * A stripped acceptor used to be rejected here too, on the
+             * grounds that it had "nowhere to put the electron".  That was
+             * wrong: an atom with no occupied shell has a vacancy in every
+             * shell, and is the easiest acceptor to place an electron in, not
+             * the hardest.  Hydrogen has only a K shell, so the rule made
+             * every ionized hydrogen a permanent electron sink - it could
+             * donate once and never recombine. */
+            if (mc->outermost_shell[cand_donor] < 0)
             {
                 continue;
             }
 
             E_donor = mc->energy_of_state[cand_donor];
 
-            R_crit = (Q_D + 1 + 2 * sqrt((Q_D + 1) * Q_A)) / E_donor;
+            R_crit = MCMD_COULOMB_EV_NM *
+                     (Q_D + 1 + 2 * sqrt((Q_D + 1) * Q_A)) / E_donor;
 
             if (R_crit < R_cob)
             {
                 continue;
             }
 
+            /* Which orbital the electron would enter - and whether any is
+             * both scorable and downhill - is a property of the pair, so it
+             * has to be settled here rather than after the nearest partner
+             * has won.  Deciding it afterwards let a nearest neighbour that
+             * fails the energy test block a farther one that would have
+             * passed, and abandoned the atom's transfer for that step
+             * entirely. */
+            cand_shell = mcmd_acceptor_shell(mc, mdatoms, cand_acceptor,
+                                             E_donor,
+                                             MCMD_COULOMB_EV_NM *
+                                             (Q_A - Q_D - 1) / R_cob);
+
+            if (cand_shell < 0)
+            {
+                continue;
+            }
+
             if (R_cob < R_min)
             {
-                R_min     = R_cob;
-                R_min_idx = cand_acceptor;
-                donor_idx = cand_donor;
+                R_min       = R_cob;
+                R_min_idx   = cand_acceptor;
+                donor_idx   = cand_donor;
+                R_min_shell = cand_shell;
             }
         }
         }
@@ -751,27 +961,30 @@ static void mcmd_charge_transfer(t_mcionize *mc, t_mdatoms *mdatoms,
             continue;
         }
 
+        /* The electron leaves the donor's outermost occupied shell. */
         shell  = mc->outermost_shell[donor_idx];
         INDEX1 = (shell < 0) ? 100 : shell;
-        shell  = mc->outermost_shell[R_min_idx];
-        INDEX2 = (shell < 0) ? 100 : shell;
 
-        if (INDEX1 == 100 || INDEX2 == 100)
+        if (INDEX1 == 100 || mc->atom_configurations[donor_idx][INDEX1] - 1 < 0)
         {
             continue;
         }
 
         /* R_min_idx is by construction the more charged of the pair and
          * donor_idx the less charged, so the direction is already fixed; the
-         * only question left is whether the two orbitals allow the move. */
-        if (mc->atom_configurations[donor_idx][INDEX1] - 1 < 0 ||
-            mc->atom_configurations[R_min_idx][INDEX2] + 1 >
-            mc->GS_configurations[R_min_idx][INDEX2])
-        {
-            /* This atom cannot donate or accept in that shell; move on to the
-             * next atom rather than abandoning the whole pass. */
-            continue;
-        }
+         * acceptor orbital was settled during the search, since a pair that
+         * has none is not a qualifying pair at all.
+         *
+         * There used to be a fallback here that reverted to the original
+         * targeting - outermost occupied shell, if it has room - so that the
+         * energy match could never refuse a transfer the old rule allowed.
+         * That fallback is what made the match inert: it carried 43.9% of
+         * transfers, and every one of them skipped the energy test entirely.
+         * Refusing is the correct outcome, and it is a decision rather than a
+         * gap: every acceptor target an atom can reach is present in the
+         * tables, so a refusal means the electron would either be unbound on
+         * the acceptor or less bound than it already is. */
+        INDEX2 = R_min_shell;
 
         if (mc->bDetailedOutput)
         {
@@ -1499,6 +1712,9 @@ t_mcionize *mcionize_init(FILE *fplog, const t_inputrec *ir,
     snew(mc, 1);
 
     mc->bChargeTransfer = (ir->mcmd_charge_transfer != 0);
+    mc->bAllowHCT       = (ir->mcmd_allow_H_CT != 0);
+    mc->bDownhill       = (ir->mcmd_charge_transfer_downhill != 0);
+    mc->elem_H          = mcmd_mass2idx(1);
     mc->bCollisional    = (ir->mcmd_collisional_ionization != 0);
     mc->bInitCharges    = (ir->mcmd_initial_charges != 0);
     mc->bDetailedOutput        = (ir->mcmd_detailed_output != 0);
@@ -1641,6 +1857,50 @@ t_mcionize *mcionize_init(FILE *fplog, const t_inputrec *ir,
                 fprintf(fplog, "mcionize: loaded atomic data for %s\n",
                         mcmd_mass2symbol(mass));
             }
+        }
+    }
+
+    /* Charge transfer needs to price an electron entering any shell of the
+     * acceptor, which only total energies can do.  Priced from
+     * energy_levels_X.txt instead, an acceptor holding an inner-shell hole
+     * cannot be scored and is refused - at hard photon energies that is most
+     * of them, and transfer is suppressed by more than an order of magnitude
+     * while every number still looks reasonable.  A silent result that wrong
+     * is worse than not running, so this is fatal rather than a warning.
+     *
+     * Only when transfer is actually on: a pure ionization run never reads
+     * the table. */
+    if (mc->bChargeTransfer)
+    {
+        char missing[MCMD_NUM_ELEMENTS * 4];
+        int  nmissing = 0;
+
+        missing[0] = '\0';
+
+        for (i = 0; i < MCMD_NUM_ELEMENTS; i++)
+        {
+            if (mc->atomdata[i].bPresent &&
+                mc->atomdata[i].total_energies == NULL)
+            {
+                if (nmissing > 0)
+                {
+                    strcat(missing, ", ");
+                }
+                strcat(missing, mcmd_mass2symbol(mcmd_idx2mass(i)));
+                nmissing++;
+            }
+        }
+
+        if (nmissing > 0)
+        {
+            gmx_fatal(FARGS,
+                      "Charge transfer is on but Atomic_data has no "
+                      "total_energies_X.txt for %s.  Regenerate the atomic "
+                      "data - explode_tools.generate_atomic_data() writes it "
+                      "alongside energy_levels_X.txt - or set "
+                      "mcmd-charge-transfer = 0.  See \"Supplying atomic "
+                      "data\" in the README.",
+                      missing);
         }
     }
 
