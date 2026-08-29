@@ -421,57 +421,6 @@ GPUs.
 For ensemble statistics it is still usually more efficient to run many
 independent single-core simulations at once than to parallelise one.
 
-### Charge transfer cost
-
-Charge transfer considers every pair of atoms within a 1 nm search radius. The
-search uses a cell list, so its cost grows roughly linearly with system size
-rather than quadratically, but it still runs on the master rank and is the
-largest single piece of the ionization module. If it matters less to you than
-the runtime, `mcmd-charge-transfer = 0` turns it off; measured on a 10000-atom protein it
-was about 40% of the wall clock.
-
-Several quantities the module needs are worked out once at setup rather than
-re-derived every step: each atom's element (masses do not change), a
-direct-index table from a K/L/M state to its entry in the rate data (replacing
-a scan over every state of the element -- 324 of them for sulphur), and
-scratch buffers for the Monte Carlo kernel, which previously allocated and
-freed twice per atom per event. Each atom's state energy and outermost
-occupied shell are cached and updated only when its configuration changes,
-instead of being recomputed for the whole system at the start of every
-transfer pass. Together these were worth about 8% of total run time on the
-25000-step test, reproducing the previous results bit for bit.
-
-The 1 nm radius is only a pre-filter; whether a transfer actually happens is
-decided by the over-the-barrier criterion, which in practice is satisfied only
-well inside a nanometer. If a run ever uses a pair close to that radius, a
-warning is printed at the end telling you to raise `MCMD_CT_CUTOFF_NM` in
-`src/kernel/mcionize.c`.
-
-Charge transfer also dies out well before a long run does, so once nothing has
-happened for `mcmd-charge-transfer-idle` steps (default 2000) the pass stops running every step
-and is sampled every `mcmd-charge-transfer-recheck` steps instead (default 100). It is never
-switched off outright, because Auger decay can create a new donor at any time
-and the periodic check picks that up. On a 25000-step run this cut about 19%
-off the wall clock while reproducing the un-skipped run bit for bit, on three
-separate seeds. Setting `mcmd-charge-transfer-idle` to a negative value disables the skip and
-runs the pass on every step; the end-of-run message reports what fraction of
-steps it actually ran on.
-
-Be careful lowering `mcmd-charge-transfer-idle`. The default window is generous on purpose: late
-transfers are sparse rather than absent, and a window shorter than the gaps
-between them clips real transfers. On the 25000-step test, `mcmd-charge-transfer-idle = 2000`
-reproduces an unskipped run bit for bit, but `mcmd-charge-transfer-idle = 200`
-with `mcmd-charge-transfer-recheck = 10` does not -- it changes the transfer and Auger counts, because
-the run goes idle during a lull, misses a transfer, and diverges from there.
-The saving over the default was under 2%, so there is nothing to gain by
-tightening it.
-
-Note that this is keyed on whether transfers are still happening, not on how
-long ago the pulse was. Transfers continue long after the pulse ends: measured
-on that run, 7.5% of them happened more than five pulse widths after the peak,
-and 0.7% more than fifty, by which point the X-ray intensity was two hundred
-orders of magnitude below its maximum.
-
 ### Systems blowing up (Too much!)
 
 For high ionization we get huge forces, this can make the numerical integration unstable.
