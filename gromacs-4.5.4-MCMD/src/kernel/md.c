@@ -1693,6 +1693,12 @@ double do_md(FILE *fplog, t_commrec *cr, int nfile, const t_filenm fnm[],
     bInitStep = bFirstStep && (bStateFromTPX || bVV);
     bStartingFromCpt = (Flags & MD_STARTFROMCPT) && bInitStep;
     bLastStep = FALSE;
+    /* Set when the ionization autostop criterion has been met.  It cannot end
+     * the run on the spot: the criterion is evaluated after the trajectory
+     * writing block, so bLastStep set there is never seen by it and the run
+     * exits having written neither confout nor a final checkpoint.  The flag
+     * ends the run one step later instead, where the write block sees it. */
+    gmx_bool bMCAutostop = FALSE;
     bSumEkinhOld = FALSE;
     bExchanged = FALSE;
 
@@ -1879,6 +1885,13 @@ double do_md(FILE *fplog, t_commrec *cr, int nfile, const t_filenm fnm[],
         /* < 0 means stop at next step, > 0 means stop at next NS step */
         if ((gs.set[eglsSTOPCOND] < 0) ||
             ((gs.set[eglsSTOPCOND] > 0) && (bNS || ir->nstlist == 0)))
+        {
+            bLastStep = TRUE;
+        }
+
+        /* Deferred by one step from where the criterion was met, so that this
+         * step's trajectory writing collects x and v and writes confout. */
+        if (bMCAutostop)
         {
             bLastStep = TRUE;
         }
@@ -2327,7 +2340,7 @@ double do_md(FILE *fplog, t_commrec *cr, int nfile, const t_filenm fnm[],
                 bCPT = FALSE;
             }
             debug_gmx();
-            if (bLastStep && step_rel == ir->nsteps &&
+            if (bLastStep && (step_rel == ir->nsteps || bMCAutostop) &&
                 (Flags & MD_CONFOUT) && MASTER(cr) &&
                 !bRerunMD && !bFFscan)
             {
@@ -2710,7 +2723,7 @@ double do_md(FILE *fplog, t_commrec *cr, int nfile, const t_filenm fnm[],
         if (mcionize_autostop(mcion, ir, enerd->term[F_EKIN],
                               enerd->term[F_ETOT], step, bGStat, cr))
         {
-            bLastStep = TRUE;
+            bMCAutostop = TRUE;
         }
 
         if (bVV)
