@@ -67,9 +67,26 @@ static const t_mcmd_element mcmd_elements[MCMD_NUM_ELEMENTS] = {
     { 127, "I", {2, 8, 18} }
 };
 
+/* Deuterium.  Deliberately not a row of its own above: it is chemically
+ * hydrogen and has hydrogen's electronic structure, so it shares hydrogen's
+ * ground state and hydrogen's Atomic_data rate files.  A separate row would
+ * mean a separate element index, hence a demand for energy_levels_D.txt that
+ * does not exist, and it would no longer compare equal to mc->elem_H in the
+ * charge-transfer pass. */
+#define MCMD_MASS_D 2
+#define MCMD_MASS_H 1
+
 int mcmd_mass2idx(int mass)
 {
     int i;
+
+    /* Fold the isotope onto its element.  Only the species identity is
+     * remapped; mdatoms->massT still carries the real mass 2, so a deuteron
+     * recoils at its own mass. */
+    if (mass == MCMD_MASS_D)
+    {
+        mass = MCMD_MASS_H;
+    }
 
     for (i = 0; i < MCMD_NUM_ELEMENTS; i++)
     {
