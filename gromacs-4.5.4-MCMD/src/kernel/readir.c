@@ -811,7 +811,8 @@ static void add_wall_energrps(gmx_groups_t *groups,int nwall,t_symtab *symtab)
 static void check_mcmd_unknown_entries(int ninp, t_inpfile *inp)
 {
     static const char *known[] = {
-        "mcmd-charge-transfer", "mcmd-charge-transfer-idle",
+        "mcmd-charge-transfer", "mcmd-allow-h-ct",
+        "mcmd-charge-transfer-downhill", "mcmd-charge-transfer-idle",
         "mcmd-charge-transfer-recheck", "mcmd-autostop",
         "mcmd-autostop-threshold", "mcmd-initial-charges",
         "mcmd-detailed-output", "mcmd-charge-output-stride",

@@ -328,12 +328,6 @@ static FILE *mcmd_open_buffered(const char *name, const char *mode, char **buf)
     return fp;
 }
 
-/* Truncate a text output file so a fresh run does not append to the last. */
-static void mcmd_truncate_output(const char *name)
-{
-    fclose(mcmd_open_output(name, "w"));
-}
-
 /* Resolve an atom's element from its mass, turning the -1 that
  * mcmd_mass2idx() returns for an unlisted mass into a clear error instead of
  * an out-of-bounds read.  Checks that the element is known
@@ -1800,8 +1794,8 @@ t_mcionize *mcionize_init(FILE *fplog, const t_inputrec *ir,
         }
 
         /* Only the detailed outputs are opened here; without them the module
-         * writes nothing per step.  Opening with "w" also truncates, which is
-         * what mcmd_truncate_output() used to do at the first step. */
+         * writes nothing per step.  Opening with "w" also truncates, so a
+         * fresh run does not append to the output of the last one. */
         if (mc->bDetailedOutput)
         {
             const char *tmode = bStartFromCpt ? "a" : "w";
@@ -2162,14 +2156,20 @@ void mcionize_done(t_mcionize *mc, t_mdatoms *mdatoms, const t_commrec *cr)
                 mc->max_transfer_separation, (double)MCMD_CT_CUTOFF_NM);
     }
 
-    fp = mcmd_open_output("procces_statistics.txt", "a");
+    /* "w", not "a".  Both files describe the whole run rather than a segment
+     * of it - the event counters are saved into mcionize_state.bin and
+     * restored by -cpi, and the charges are the final ones either way - so a
+     * second run in the same directory has nothing to add, only a stale copy
+     * to leave behind.  Appending also ran the counts of one run into the
+     * header of the next, since the last line carried no newline. */
+    fp = mcmd_open_output("procces_statistics.txt", "w");
     fprintf(fp, "Processes during the simulation \n| Auger decay | "
                 "Fluorescence | Photo-ionization | charge transfer |\n");
-    fprintf(fp, "%d %d %d %d", mc->count_auger, mc->count_fluorescence,
+    fprintf(fp, "%d %d %d %d\n", mc->count_auger, mc->count_fluorescence,
             mc->count_photoionization, mc->count_chargetransfer);
     fclose(fp);
 
-    fp = mcmd_open_output("charges.txt", "a");
+    fp = mcmd_open_output("charges.txt", "w");
     for (i = 1; i < mc->natoms + 1; i++)
     {
         fprintf(fp, "%d %d\n", i, (int)mdatoms->chargeA[i - 1]);
