@@ -1333,6 +1333,9 @@ int main (int argc, char *argv[])
   
   if (debug)
     pr_symtab(debug,0,"After new_status",&sys->symtab);
+
+  /* MolDStruct: mcmd-pb-long-range = auto needs the atom count */
+  mcmd_resolve_long_range(ir,sys->natoms,wi);
   
   if (count_constraints(sys,mi,wi) && (ir->eConstrAlg == econtSHAKE)) {
     if (ir->eI == eiCG || ir->eI == eiLBFGS) {

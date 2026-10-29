@@ -1,3 +1,17 @@
+# builds
 build
+# local notes and tool state
 notes.md
-./claude
+/claude/
+/.claude/
+# backups of the working tree (not part of the release)
+/backups/
+# Python
+__pycache__/
+*.pyc
+# LaTeX by-products (the manual's PDF is shipped)
+manual/*.aux
+manual/*.log
+manual/*.out
+manual/*.toc
+manual/*.synctex.gz

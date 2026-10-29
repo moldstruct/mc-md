@@ -1,0 +1,33 @@
+\chapter{Parallel runs}
+\label{app:parallel}
+
+\section{Particle decomposition}
+
+\code{mdrun -nt N -pd} runs $N$ thread-MPI ranks with particle decomposition.
+Domain decomposition is refused: it renumbers atoms into rank-local indices, and the module needs global searches over
+all positions (charge transfer, the escape depth, the grid deposit).
+GPUs are not supported.
+
+\section{What runs where}
+
+The ionization module and the PB solve run on the master rank.
+To have all coordinates every step, the master gathers them over the whole ring of ranks.
+During the solve the other ranks sleep on a condition variable (instead of spinning in the broadcast), and their cores
+run the multithreaded FFTs (\env{GMX\_MCMD\_PBG\_FFT\_THREADS}, default the number of ranks).
+The master then broadcasts the electron potential (single precision) and a few scalars, and every rank adds the cloud's
+forces to its own atoms.
+The MD itself (GROMACS's forces and integration) is distributed as usual.
+
+\section{How many threads}
+
+The PB solve dominates (50--80\,\% of the wall time) and scales with the FFT threads, the rest with the ranks.
+4 threads suit 1k--10k atoms; 8 suit 50k atoms; 16 brought nothing for the GroEL ring.
+For an ensemble it is usually more efficient to run many independent runs side by side than to parallelize one.
+
+\section{Reproducibility across rank counts}
+
+With a fixed \opt{mcmd-seed} the run is reproducible on the same number of ranks and the same build.
+On a different number of ranks the electronic events are the same at first (the Monte Carlo runs on the master from one
+stream), but GROMACS sums the forces in a different order, so the positions differ in the last bits ($10^{-6}$\,nm
+after 2\,fs on lysozyme).
+As in any MD this grows over a run: runs on different rank counts agree statistically, not bit for bit.

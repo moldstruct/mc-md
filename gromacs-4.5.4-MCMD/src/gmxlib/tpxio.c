@@ -69,8 +69,14 @@
  * unconditionally while the version stayed at 73, so a MolDStruct tpr was
  * indistinguishable from a stock one yet had a different layout - anything
  * else reading it misparsed everything past userint4 in silence.  The bump
- * makes that detectable; tprs written by the old build must be regenerated. */
-static const int tpx_version = 76;
+ * makes that detectable; tprs written by the old build must be regenerated.
+ * 77: the trapped-electron model (PB cloud) moved from environment variables to
+ * mcmd-* options; mcmd-collisional-ionization (never implemented) removed.
+ * 78: mcmd-seed and the numerical PB settings (newton tolerance, cells per
+ * smoothing, box max, grid limit) moved from environment variables.
+ * 79: mcmd-coll-data (collisional ionization from Lotz's formula or from files).
+ * 80: mcmd-atomic-data (built-in screened-hydrogenic data or ./Atomic_data). */
+static const int tpx_version = 80;
 
 /* This number should only be increased when you edit the TOPOLOGY section
  * of the tpx format. This way we can maintain forward compatibility too
@@ -763,7 +769,11 @@ static void do_inputrec(t_fileio *fio, t_inputrec *ir,gmx_bool bRead,
       gmx_fio_do_int(fio,ir->mcmd_initial_charges);
       gmx_fio_do_int(fio,ir->mcmd_charge_output_stride);
       gmx_fio_do_int(fio,ir->mcmd_detailed_output);
-      gmx_fio_do_int(fio,ir->mcmd_collisional_ionization);
+      if (file_version < 77) {
+        int idum = 0;   /* mcmd-collisional-ionization, removed */
+
+        gmx_fio_do_int(fio,idum);
+      }
       gmx_fio_do_real(fio,ir->mcmd_autostop_threshold);
       gmx_fio_do_real(fio,ir->mcmd_pulse_peak_time);
       gmx_fio_do_real(fio,ir->mcmd_pulse_fwhm);
@@ -785,7 +795,68 @@ static void do_inputrec(t_fileio *fio, t_inputrec *ir,gmx_bool bRead,
       } else if (bRead) {
         ir->mcmd_charge_transfer_downhill = 0;
       }
+    }
+    /* Added in version 77, the trapped-electron model.  An older tpr gets
+     * grompp's defaults, the reference model. */
+    if (file_version >= 77) {
+      gmx_fio_do_real(fio,ir->mcmd_pulse_bandwidth);
+      gmx_fio_do_int(fio,ir->mcmd_electrons);
+      gmx_fio_do_int(fio,ir->mcmd_pb_long_range);
+      gmx_fio_do_int(fio,ir->mcmd_evaporation);
+      gmx_fio_do_int(fio,ir->mcmd_collisions);
+      gmx_fio_do_int(fio,ir->mcmd_coll_excitation);
+      gmx_fio_do_int(fio,ir->mcmd_coll_recombination);
+      gmx_fio_do_int(fio,ir->mcmd_coll_h_recombination);
+      gmx_fio_do_int(fio,ir->mcmd_ct_h_donor_only);
+      gmx_fio_do_int(fio,ir->mcmd_field_ionization);
+      gmx_fio_do_real(fio,ir->mcmd_pb_interval);
+      gmx_fio_do_real(fio,ir->mcmd_pb_smoothing);
+      gmx_fio_do_real(fio,ir->mcmd_pb_box_cut);
+      gmx_fio_do_real(fio,ir->mcmd_field_ionization_smoothing);
     } else if (bRead) {
+      ir->mcmd_pulse_bandwidth            = 0.003;
+      ir->mcmd_electrons                  = 1;
+      ir->mcmd_pb_long_range              = 0;
+      ir->mcmd_evaporation                = 1;
+      ir->mcmd_collisions                 = 1;
+      ir->mcmd_coll_excitation            = 0;
+      ir->mcmd_coll_recombination         = 0;
+      ir->mcmd_coll_h_recombination       = 0;
+      ir->mcmd_ct_h_donor_only            = 1;
+      ir->mcmd_field_ionization           = 0;
+      ir->mcmd_pb_interval                = 0.1;
+      ir->mcmd_pb_smoothing               = 0.25;
+      ir->mcmd_pb_box_cut                 = 0.02;
+      ir->mcmd_field_ionization_smoothing = 0.5;
+    }
+    /* Added in version 78; an older tpr gets grompp's defaults and a seed
+     * from time and pid (the GMX_MCMD_* variables these replace are refused) */
+    if (file_version >= 78) {
+      gmx_fio_do_int(fio,ir->mcmd_seed);
+      gmx_fio_do_int(fio,ir->mcmd_pb_grid_limit);
+      gmx_fio_do_real(fio,ir->mcmd_pb_newton_tol);
+      gmx_fio_do_real(fio,ir->mcmd_pb_cells_per_smoothing);
+      gmx_fio_do_real(fio,ir->mcmd_pb_box_max);
+    } else if (bRead) {
+      ir->mcmd_seed                   = -1;
+      ir->mcmd_pb_grid_limit          = 384;
+      ir->mcmd_pb_newton_tol          = 1e-2;
+      ir->mcmd_pb_cells_per_smoothing = 2.5;
+      ir->mcmd_pb_box_max             = 3;
+    }
+    /* Added in version 79; an older tpr keeps what it ran with: the data files */
+    if (file_version >= 79) {
+      gmx_fio_do_int(fio,ir->mcmd_coll_data);
+    } else if (bRead) {
+      ir->mcmd_coll_data = 0;
+    }
+    /* Added in version 80; an older tpr ran with ./Atomic_data */
+    if (file_version >= 80) {
+      gmx_fio_do_int(fio,ir->mcmd_atomic_data);
+    } else if (bRead) {
+      ir->mcmd_atomic_data = 0;
+    }
+    if (file_version < 74 && bRead) {
       ir->mcmd_charge_transfer         = 1;
       ir->mcmd_allow_H_CT              = 0;
       ir->mcmd_charge_transfer_downhill = 0;
@@ -795,7 +866,6 @@ static void do_inputrec(t_fileio *fio, t_inputrec *ir,gmx_bool bRead,
       ir->mcmd_initial_charges         = 0;
       ir->mcmd_charge_output_stride    = 50;
       ir->mcmd_detailed_output         = 0;
-      ir->mcmd_collisional_ionization  = 0;
       ir->mcmd_autostop_threshold      = 0.99;
       ir->mcmd_pulse_peak_time         = 0;
       ir->mcmd_pulse_fwhm              = 0;

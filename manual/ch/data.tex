@@ -1,0 +1,182 @@
+\chapter{Atomic data}
+\label{ch:data}
+
+By default the module computes the atomic physics of every element at start-up from a screened-hydrogenic shell
+model, for the photon energy of the pulse (\opt{mcmd-atomic-data = hydrogenic}, Section~\ref{sec:builtin}); no input
+file is needed.
+With \opt{mcmd-atomic-data = files} it reads the same quantities from plain-text tables in \file{./Atomic\_data/} of
+the run directory instead.
+This chapter specifies the tables; \file{ATOMIC\_DATA.md} in the repository is the same specification in short form,
+and \file{tools/check\_atomic\_data.py} checks a directory against it.
+
+\section{The built-in data}
+\label{sec:builtin}
+
+The built-in data are a screened-hydrogenic model of shells only~\cite{scott2010}, with the screening constants of
+Marchand, Caille and Lee~\cite{marchand1990} and the level energies scaled to the NIST ionization
+energies~\cite{nist}:
+\begin{itemize}
+  \item states: every \code{K L M} of every charge state ($K \le 2$, $L \le 8$, $M \le 18$), so elements up to
+    $Z = 18$ (H to Ar except He); Ca, Fe, Ni and I need \opt{mcmd-atomic-data = files};
+  \item energies: the screened-hydrogenic binding energy of each configuration (with the leading relativistic
+    terms), the excitation energy scaled by the ratio of the NIST to the hydrogenic ionization energy of the charge
+    state its lowest inner-shell hole belongs to;
+  \item photoionization out of each occupied shell: Kramers' cross section with a constant Gaunt factor,
+    $\sigma \propto q^4 n^{-5} E^{-3}$ per electron ($q$ the screened charge of the shell);
+  \item fluorescence: the Einstein $A$ of each radiative transition into a lower shell, from hydrogenic oscillator
+    strengths scaled with the screened charges;
+  \item Auger: the hydrogenic formula of Scott and Hansen~\cite{scott2010} (Gaunt factor 0.12), summed per final state;
+  \item statistical weights $g = \binom{2}{K}\binom{8}{L}\binom{18}{M}$.
+\end{itemize}
+It takes well under a second.
+The model is the one of the CRETIN screened-hydrogenic models the published results were computed with; it reproduces
+their rates to $\sim$10\,\% and, on lysozyme at 1000\,eV, their explosion: charge to 0.7\,\%, escape to 1.3\,\%,
+directions within the seed noise, ion kinetic energy 3.5\,\% lower (Section~\ref{sec:accuracy}).
+There are no collisional fit data: electron-impact ionization comes from Lotz's formula (\opt{mcmd-coll-data = lotz}),
+and collisional excitation (\opt{mcmd-coll-excitation}) and \opt{mcmd-coll-data = files} need
+\opt{mcmd-atomic-data = files}; \code{grompp} stops otherwise.
+The run writes the data it used to \file{simulation\_output/Atomic\_data/}, in the format below; copied to
+\file{./Atomic\_data} and run with \opt{mcmd-atomic-data = files} they give the identical run.
+
+\section{Which files}
+
+A file is \file{<table>\_<SYMBOL>.txt}, with the symbol in upper case as in Table~\ref{tab:elements}
+(\file{energy\_levels\_C.txt}, \file{rate\_transitions\_CL.txt}).
+Only the elements present in the system are needed.
+
+\begin{table}[H]
+\centering\small
+\begin{tabularx}{\textwidth}{@{}>{\raggedright\arraybackslash}p{0.4\textwidth} X X@{}}
+\toprule
+file & needed when (\opt{mcmd-atomic-data = files}) & what for \\
+\midrule
+\file{energy\_levels\_X.txt} & always & outermost binding energy per state \\
+\file{rate\_transitions\_X.txt} & always & photoionization, Auger, fluorescence \\
+\file{total\_energies\_X.txt} & charge transfer or collisions on (both default) & electron energies, charge-transfer
+  energies, collisional transition energies \\
+\file{statistical\_weight\_X.txt} & collisions on & detailed balance \\
+\file{collisional\_ionization\_table\_X.txt} or \file{collisional\_parameters\_X.txt} &
+  only with \opt{mcmd-coll-data = files} & electron-impact ionization \\
+\file{collisional\_excitation\_table\_X.txt} or \file{collisional\_excitation\_X.txt} &
+  only with \opt{mcmd-coll-excitation = 1} & collisional (de-)excitation \\
+\bottomrule
+\end{tabularx}
+\end{table}
+Only \file{rate\_transitions\_X.txt} depends on the photon energy (the photoionization cross sections): regenerate it
+for every \opt{mcmd-pulse-photon-energy}.
+
+\paragraph{General rules.}
+One record per line, whitespace separated; \code{;} separates the initial state from the final states in the
+transition tables; no comments or header (except the tables' temperature line).
+Lines must be shorter than 1024 characters.
+Energies in eV, rates in s$^{-1}$, cross sections in cm$^2$.
+Where a state appears twice, the first line counts.
+
+\section{The tables}
+
+\paragraph{\file{energy\_levels\_X.txt}:} \code{K L M E}, the binding energy of the state's \emph{outermost}
+electron.
+Autoionizing states (excitation above the ionization potential of their charge state) get \code{1e14}.
+Used as the charge-transfer donor energy and the field-ionization threshold.
+
+\paragraph{\file{total\_energies\_X.txt}:} \code{K L M T}, the energy to remove all of the state's electrons,
+$T = \sum(\text{ionization potentials up to this charge state}) - \text{excitation energy}$; defined for autoionizing
+states too, and \code{0 0 0 0.0}.
+It must reproduce \file{energy\_levels} for every bound state, $E(c) = T(c) - T(c\text{ minus its outermost
+electron})$, and cover every reachable state.
+It gives the kinetic energy of emitted electrons (photoelectron $E_{\mathrm{ph}} - (T_{\mathrm{from}}-T_{\mathrm{to}})$,
+Auger $T_{\mathrm{to}} - T_{\mathrm{from}}$, both must be positive), the binding energy of any shell for charge
+transfer, and collisional transition energies.
+
+\paragraph{\file{rate\_transitions\_X.txt}:} one line per initial state, then one \code{;}-terminated token per final
+state with five fields:
+\begin{lstlisting}
+K L M ;K' L' M' rate type ;K'' L'' M'' rate type ;...
+1 1 0 ;1 0 0 7.416614e-21 2 ;0 1 0 0.0 2 ;2 0 0 7.291753e+11 1 ;      (oxygen, 600 eV)
+\end{lstlisting}
+Type 0: Auger--Meitner decay, rate in s$^{-1}$, one electron fewer.
+Type 1: fluorescence, rate in s$^{-1}$, same electron count.
+Type 2: photoionization, cross section in cm$^2$, one electron fewer.
+The type column is mandatory: many Auger and photoionization transitions have the same occupation change.
+Every state reachable through any transition needs a line of its own, also without transitions (\code{K L M ;});
+only \code{0 0 0} may be absent.
+A zero rate is inactive; two entries to the same final state are two channels.
+
+\paragraph{\file{statistical\_weight\_X.txt}:} \code{K L M g}, the degeneracy $g = \binom{2}{K}\binom{8}{L}\binom{18}{M}$.
+
+\paragraph{Collisional data} (only for \opt{mcmd-coll-data = files} and collisional excitation):
+\begin{itemize}
+  \item \file{collisional\_ionization\_table\_X.txt}, \file{collisional\_excitation\_table\_X.txt}: a first line
+    \code{T\_e t1 ... tn} (eV, increasing, full precision), then \code{K L M K' L' M' k1 ... kn}: the full Maxwellian
+    rate coefficient $\langle\sigma v\rangle$ (cm$^3$\,s$^{-1}$, Boltzmann factor included) at each temperature.
+    Any exponent is allowed (\code{3.1e-2650}); a \code{0} means too small to write and is extrapolated.
+    The tables are generator independent: FLYCHK, FAC, BEB or Lotz can supply them.
+  \item \file{collisional\_parameters\_X.txt} (\code{K L M ; K' L' M' c0 c1 c2 c3 s0 ; ...}) and
+    \file{collisional\_excitation\_X.txt} (\code{... c0 c1 c2 c3 a0 ...}): the CRETIN Sampson and \code{colex2} fits,
+    used where no table is given (formulas in Chapter~\ref{ch:coll}).
+\end{itemize}
+
+\section{Generating the data}
+\label{sec:generators}
+
+Two generators write all the tables above, for \opt{mcmd-atomic-data = files}.
+
+\paragraph{From XATOM} (\file{tools/make\_atomic\_data\_xatom.py OUTDIR ENERGY [--elements H,C,N,O,S] [--validate]}).
+XATOM~\cite{jurek2016,son2011} is an open-source (GPLv3) Hartree--Fock--Slater atomic code; its output is not covered
+by its license, so the generated data can be distributed freely.
+The script runs \code{xatom} once per configuration ($\sim$20\,s for H, C, N, O, S on 12 cores):
+\begin{itemize}
+  \item states: every \code{K L M} up to the ground-state occupation --- photoionization, Auger, fluorescence and charge
+    transfer never leave that set;
+  \item each state is computed as its aufbau subshell configuration (2s before 2p, 3s before 3p), and XATOM's subshell
+    final states are summed back onto \code{K L M};
+  \item energies from the orbital eigenvalues,
+    $T(c) = T(c\text{ minus its outermost electron}) - \varepsilon_{\mathrm{outermost}}(c)$: XATOM's total energies are
+    tens of eV off (N$^{5+}$\,1s$^2$: 1267\,eV against 1218), its eigenvalues are what it prices transitions with;
+  \item core and valence photoionization (\code{P}, \code{V}) become type 2, \code{A} type 0, \code{F} type 1;
+    photoexcitation is dropped; channels these energies close and intra-shell ones are dropped and counted;
+  \item elements up to $Z = 18$ (H to Ar except He); Ca, Fe, Ni are refused (their 4s electrons are
+    counted in M).
+\end{itemize}
+
+\paragraph{From CRETIN models} (\file{tools/make\_atomic\_data\_cretin.py MODELS OUTDIR ENERGY [--tables] [--validate]}).
+Reads CRETIN \file{.z01} atomic models and writes all tables including the Sampson and \code{colex2} fits;
+\code{--tables} also writes them as temperature tables (\file{tools/make\_collisional\_tables.py}).
+CRETIN is not open source.
+
+\paragraph{Checking.}
+\code{tools/check\_atomic\_data.py Atomic\_data --photon-energy E} reports everything the reader would stop on or
+misread as an error and everything legal but suspicious (rates out of range, closed channels, unreachable states) as a
+warning; it exits 1 on errors.
+
+\section{Accuracy of the data}
+\label{sec:accuracy}
+
+Against Scofield's subshell photoionization cross sections~\cite{scofield1973} and Krause's K-shell widths and
+fluorescence yields~\cite{krause1979} (via xraylib):
+\begin{table}[H]
+\centering\small
+\begin{tabular}{lccc}
+\toprule
+ground state, 600\,eV, kb & Scofield & XATOM & CRETIN \\
+\midrule
+C K / L & 167.8 / 7.86 & 167.8 / 7.86 & 179.5 / 1.61 \\
+N K / L & 275.9 / 14.4 & 276.0 / 14.4 & 317.6 / 4.13 \\
+O K / L & 411.3 / 24.5 & 411.5 / 24.5 & 507.9 / 9.05 \\
+S L / M & 445.9 / 26.6 & 444.7 / 26.5 & 419.2 / 2.19 \\
+\bottomrule
+\end{tabular}
+\end{table}
+XATOM agrees with Scofield to 0.3\,\% and with Krause for the S K hole (width 0.56 against 0.52\,eV, fluorescence yield
+0.089 against 0.080).
+The CRETIN models' K-shell cross sections are 7--23\,\% high, their valence ones 3--12$\times$ low, and their S K-hole
+Auger rate 3.4$\times$ low.
+XATOM's weak point is the outermost binding energy of neutral C and N ($\sim$20\,\% low, open 2p shells).
+On lysozyme at 600\,eV, XATOM data give a 15\,\% higher ion kinetic energy than CRETIN data, 1\,\% more charge, and the
+same ion directions; at 1000\,eV (the example) 39\,\% higher, with half the Auger decays and twice the valence
+photoionizations.
+
+The built-in data are of the CRETIN kind: core photoionization within 10\,\% of the CRETIN models, valence within
+5\,\%, Auger and fluorescence per configuration within $\sim$10\,\%, so with the same deviations from the reference
+data; their K-hole Auger rates are 1.5--2.5$\times$ slower than CRETIN's, and the constant Gaunt factor makes the
+photoionization rise above CRETIN's towards 10\,keV (C, N, O core 1.3$\times$ at 12\,keV).

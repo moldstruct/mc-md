@@ -1,0 +1,56 @@
+\chapter{Charge transfer}
+\label{ch:ct}
+
+In a charged sample electrons move between atoms: a highly charged ion pulls an electron over the barrier from a
+nearby, less charged atom.
+The model does this with a classical over-the-barrier criterion (\opt{mcmd-charge-transfer = 1}, the default).
+
+\section{The criterion}
+
+For a pair of atoms of different charge, the less charged one is the donor (charge $Q_D$) and the other the
+acceptor ($Q_A$).
+The electron goes over the barrier when the pair is closer than
+\begin{equation}
+  R_{\mathrm{crit}} = \frac{\kc\big(Q_D + 1 + 2\sqrt{(Q_D+1)\,Q_A}\big)}{E_{\mathrm{donor}}},
+\end{equation}
+with $E_{\mathrm{donor}}$ the binding energy of the donor's outermost electron (\file{energy\_levels\_X.txt}).
+Atoms are visited in random order, and each takes the nearest partner that qualifies, within a cutoff of 1.5\,nm
+(a cell list keeps the search linear in the number of atoms).
+
+\section{Which shell the electron enters}
+
+Following Boll \emph{et al.}~\cite{boll2022}, the electron enters the acceptor vacancy whose binding energy is closest to
+that of the donor orbital it came from.
+The binding energy in shell $s$ of configuration $c$ is a difference of total energies,
+\begin{equation}
+  \varepsilon(c,s) = T(c + e_s) - T(c),
+\end{equation}
+defined for every shell, also for autoionizing configurations.
+This is why \file{total\_energies\_X.txt} is required whenever charge transfer is on.
+Only shells up to the ground-state occupation are filled, and a vacancy below an occupied shell (a K hole under a
+filled L shell) is skipped: refilling the shell that absorbed the photon would short-circuit the Auger cascade the
+rates already describe.
+
+\section{Variants}
+
+\begin{description}
+  \item[\opt{mcmd-ct-h-donor-only = 1}] (default): only neutral hydrogen donates, the behaviour of the published
+    model.
+    Hydrogen barely photoionizes at these photon energies and is stripped early by its neighbours.
+  \item[\opt{mcmd-allow-h-ct}] (default 0): allow transfer between two hydrogens.
+    This is resonant and moves no net charge; it is off by default and not fully validated.
+  \item[\opt{mcmd-charge-transfer-downhill}] (default 0): require the transfer to leave the electron more tightly
+    bound, counting the Coulomb energy the pair releases, $(Q_A - Q_D - 1)\kc/R$, by more than $10^{-6}$\,eV.
+    On the lysozyme example it changes the number of transfers by an order of magnitude without changing any
+    observable: charge transfer saturates, and the extra transfers only reshuffle charge the energetics have already
+    fixed.
+\end{description}
+
+\section{Scheduling}
+
+The pass over all atoms runs every MD step until nothing has transferred for \opt{mcmd-charge-transfer-idle} steps
+(default 2000); it then runs only every \opt{mcmd-charge-transfer-recheck} steps (default 100), and every step again
+as soon as a transfer happens.
+Because transfer is applied per step rather than at a rate, these two settings change how many transfers happen; they
+are not pure performance options.
+A negative idle value never goes idle.

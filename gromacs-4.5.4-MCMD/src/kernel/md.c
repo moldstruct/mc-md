@@ -1630,7 +1630,10 @@ double do_md(FILE *fplog, t_commrec *cr, int nfile, const t_filenm fnm[],
      * data for the elements present, allocates the per-atom electronic
      * state and opens ./simulation_output/. */
     mcion = bIonize ? mcionize_init(fplog, ir, mdatoms, cr,
-                                    (Flags & MD_STARTFROMCPT) != 0) : NULL;
+                                    (Flags & MD_STARTFROMCPT) != 0,
+                                    gmx_mtop_ftype_count(top_global, F_BONDS) +
+                                    gmx_mtop_ftype_count(top_global, F_G96BONDS) +
+                                    gmx_mtop_ftype_count(top_global, F_HARMONIC)) : NULL;
 
     /***********************************************************
      *
@@ -1971,6 +1974,24 @@ double do_md(FILE *fplog, t_commrec *cr, int nfile, const t_filenm fnm[],
         /* Advance the electronic state.  This updates mdatoms->chargeA and
          * must run before do_force() so this step's forces see this step's
          * charges. */
+        /* (Decided before the ionization step, whose state at the start of
+         * this step goes with the checkpoint, see mcionize_checkpoint.)
+         * We write a checkpoint at this MD step when:
+         * either at an NS step when we signalled through gs,
+         * or at the last step (but not when we do not want confout),
+         * but never at the first step or with rerun.
+         */
+        bCPT = (((gs.set[eglsCHKPT] && (bNS || ir->nstlist == 0)) ||
+                 (bLastStep && (Flags & MD_CONFOUT))) &&
+                step > ir->init_step && !bRerunMD);
+        if (bCPT)
+        {
+            gs.set[eglsCHKPT] = 0;
+        }
+        if (bIonize && bCPT)
+        {
+            mcionize_checkpoint(mcion, mdatoms, step, cr);
+        }
         if (bIonize)
         {
             mcionize_step(mcion, fplog, ir, mdatoms, state, t, cr, nrnb);
@@ -1993,18 +2014,6 @@ double do_md(FILE *fplog, t_commrec *cr, int nfile, const t_filenm fnm[],
 
         GMX_MPE_LOG(ev_timestep2);
 
-        /* We write a checkpoint at this MD step when:
-         * either at an NS step when we signalled through gs,
-         * or at the last step (but not when we do not want confout),
-         * but never at the first step or with rerun.
-         */
-        bCPT = (((gs.set[eglsCHKPT] && (bNS || ir->nstlist == 0)) ||
-                 (bLastStep && (Flags & MD_CONFOUT))) &&
-                step > ir->init_step && !bRerunMD);
-        if (bCPT)
-        {
-            gs.set[eglsCHKPT] = 0;
-        }
 
         /* Determine the energy and pressure:
          * at nstcalcenergy steps and at energy output steps (set below).
@@ -2074,6 +2083,9 @@ double do_md(FILE *fplog, t_commrec *cr, int nfile, const t_filenm fnm[],
                      fr, vsite, mu_tot, t, outf->fp_field, ed, bBornRadii,
                      (bNS ? GMX_FORCE_NS : 0) | force_flags);
         }
+
+        /* Screening by trapped electrons; no-op unless mcmd-electrons is set. */
+        mcionize_screen_forces(mcion, ir, mdatoms, state->x, state->v, f, cr);
 
         GMX_BARRIER(cr->mpi_comm_mygroup);
 

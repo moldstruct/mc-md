@@ -379,6 +379,11 @@ real morse_bonds(int nbonds,
       vtot      += vbond;       /* 1 */
     }
     coulomb_term = md->chargeA[aj]*md->chargeA[ai]*ONE_4PI_EPS0*gmx_invsqrt(dr2)*gmx_invsqrt(dr2)*gmx_invsqrt(dr2)*morse_ionization_factor;
+    /* Its energy too (2026-10-28): the bonded pair is excluded from the
+     * non-bonded Coulomb sum, so without this the reported potential energy
+     * missed the Coulomb energy of every bonded ion pair.  The force is
+     * unchanged. */
+    vtot += md->chargeA[aj]*md->chargeA[ai]*ONE_4PI_EPS0*gmx_invsqrt(dr2)*morse_ionization_factor;
 
     fbond    =  morse_term + coulomb_term + lj_fscale;      /*   9          */
 

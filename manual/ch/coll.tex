@@ -1,0 +1,88 @@
+\chapter{Electron--ion collisions and field ionization}
+\label{ch:coll}
+
+\section{Electron-impact ionization}
+
+With the electron cloud on, its electrons ionize the atoms they reach (\opt{mcmd-collisions = 1}, the default).
+Every configuration can lose one electron from each occupied shell, to any final configuration that has data.
+The rate of a channel $i\to f$ at atom $k$ is
+\begin{equation}
+  w_{i\to f} = n_e(\vect x_k)\,\langle\sigma v\rangle_{i\to f}(T),
+\end{equation}
+with the cloud's temperature $T$ and its density at the atom, interpolated from the last solve,
+$n_e(\vect x_k) = \varsigma\sum_{\vect o}w_{\vect o}\,n_{\vect i_0+\vect o}/\Delta V$ (cloud-in-cell weights).
+An ion deep in the quasi-neutral core sees a high density and ionizes quickly; one in the depleted outer sheath sees
+almost none.
+The collisional channels join the atom's other transitions in the Monte Carlo step, with the rates frozen for the
+step, and the energy is booked as in Section~\ref{sec:energy} (item~3).
+The transition energy is always $\Delta E = T_i - T_f$ from the total energies.
+
+\subsection{Rate coefficients: Lotz (built in) or from files}
+
+\opt{mcmd-coll-data} chooses where $\langle\sigma v\rangle$ comes from.
+\begin{description}
+  \item[\code{lotz}] (default): Lotz's Maxwellian formula~\cite{lotz1968} (with $b=0$),
+    \begin{equation}
+      \langle\sigma v\rangle = 6.7\times10^{-7}\,a\,q\,T^{-3/2}\,\frac{E_1(P/T)}{P/T}\ \ \mathrm{cm^3\,s^{-1}},\qquad
+      a = 4.5\times10^{-14}\ \mathrm{cm^2\,eV^2},
+    \end{equation}
+    $q$ the occupation of the shell, $P = \Delta E$ (eV), $E_1$ the exponential integral.
+    No data file is needed.
+  \item[\code{files}]: from \file{collisional\_ionization\_table\_X.txt} if present, a table of
+    $\langle\sigma v\rangle$ on a temperature grid that any atomic code can supply; else from the Sampson fits in
+    \file{collisional\_parameters\_X.txt} (CRETIN models):
+    \begin{equation}
+      \langle\sigma v\rangle = 1.0899\times10^{-6}\,\frac{s_0\,q(b)}{\Delta E\sqrt T}\,e^{-b},\quad
+      q(b) = c_0 + c_1\sqrt{\pi b}\,\mathrm{erfcx}\sqrt b + (c_2b+c_3)\,e^bE_1(b),\quad b = \frac{\Delta E}{T}.
+    \end{equation}
+    Tables are interpolated linearly in $\ln T$ in the smooth quantity $\ln\langle\sigma v\rangle + \Delta E/T$ and
+    held at the grid edges outside them.
+\end{description}
+For H, C, N, O and S Lotz gives the same transitions as the CRETIN fits, with coefficients 13--25\,\% higher
+between 10 and 300\,eV.
+On lysozyme at 600\,eV this changes the ion kinetic energy by $-2.5$\,\% and nothing else beyond the seed noise.
+A \file{.tpr} older than format 79 runs as \code{files}.
+
+\section{Three-body recombination}
+
+The inverse of collisional ionization, two cloud electrons colliding at an ion with one of them captured, follows by
+detailed balance with the statistical weights $g$:
+\begin{equation}
+  w_{f\to i} = n_e^2\,\langle\sigma v\rangle_{i\to f}\,\frac{g_i}{g_f}\,1.656\times10^{-22}\,T^{-3/2}\ \ \mathrm{s^{-1}}.
+\end{equation}
+It is off by default (\opt{mcmd-coll-recombination = 0}) and \textbf{not fully validated}: in the classical
+continuum picture it recaptures far too many electrons in the dense, cool cloud late in the explosion.
+\opt{mcmd-coll-h-recombination} additionally allows recombination onto hydrogen (off: a proton stays a proton).
+
+\section{Collisional excitation}
+
+With \opt{mcmd-coll-excitation = 1} the cloud also excites atoms between configurations with the same number of
+electrons, and de-excites them by detailed balance ($\langle\sigma v\rangle_{\mathrm{down}} =
+\langle\sigma v\rangle_{\mathrm{up}}\,g_{\mathrm{lower}}/g_{\mathrm{upper}}$).
+The rates come from \file{collisional\_excitation\_table\_X.txt} or the CRETIN \code{colex2} fits in
+\file{collisional\_excitation\_X.txt} (Chapter~\ref{ch:data}).
+It is off by default and \textbf{not fully validated}: it produces too much early collisional ionization out of excited
+configurations.
+
+\section{Field ionization}
+
+In a strongly charged sample the collective field can lower an atom's barrier below its outermost binding energy.
+With \opt{mcmd-field-ionization = 1} an atom is stripped while the field at it exceeds the Bethe over-the-barrier
+threshold,
+\begin{equation}
+  F \ge \frac{I_p^2}{4\kc Z},
+\end{equation}
+$I_p$ the binding energy of its outermost electron and $Z$ its charge after the step.
+$F = |\nabla P_L|$ is the field of the collective potential $P_L = \kc G_L*(q_{\mathrm{ion}}-n_e)$, with every
+charge spread over $L$ (\opt{mcmd-field-ionization-smoothing}, 0.5\,nm; at least the grid's $s$) and the atom's own
+charge left out, so neighbours closer than $\sim L$ are smeared: their barrier lowering is the charge-transfer
+channel's.
+It is computed on the grid after every solve, by direct summation where there is no grid, during the pulse only
+(from 6$\sigma_t$ before to 4$\sigma_t$ after the peak, stopping once no atom has been within a factor 2 of its
+threshold for 5 updates).
+Every field ionization is logged in \file{pbfield\_events.txt}.
+
+Field ionization does not change the explosion: on ubiquitin at 600\,eV it strips $\sim$900--1000 atoms per run early in
+the pulse, and about as many fewer are ionized by electron impact and charge transfer; the charge, the escape and the
+ion directions are unchanged.
+It is off by default.

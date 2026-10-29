@@ -32,15 +32,16 @@ typedef struct t_mcionize t_mcionize;
  * output files.  Call once before the MD loop.  Returns NULL if -ionize was
  * not given.
  *
- * With bStartFromCpt the electronic state, the free-electron plasma and the
- * reference radius of gyration are restored from
- * ./simulation_output/mcionize_state.bin, which mcionize_done() writes at the
- * end of every run.  Restarting without that file is an error: re-deriving
- * the reference radius from an already-expanded sample would silently
- * rescale the plasma volume. */
+ * With bStartFromCpt the electronic state, the free-electron plasma, the PB
+ * electrons and the module's counters are restored from the state file that
+ * mcionize_checkpoint() wrote at the checkpoint being resumed, and the output
+ * files are cut back to that checkpoint and appended to.  Restarting without
+ * that file is an error. */
 t_mcionize *mcionize_init(FILE *fplog, const t_inputrec *ir,
                           t_mdatoms *mdatoms, const t_commrec *cr,
-                          gmx_bool bStartFromCpt);
+                          gmx_bool bStartFromCpt, int nHarmonicBonds);
+/* nHarmonicBonds: bonds of the topology that -ionize does not modify
+ * (harmonic, G96, harmonic potential); only reported, in the run summary. */
 
 /* Advance the electronic state by one MD step: charge transfer, then the
  * kinetic Monte Carlo over electronic transitions, then the per-step output.
@@ -67,6 +68,19 @@ void mcionize_step(t_mcionize *mc, FILE *fplog, const t_inputrec *ir,
 gmx_bool mcionize_autostop(const t_mcionize *mc, const t_inputrec *ir,
                            double E_kin, double E_tot, gmx_large_int_t step,
                            gmx_bool bEnergiesGlobal, const t_commrec *cr);
+
+/* Correct the forces do_force() produced for screening by the trapped
+ * electrons (mcmd-electrons).  No-op unless enabled.  Call right after
+ * do_force(), before the update. */
+void mcionize_screen_forces(t_mcionize *mc, const t_inputrec *ir,
+                            t_mdatoms *mdatoms, rvec *x, rvec *v, rvec *f,
+                            const t_commrec *cr);
+
+/* Save the module's state for mdrun -cpi (./simulation_output/mcionize_state.bin;
+ * the one before is kept as mcionize_state_prev.bin).  Call on the master at
+ * the start of every step a checkpoint is written on, before mcionize_step():
+ * the continuation resumes at that step and runs it in full. */
+void mcionize_checkpoint(t_mcionize *mc, const t_mdatoms *mdatoms, gmx_large_int_t step, const t_commrec *cr);
 
 /* Write the end-of-run output (process statistics, final charges and
  * configurations) and release everything.  Safe to call with mc == NULL. */

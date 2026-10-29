@@ -96,6 +96,23 @@ set_target_properties(gmxcheck PROPERTIES OUTPUT_NAME "gmxcheck${GMX_BINARY_SUFF
 
 add_executable(mdrun ${MDRUN_SOURCES})
 target_link_libraries(mdrun ${GMX_EXTRA_LIBRARIES} ${GMX_OPENMM_LIBRARIES})
+# PB grid (mcionize.c, mcmd-electrons = pbgrid): FFTW's threaded planner for the grid solve
+find_library(FFTW3F_THREADS_LIBRARY NAMES fftw3f_threads)
+if(FFTW3F_THREADS_LIBRARY)
+    target_link_libraries(mdrun ${FFTW3F_THREADS_LIBRARY})
+    set_source_files_properties(mcionize.c PROPERTIES COMPILE_DEFINITIONS MCMD_FFTW_THREADS)
+    message(STATUS "mcionize: threaded FFTW for the PB grid: ${FFTW3F_THREADS_LIBRARY}")
+endif()
+# PB grid: OpenMP for the grid loops of the solve (mcionize.c only)
+option(MCMD_OPENMP "OpenMP for the PB grid loops in mcionize.c (off: only fast with OMP_WAIT_POLICY=PASSIVE, and its sums are not reproducible)" OFF)
+if(MCMD_OPENMP)
+    find_package(OpenMP)
+endif()
+if(MCMD_OPENMP AND OPENMP_FOUND)
+    set_source_files_properties(mcionize.c PROPERTIES COMPILE_FLAGS "${OpenMP_C_FLAGS}")
+    set_target_properties(mdrun PROPERTIES LINK_FLAGS "${OpenMP_C_FLAGS}")
+    message(STATUS "mcionize: OpenMP for the PB grid loops: ${OpenMP_C_FLAGS}")
+endif()
 set_target_properties(mdrun PROPERTIES OUTPUT_NAME "mdrun${GMX_BINARY_SUFFIX}")
 
 # this is to circumvent the following MSVC error: 

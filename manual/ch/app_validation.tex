@@ -1,0 +1,67 @@
+\chapter{Validation and limitations}
+\label{app:validation}
+
+\section{Numerical convergence}
+
+The production settings were checked on lysozyme (1960 atoms) and 1B7U (10\,430 atoms) at 600\,eV and 8\,keV, with
+several seeds per setting:
+\begin{itemize}
+  \item the MD step (converged at 2\,as), the PB interval (0.2\,fs), the Newton tolerance ($10^{-2}$), the box and the grid
+    spacing: the charge, the escape and trapping, the radius and the ion directions are converged to within the
+    seed-to-seed noise;
+  \item \textbf{not converged:} the ion kinetic energy depends on the late-time smoothing --- once the grid coarsens with the
+    expanding sample, the effective $s$ grows above $s_e$.
+    At 600\,eV the ion kinetic energy is up to $\sim$15\,\% above that of a run with the smoothing held at $s_e$, at
+    8\,keV $\sim$5\,\%.
+    Compare kinetic energies between runs at equal settings.
+\end{itemize}
+The electron size $s_e$: charge, escape and directions are independent of it; the ion kinetic energy at 600\,eV changes
+by $-15$\,\% / $+13$--19\,\% for $s_e$ = 0.20 / 0.30\,nm.
+
+The long-range ion force (above 10\,000 atoms) leaves charge, escape and ion maps unchanged but raises the ion kinetic
+energy by 2--6\,\% against all pairs (GroEL at 8\,keV: +5.3\,\%).
+
+\section{Against a particle code}
+
+The model was compared with XMDYN~\cite{jurek2016}, which follows every released electron as a classical particle,
+run without recombination, on lysozyme (8 seeds) and 1B7U:
+\begin{itemize}
+  \item charge, escape, radius and ion kinetic energy agree within a few per cent at high fluence;
+  \item at 600\,eV and low fluence ($10^5$) the ion kinetic energy is 11\,\% higher and the expansion starts earlier;
+  \item the peak electron temperature is 25--30\,\% lower;
+  \item at 8\,keV and $10^7$ the charge is half of XMDYN's (late impact ionization in a shallow well);
+  \item heavy-ion maps correlate $r = 0.84$--$0.90$ with XMDYN's, against 0.88--0.93 from seed to seed; mean directions
+    differ by 1.5--3$^\circ$ beyond the seed spread.
+\end{itemize}
+
+\section{Statistics}
+
+A single run is one realization of the Monte Carlo.
+A lysozyme heavy-ion map needs 3--10 seeds to correlate at $r = 0.99$ with the infinite-seed map, 1B7U one; per-atom
+directions scatter by 6.5--16$^\circ$ from seed to seed.
+When the start structures also differ (an ensemble of equilibrated structures, e.g.\ the ubiquitin variants), the map
+needs 150--250 runs for $r = 0.99$.
+The ion directions stop turning (to within 2$^\circ$) 60\,fs after the pulse peak (90\,fs at 600\,eV and low fluence).
+
+\section{Atomic data}
+
+The data matter: XATOM data (which match the reference photoionization cross sections) give a 15\,\% higher ion kinetic
+energy at 600\,eV than the CRETIN models (whose valence cross sections are 3--12$\times$ too small), and 39\,\% higher at
+1000\,eV, with the same charge to 1--2\,\% and the same directions (Section~\ref{sec:accuracy}).
+The built-in screened-hydrogenic data reproduce the CRETIN models: on lysozyme at 1000\,eV the charge agrees to
+0.7\,\%, the escape to 1.3\,\%, the directions within the seed noise, and the ion kinetic energy is 3.5\,\% lower.
+
+\section{Limitations}
+
+\begin{itemize}
+  \item \textbf{Elements}: up to the M shell; elements with 4s electrons count them in M, and iodine is a placeholder.
+  \item \textbf{Configurations}: shell averaged, no subshells or levels.
+  \item \textbf{Electrons}: one temperature, classical mean field, escape tested at birth only
+    (Chapter~\ref{ch:pb}); the ion kinetic energy depends on $s_e$ and on the late smoothing.
+  \item \textbf{Not fully validated}: three-body recombination, collisional excitation, H--H charge transfer, transfer
+    from heavy donors, evaporation off.
+  \item \textbf{Force field}: harmonic bonds are not modified (use \code{morse = yes}; the run summary warns).
+  \item \textbf{Large forces}: highly charged samples produce large forces; check that the kinetic and potential energy
+    evolve smoothly, and lower \code{dt} if they do not.
+  \item Tested on Linux only.
+\end{itemize}

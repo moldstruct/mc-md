@@ -1,0 +1,101 @@
+\chapter{The atomic model}
+\label{ch:atomic}
+
+\section{Electronic states}
+
+The electronic state of an atom is its \emph{shell configuration}: three integers \code{K L M}, the number of
+electrons in the $n=1,2,3$ shells (capacities 2, 8 and 18).
+There are no subshells and no terms or levels within a configuration; whatever an atomic-structure code resolves
+is summed or averaged per configuration when the data are generated (Chapter~\ref{ch:data}).
+An atom starts in its element's ground configuration (table~\ref{tab:elements}).
+Its charge in the MD is $q = Z - (K+L+M)$: at the first step the module replaces the force field's partial charges by
+these integer ionization charges (all zero at the start), and every transition changes the configuration and the
+charge.
+
+An atom's element is the one whose standard atomic weight is nearest to its mass, within 0.5 (so argon, 39.948, and
+calcium, 40.078, are told apart):
+
+\begin{table}[H]
+\centering\small
+\begin{tabular}{@{}lrrl@{\quad}lrrl@{\quad}lrrl@{}}
+\toprule
+element & mass & $Z$ & ground & element & mass & $Z$ & ground & element & mass & $Z$ & ground \\
+\midrule
+H  & 1.008  & 1 & \code{1 0 0} & F  & 18.998 & 9  & \code{2 7 0} & S  & 32.06  & 16 & \code{2 8 6} \\
+Li & 6.94   & 3 & \code{2 1 0} & Ne & 20.180 & 10 & \code{2 8 0} & Cl & 35.45  & 17 & \code{2 8 7} \\
+Be & 9.0122 & 4 & \code{2 2 0} & Na & 22.990 & 11 & \code{2 8 1} & Ar & 39.948 & 18 & \code{2 8 8} \\
+B  & 10.81  & 5 & \code{2 3 0} & Mg & 24.305 & 12 & \code{2 8 2} & Ca & 40.078 & 20 & \code{2 8 10}$^\ast$ \\
+C  & 12.011 & 6 & \code{2 4 0} & Al & 26.982 & 13 & \code{2 8 3} & Fe & 55.845 & 26 & \code{2 8 16}$^\ast$ \\
+N  & 14.007 & 7 & \code{2 5 0} & Si & 28.085 & 14 & \code{2 8 4} & Ni & 58.693 & 28 & \code{2 8 18}$^\ast$ \\
+O  & 15.999 & 8 & \code{2 6 0} & P  & 30.974 & 15 & \code{2 8 5} & I  & 126.904 & 53 & \code{2 8 18}$^{\ast\ast}$ \\
+\bottomrule
+\end{tabular}
+\caption{Elements the module knows (\code{mcmd\_elements[]} in \file{atomic\_data.c}); H to Ar have built-in data.
+$^\ast$\,The 4s electrons are counted in M; only with \opt{mcmd-atomic-data = files}.
+$^{\ast\ast}$\,A placeholder: right for the force field, not for the ionization physics.
+Deuterium (mass 2) is hydrogen.  Helium is left out: an atom of mass $\sim$4 is far more likely a heavy hydrogen
+(\code{pdb2gmx -heavyh}, mass repartitioning) and is refused rather than taken as helium.}
+\label{tab:elements}
+\end{table}
+A new element needs a row in that table (mass, symbol, ground configuration) and, above argon or for files, its
+atomic data.
+
+\section{Transitions}
+
+Three processes are tabulated per configuration, each with its final configuration:
+\begin{description}
+  \item[Photoionization] (type 2) removes one electron from a shell.
+    The table gives the cross section $\sigma$ (cm$^2$) at the photon energy; the rate is $\sigma I(t)$ with the pulse
+    flux $I(t)$ below.
+  \item[Auger--Meitner decay] (type 0) fills a hole from an outer shell and ejects a second electron: the atom loses
+    one electron.
+    The table gives the rate (s$^{-1}$).
+  \item[Fluorescence] (type 1) fills a hole from an outer shell and emits a photon, which leaves; the charge does not
+    change.
+\end{description}
+Charge transfer (Chapter~\ref{ch:ct}) and, with the electron cloud, collisional ionization
+(Chapter~\ref{ch:coll}) are added to these.
+
+\section{The pulse}
+
+The pulse is Gaussian in time, with peak time $t_0$ (\opt{mcmd-pulse-peak-time}), full width at half maximum
+$\tau$ (\opt{mcmd-pulse-fwhm}), $N_{\mathrm{ph}}$ photons (\opt{mcmd-pulse-photons}) in a focal spot of
+diameter $d$ (\opt{mcmd-pulse-focal-diameter}), uniform over the sample:
+\begin{equation}
+  I(t) = \frac{N_{\mathrm{ph}}}{\pi (d/2)^2}\,\frac{1}{\sigma_t\sqrt{2\pi}}\,
+         \exp\!\Big[-\frac{(t-t_0)^2}{2\sigma_t^2}\Big],\qquad \sigma_t = \frac{\tau}{2\sqrt{2\ln 2}},
+\end{equation}
+in photons cm$^{-2}$\,s$^{-1}$.
+The fluence $N_{\mathrm{ph}}/(\pi d^2/4)$ is what sets the ionization; the example's $10^{11}$ photons into 100\,nm
+are $1.27\times10^{13}$ photons/\textmu m$^2$.
+The photon energy (\opt{mcmd-pulse-photon-energy}) only enters through the atomic data, which are computed for it
+(built in) or must be generated for it (files),
+and through the energy of the photoelectrons.
+\opt{mcmd-pulse-bandwidth} (relative FWHM, default 0.003) gives each photoelectron a Gaussian jitter of that width
+in its energy, which matters only for the escape test near threshold; the cross sections are those of the nominal
+energy.
+
+\section{The Monte Carlo step}
+
+Every MD step $\Delta t$, every atom is advanced by a first-reaction kinetic Monte Carlo~\cite{gillespie1976}:
+for each transition available from its current configuration a waiting time $\delta t = -\ln u / k$ is drawn
+($u$ uniform, $k$ the rate, with $I(t)$ for photoionization); the earliest fires if it falls within the time left in
+the step; then the atom's new configuration offers new transitions, and the procedure repeats until the step is used
+up.
+Several transitions can therefore happen to one atom in one step, e.g.\ a K-shell photoionization followed within
+femtoseconds by an Auger decay.
+The Monte Carlo runs on the master rank from one random stream (seeded by \opt{mcmd-seed},
+Section~\ref{sec:seed}), so the sequence of events does not depend on the number of ranks.
+
+\section{The released electrons}
+
+Each photoionization and Auger decay releases an electron, with kinetic energy from the configurations' total
+binding energies $T$ (Chapter~\ref{ch:data}):
+\begin{equation}
+  \varepsilon_{\mathrm{photo}} = E_{\mathrm{ph}} - \big(T_{\mathrm{from}} - T_{\mathrm{to}}\big),\qquad
+  \varepsilon_{\mathrm{Auger}} = T_{\mathrm{to}} - T_{\mathrm{from}}.
+\end{equation}
+For carbon at 1000\,eV a K-shell photoelectron has $\sim$700\,eV and a KLL Auger electron $\sim$260\,eV.
+Without the electron cloud (\opt{mcmd-electrons = none}) every electron leaves.
+With it, the electron escapes if $\varepsilon$ exceeds the depth of the potential well at its atom, and is trapped in
+the cloud otherwise (Section~\ref{sec:escape}).

@@ -1,0 +1,65 @@
+% MolDStruct MC/MD reference manual.  Build: tectonic manual.tex  (or pdflatex twice)
+\documentclass[11pt,a4paper,openany]{report}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{amsmath,amssymb,bm}
+\usepackage{booktabs,array,tabularx,longtable}
+\usepackage{graphicx,caption}
+\usepackage{xcolor}
+\usepackage{float}
+\usepackage{listings}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning}
+\usepackage{enumitem}
+\usepackage[colorlinks=true,linkcolor=blue!50!black,citecolor=green!35!black,urlcolor=blue!50!black]{hyperref}
+
+\definecolor{codebg}{RGB}{247,246,242}
+\definecolor{codecomment}{RGB}{110,108,100}
+\lstset{basicstyle=\ttfamily\footnotesize, backgroundcolor=\color{codebg}, frame=single,
+  rulecolor=\color{black!15}, framesep=4pt, xleftmargin=6pt, xrightmargin=6pt, columns=fullflexible,
+  keepspaces=true, breaklines=true, showstringspaces=false, aboveskip=8pt, belowskip=8pt,
+  commentstyle=\color{codecomment}\itshape}
+\setlist{itemsep=2pt, topsep=4pt}
+\emergencystretch=2em
+
+% long file and option names may break after an underscore
+\let\oldunderscore\_
+\renewcommand{\_}{\oldunderscore\allowbreak}
+\newcommand{\code}[1]{\texttt{#1}}
+\newcommand{\opt}[1]{\texttt{#1}}            % an mdp option
+\newcommand{\env}[1]{\texttt{#1}}            % an environment variable
+\newcommand{\file}[1]{\texttt{#1}}
+\newcommand{\dd}{\mathrm{d}}
+\newcommand{\kc}{k_{\mathrm C}}
+\newcommand{\Kmat}{\mathsf K}
+\newcommand{\vect}[1]{\bm{#1}}
+
+\title{\Huge MolDStruct MC/MD\\[8pt]
+  \Large Hybrid Monte Carlo / molecular dynamics for X-ray induced\\ ionization and Coulomb explosion\\[18pt]
+  \large Reference manual}
+\author{Biophysics group, Uppsala University}
+\date{October 2026 \\[4pt] \small model version: tpr format 79}
+
+\begin{document}
+\maketitle
+\tableofcontents
+
+\input{ch/intro}
+\input{ch/start}
+\input{ch/atomic}
+\input{ch/ct}
+\input{ch/ff}
+\input{ch/pb}
+\input{ch/coll}
+\input{ch/data}
+\input{ch/output}
+\input{ch/mdp}
+\input{ch/env}
+
+\appendix
+\input{ch/app_numerics}
+\input{ch/app_parallel}
+\input{ch/app_validation}
+\input{ch/app_misc}
+
+\input{ch/biblio}
+\end{document}

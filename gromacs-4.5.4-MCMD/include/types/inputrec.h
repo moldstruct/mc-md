@@ -287,7 +287,6 @@ typedef struct {
   int  mcmd_charge_transfer_downhill;  /* boolean, require downhill CT     */
   int  mcmd_autostop;                  /* boolean                          */
   int  mcmd_detailed_output;           /* boolean                          */
-  int  mcmd_collisional_ionization;    /* boolean, NOT IMPLEMENTED         */
   int  mcmd_charge_transfer_idle;      /* steps                            */
   int  mcmd_charge_transfer_recheck;   /* steps                            */
   int  mcmd_initial_charges;           /* boolean                          */
@@ -299,6 +298,30 @@ typedef struct {
   real mcmd_pulse_focal_diameter;      /* nm                               */
   real mcmd_pulse_photon_energy;       /* eV                               */
   real mcmd_autostop_threshold;        /* E_kin/E_tot ratio                */
+  real mcmd_pulse_bandwidth;           /* relative FWHM of the photon energy */
+
+  /* The trapped electrons (mcionize.c, the Poisson-Boltzmann electron cloud) */
+  int  mcmd_electrons;                 /* 0 none, 1 pbgrid                 */
+  int  mcmd_pb_long_range;             /* boolean, ion-ion beyond rcoulomb from the grid */
+  int  mcmd_evaporation;               /* boolean                          */
+  int  mcmd_collisions;                /* boolean, electron-impact ionization */
+  int  mcmd_coll_excitation;           /* boolean, collisional (de)excitation */
+  int  mcmd_coll_recombination;        /* boolean, three-body recombination */
+  int  mcmd_coll_h_recombination;      /* boolean, recombination onto H    */
+  int  mcmd_ct_h_donor_only;           /* boolean, charge transfer from H only */
+  int  mcmd_field_ionization;          /* boolean, over the barrier in the PB field */
+  real mcmd_pb_interval;               /* fs between PB solves             */
+  real mcmd_pb_smoothing;              /* nm, charge smoothing s_e         */
+  real mcmd_pb_box_cut;                /* electrons allowed outside the grid box */
+  real mcmd_field_ionization_smoothing; /* nm, L of the collective field   */
+  /* tpr version 78: numerical PB settings and the seed (were environment variables) */
+  int  mcmd_seed;                      /* RNG seed, -1 = from time and pid */
+  int  mcmd_pb_grid_limit;             /* most grid cells per side         */
+  real mcmd_pb_newton_tol;             /* Newton tolerance, relative residual */
+  real mcmd_pb_cells_per_smoothing;    /* target spacing = s_e / this at R0 */
+  real mcmd_pb_box_max;                /* largest grid half-width, in R   */
+  int  mcmd_coll_data;                 /* collisional ionization data: 0 files, 1 lotz (tpr 79) */
+  int  mcmd_atomic_data;               /* atomic data: 0 files (./Atomic_data), 1 hydrogenic, built in (tpr 80) */
 
   t_grpopts opts;	/* Group options				*/
   t_cosines ex[DIM];	/* Electric field stuff	(spatial part)		*/

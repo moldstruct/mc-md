@@ -3,8 +3,8 @@
  *
  * Atomic data for the MolDStruct MC/MD ionization module: the table of
  * supported elements, and the per-element data read out of ./Atomic_data/
- * (energy levels, transition rates, and the collisional parameters and
- * statistical weights used by the not-yet-implemented collisional channel).
+ * or computed at start-up (energy levels, transition rates, collisional
+ * parameters and statistical weights).
  *
  * An electronic state is three integers: the K, L and M shell occupations.
  *
@@ -26,11 +26,11 @@ extern "C"
 #define MCMD_NSHELL 3
 
 /* Number of elements the code knows the mass and ground state of. */
-#define MCMD_NUM_ELEMENTS 15
+#define MCMD_NUM_ELEMENTS 21
 
 /* Upper bound on element indices, used to size the per-element data table.
  * Must be >= MCMD_NUM_ELEMENTS. */
-#define MCMD_ATOM_TABLE_SIZE 20
+#define MCMD_ATOM_TABLE_SIZE 24
 
 /* Value returned by mcmd_dict_get() and mcmd_weight_for_state() when the
  * requested state is not in the table.  All real energies and weights are
@@ -43,8 +43,17 @@ extern "C"
 
 /* Element index for a rounded atomic mass, or -1 if the mass is not in the
  * table.  Callers must check for -1: it used to be passed straight to an
- * array subscript. */
+ * array subscript.  Ambiguous for 40 (calcium, the first row): an atom's
+ * element comes from mcmd_atom2idx(). */
 int mcmd_mass2idx(int mass);
+
+/* Element index of an atom of this mass: the nearest standard atomic weight
+ * within 0.5 (deuterium is hydrogen), or -1. */
+int mcmd_atom2idx(double mass);
+
+/* Symbol ("H", "CL", ...) and ground state of an element index; "_" / NULL out of range. */
+const char *mcmd_idx2symbol(int idx);
+const int *mcmd_idx_ground_state(int idx);
 
 /* Rounded atomic mass for an element index, or -1 if out of range. */
 int mcmd_idx2mass(int idx);
@@ -95,8 +104,28 @@ typedef struct
     double **coll_rates;   /* [num_transitions][MCMD_NCOLL_PARAM] */
 } t_mcmd_coll;
 
-/* Statistical weights per state, from statistical_weight_X.txt.  Also only
- * needed by the collisional channel. */
+/* Tabulated collisional rate coefficients (2026-10-28), the generator-
+ * independent alternative to the fit parameters: collisional_ionization_table_X.txt
+ * replaces collisional_parameters_X.txt, collisional_excitation_table_X.txt
+ * replaces collisional_excitation_X.txt, where present.  A header line
+ * 'T_e t1 t2 ... tn' (eV, increasing), then one transition per line:
+ * 'K L M K' L' M' k1 ... kn', k = <sigma v> in cm^3/s for a Maxwellian at each
+ * t (the full coefficient: ionization or excitation from the initial state).
+ * Any exponent is read ('3.1e-2650'); a 0 means 'too small to write' and is
+ * extrapolated from the neighbouring values (see mcmd_coll_build).
+ * See ATOMIC_DATA.md. */
+typedef struct
+{
+    int     nT;
+    double *lnT;                  /* [nT], ln of the grid temperatures (eV) */
+    int     ntr;
+    int   (*ini)[MCMD_NSHELL];    /* [ntr] */
+    int   (*fin)[MCMD_NSHELL];    /* [ntr] */
+    double *lnk;                  /* [ntr * nT], ln of <sigma v> (cm^3/s); -HUGE_VAL where 0 */
+} t_mcmd_ctab;
+
+/* Statistical weights per state, from statistical_weight_X.txt where present,
+ * else C(2,K) C(8,L) C(18,M).  Only needed by the collisional channel. */
 typedef struct
 {
     int     num_states;
@@ -127,6 +156,7 @@ int mcmd_state_index_get(const t_mcmd_state_index *si,
 typedef struct
 {
     int             mass;
+    int             elem;     /* element index */
     gmx_bool        bPresent; /* FALSE if this element is not in the system */
     t_mcmd_dict    *energy_levels;
 
@@ -140,7 +170,17 @@ typedef struct
     int             num_rates;
     t_mcmd_coll    *coll;
     int             num_coll;
+    /* Electron-impact excitation, collisional_excitation_X.txt (same
+     * format as coll: c0 c1 c2 c3 a0 of the CRETIN 'colex2' fit, keyed by the
+     * lower configuration).  Optional: NULL when the file is absent. */
+    t_mcmd_coll    *colex;
+    int             num_colex;
+    /* the tabulated forms, NULL when absent; where present they are used
+     * instead of coll / colex (which are then not read) */
+    t_mcmd_ctab    *coll_tab;
+    t_mcmd_ctab    *colex_tab;
     t_mcmd_weights  weights;
+    gmx_bool        bWeightsFile; /* weights read from statistical_weight_X.txt (else computed) */
 
     /* O(1) replacements for the linear scans over rates[] and coll[].  Built
      * by mcmd_atomdata_read() from the same arrays, so they always agree with
@@ -153,11 +193,20 @@ typedef struct
     int             max_transitions;
 } t_mcmd_atomdata;
 
-/* Read the data files for one element into ad.  Reads the collisional
- * parameters and statistical weights as well when bCollisional is TRUE.
+/* Read the data files for one element into ad (and the collisional data, see collmode below), or compute them.
  * Fatal if a required file is missing or malformed. */
 void mcmd_atomdata_read(t_mcmd_atomdata *ad, int elem_idx,
-                        gmx_bool bCollisional);
+                        int collmode, int source, double photon_energy);
+/* collmode: 0 no collisions; 1 collisional ionization from files (table or fit, mcmd-coll-data = files);
+ * 2 from Lotz's formula (mcmd-coll-data = lotz: no ionization file read).  With 1 and 2 the statistical
+ * weights and the (optional) excitation data are read.
+ * source: 0 ./Atomic_data (mcmd-atomic-data = files); 1 built in (mcmd-atomic-data = hydrogenic): the
+ * screened-hydrogenic shell model computed for photon_energy (eV), H to Ar, energies, rates and weights, no
+ * collisional or excitation data (collmode 1 is not allowed with it). */
+
+/* Write the energies, rates and weights of ad into dir as energy_levels_X.txt, total_energies_X.txt,
+ * rate_transitions_X.txt and statistical_weight_X.txt, in the format mcmd_atomdata_read() reads. */
+void mcmd_atomdata_write(const t_mcmd_atomdata *ad, const char *dir);
 
 /* Release everything mcmd_atomdata_read() allocated. */
 void mcmd_atomdata_done(t_mcmd_atomdata *ad, gmx_bool bCollisional);

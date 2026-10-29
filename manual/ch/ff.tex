@@ -1,0 +1,103 @@
+\chapter{The modified force field}
+\label{ch:ff}
+
+A force field describes a molecule held together by chemical bonds.
+Once its atoms are ionized, the electrons that formed those bonds are gone, and the bonded terms would hold the
+exploding fragments together with a strength they no longer have.
+With \code{mdrun -ionize} the bonded and 1--4 interactions are therefore modified as the atoms charge up
+(\file{src/gmxlib/bondfree.c} and \file{src/gmxlib/nonbonded/nonbonded.c}; the switch is the global
+\code{moldstruct\_altered\_ff}).
+Without \code{-ionize} the force field is that of stock GROMACS.
+
+\section{Charges}
+
+At the first step the module replaces every atom's partial charge by its ionization charge $q = Z-(K+L+M)$, zero for
+a neutral atom.
+From then on the Coulomb interactions act only between ions, with integer charges that change as the atoms ionize.
+The Lennard-Jones interactions are not modified.
+
+\section{The ionization factor}
+
+Every modified bonded term is scaled by the \emph{ionization factor} of the mean charge $\bar q$ of the atoms it
+involves:
+\begin{equation}
+  f(\bar q) = \min\!\big(1,\ \max(1-\bar q,\ 0)\big),
+\end{equation}
+which is 1 for neutral atoms, falls linearly, and is 0 once the atoms carry on average one charge.
+Energies and forces are scaled together, so the scaled terms remain conservative at fixed charge.
+
+\begin{table}[H]
+\centering\small
+\begin{tabularx}{\textwidth}{@{}l l X@{}}
+\toprule
+interaction & GROMACS function & modification under \code{-ionize} \\
+\midrule
+Morse bond & \code{morse\_bonds} & breaks irreversibly at $\beta(r-b_0) > 4$; then removed and replaced by the pair's
+  $C_{12}/r^{12}$ repulsion; the bare 1--2 Coulomb between the two ions is added \\
+harmonic bond & \code{bonds} & not modified --- use \code{morse = yes} \\
+angle & \code{angles} & scaled by $f(\bar q)$ of the three atoms; explicit 1--3 Coulomb added \\
+Urey--Bradley & \code{urey\_bradley} & angle part scaled by $f(\bar q)$; the 1--3 spring breaks irreversibly at
+  $r_{13} > 2\,r_{13}^0$, scaled by $f(\bar q)$ before; explicit 1--3 Coulomb added \\
+proper dihedral & \code{pdihs} & scaled by $f(\bar q)$ of the four atoms \\
+improper dihedral & \code{idihs} & scaled by $f(\bar q)$ of the four atoms \\
+Ryckaert--Bellemans & \code{rbdihs} & scaled by $f(\bar q)$ of the four atoms \\
+CMAP & \code{cmap\_dihs} & scaled by a stepped $f(\bar q)$ of the five atoms: 1, 0.8, 0.6, 0.4, 0.2, 0 at
+  $\bar q <$ 0.19, 0.39, 0.59, 0.79, 1, $\ge1$ \\
+1--4 pair & \code{do\_listed\_vdw\_q} & Coulomb scaled from \code{fudgeQQ} to full strength, LJ unchanged \\
+\bottomrule
+\end{tabularx}
+\caption{The bonded and 1--4 interactions under \code{-ionize}.}
+\label{tab:ff}
+\end{table}
+
+\section{Bond breaking}
+
+\paragraph{Morse bonds.}
+The bonds should be Morse potentials, $V = D\,[1-e^{-\beta(r-b_0)}]^2$, which \code{grompp} makes from harmonic bonds with
+\code{morse = yes} (dissociation energies from \file{share/top/edissoc.dat}); the example does this.
+A Morse bond breaks permanently once $\beta(r-b_0) > 4$.
+The threshold is in units of the decay length $1/\beta$, so it lies at the same point of the dissociation curve for
+every bond type: about 7\,\% of the peak restoring force is left and 96\,\% of the well depth has been paid.
+(A multiple of $b_0$ would be much more aggressive for short bonds: $2b_0$ leaves 43\,\% of the peak force on a C--H bond,
+20\,\% on C--C.)
+After breaking, the Morse term is gone.
+Because GROMACS's exclusion lists are fixed, the pair stays excluded from the non-bonded interactions; the bond term
+therefore puts back the pair's own repulsive wall $C_{12}/r^{12}$ (the real $C_{12}$ of the two atom types, without the
+$r^{-6}$ dispersion), so that broken fragments cannot pass through each other.
+
+\paragraph{The 1--2 Coulomb interaction.}
+Bonded pairs are excluded from the non-bonded Coulomb sum, which is right for partial charges in a molecule but wrong for
+two ions.
+The Morse term therefore adds the bare Coulomb interaction of the pair, $\kc q_iq_j/r$, broken or not; its energy is
+reported in the Morse term of the energy file.
+
+\paragraph{Urey--Bradley 1--3 springs} (CHARMM) are harmonic and have no decay length, so their threshold is
+geometric: the spring breaks permanently at twice its equilibrium length, where the angle it braces is already
+destroyed.
+
+\paragraph{Harmonic bonds} are not modified: they neither weaken nor break.
+Runs with \code{-ionize} should use \code{morse = yes}.
+
+\paragraph{The broken-bond registry.}
+Broken pairs are stored by their global atom indices in a hash set, separately for Morse and Urey--Bradley pairs.
+It is thread-local: under particle decomposition each rank owns a fixed slice of the bonded interactions, so a bond
+is only ever evaluated on one rank.
+It is not written to the checkpoint; after a restart a bond still beyond its threshold re-registers at the first
+step, so only bonds that broke and came back inside the threshold are forgotten.
+
+\section{Angles and the 1--3 interaction}
+
+Angles are scaled by the ionization factor of their three atoms.
+As with bonds, 1--3 pairs are excluded from the non-bonded Coulomb sum, so the angle (and Urey--Bradley) terms add
+the 1--3 Coulomb interaction explicitly, as a genuine potential: energy and force, with the signed charge product.
+
+\section{The 1--4 interactions}
+
+The 1--4 Coulomb interaction of a force field is scaled by \code{fudgeQQ} (e.g.\ 0.5--1, depending on the force
+field) because the bonded terms already describe part of it.
+Once the bonded terms fade, the 1--4 Coulomb is interpolated back to full strength with the mean charge of the pair:
+\begin{equation}
+  \epsilon_{14} = \epsilon\,\big[1 - (1-\code{fudgeQQ})\,f(\bar q_{ij})\big],
+\end{equation}
+\code{fudgeQQ} for neutral atoms and 1 for ionized ones.
+The 1--4 Lennard-Jones term is not changed.

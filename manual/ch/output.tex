@@ -1,0 +1,80 @@
+\chapter{Output}
+\label{ch:output}
+
+All standard GROMACS output (\file{.trr}, \file{.edr}, \file{.log}, \file{.gro}) is written as usual.
+The ionization module writes into \file{simulation\_output/} in the run directory; a 30\,fs lysozyme run writes about
+0.6\,MB there.
+Text files are whitespace-separated columns (\code{numpy.loadtxt} reads them; \code{\#} lines are headers); times are in
+ps.
+The time-resolved files are written every \code{nstenergy} steps, the electron model's at every solve; all are
+buffered and flushed every 1000 steps.
+
+\section{Always written}
+
+\begin{description}
+  \item[\file{charges.txt}] the final charge of every atom: atom number (1-based), charge.
+  \item[\file{procces\_statistics.txt}] event counts at the end: Auger decays, fluorescence, photoionizations, charge
+    transfers.
+    (Electron-impact ionizations and recombinations are in \file{collisional\_log.txt} and in the end-of-run summary
+    on stderr.)
+  \item[\file{masses.bin}] the atom masses (float32), from which \file{tools/mcmd\_output.py} gets the elements.
+  \item[\file{mcionize\_state.bin}] the restart state, written at every checkpoint (Section~\ref{sec:seed}); the
+    previous one is kept as \file{mcionize\_state\_prev.bin}.
+  \item[\file{timing\_mcionize.txt}] wall time per part of the module (Monte Carlo, charge transfer, PB solves, \ldots).
+\end{description}
+
+\section{Time-resolved output (\opt{mcmd-detailed-output = 1})}
+
+\begin{description}
+  \item[\file{mean\_charge\_vs\_time.txt}] $t$, mean charge per atom.
+  \item[\file{pulse\_profile.txt}] $t$, pulse intensity $I(t)$ in photons\,cm$^{-2}$\,s$^{-1}$.
+  \item[\file{electron\_data.txt}] $t$, mean density of the trapped electrons (cm$^{-3}$), their temperature (eV), and
+    the expansion $R_g/R_g(0)$.
+    The temperature is \code{nan} before the first electron is trapped.
+  \item[\file{charges\_over\_time.bin}] every atom's charge (float32), one frame every
+    \opt{mcmd-charge-output-stride} steps (default 500, i.e.\ 1\,fs at 2\,as).
+  \item[\file{transitions.bin}] every electronic event: a 16-byte header (\code{MCMDTRN1}, version, record size), then
+    20-byte records: time (fs, float32), atom (0-based), the charge-transfer donor (else $-1$), the type (0 Auger,
+    1 fluorescence, 2 photoionization, 3 collisional ionization, 4 recombination, 5 excitation, 6 de-excitation,
+    7 charge transfer), and the \code{K L M} occupations before and after.
+    It is front-loaded: photoionization follows the pulse and the Auger cascades follow within a few fs.
+\end{description}
+
+\section{The electron model (\opt{mcmd-electrons = pbgrid})}
+
+\begin{description}
+  \item[\file{pb\_log.txt}] one line per solve: $t$, $N$ trapped, $Q$ escaped, $T$, grid spacing, ions outside the
+    grid, Newton and CG iterations, residual, wall time (ms), mean and maximum depth, the field's work and the change of
+    $U$ since the last solve, the kinetic energy, any clamped energy, the core neutralization (electrons per ion charge
+    within $R/2$), convolutions, rebuilds, temperature iterations.
+  \item[\file{screening\_log.txt}] every \code{nstenergy} steps: escaped and trapped electrons, trapped fraction, mean
+    energy of the trapped electrons, $R$, Debye length and number, evaporated electrons, $T$.
+  \item[\file{collisional\_log.txt}] every \code{nstenergy} steps: $T$, mean $n_e$, $N$, the cloud's energy, cumulative
+    electron-impact ionizations and recombinations, the energy spent on ionization, the energy brought in by trapped
+    electrons, the adiabatic and evaporated energy, $R$, $Q$.
+    It is written before each step's Monte Carlo, so the last line misses the last step's events; the end-of-run
+    summary has the final counts.
+  \item[\file{energy\_ledger.txt}] cumulative energy exchanges: the ion--ion and ion--electron energy jumps of charge
+    changes, the field's work on the ions, the electrons' kinetic energy, $N$.
+  \item[\file{pbg\_box.txt}] the grid box at each solve: $R$, half-width in units of $R$, spacing, the estimated fraction
+    of electrons outside, whether the grid was rebuilt, cells per side.
+  \item[\file{pbg\_lr.txt}] with long range: the refreshes of the long-range ion field.
+  \item[\file{pbfield\_events.txt}] with field ionization: every event ($t$, atom, mass, charge after, distance from
+    the centre, field, $I_p$, depth).
+\end{description}
+
+\section{The output viewer}
+\label{sec:viewer}
+
+\file{tools/mcmd\_output.py} reads all of the above:
+\begin{lstlisting}
+mcmd_output.py transitions [dir] [--type photo,auger] [--atom 12] [--tmin 20 --tmax 40]
+mcmd_output.py summary [dir]           # events per type and element, and per 5 fs
+mcmd_output.py charges [dir]           # mean charge per element over time
+mcmd_output.py plot [dir]              # overview.png of every metric the run wrote
+mcmd_output.py plot [dir] --gif        # + explosion.gif: three views along the initial gyration axes
+mcmd_output.py plot [dir] --extract    # + extracted/: transitions.txt, charges_over_time.txt
+\end{lstlisting}
+\code{dir} is the run directory or its \file{simulation\_output} (default: the current directory).
+From Python, \code{import mcmd\_output} gives \code{read\_transitions}, \code{read\_charges}, \code{elements},
+\code{masses} and \code{read\_trr} (pure Python) as numpy arrays.

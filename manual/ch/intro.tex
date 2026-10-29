@@ -1,0 +1,72 @@
+\chapter{Introduction}
+\label{ch:intro}
+
+MolDStruct MC/MD simulates what happens to a biomolecule, or any small system of light atoms, when it is hit by an
+intense femtosecond X-ray pulse.
+The pulse ionizes the atoms, the released electrons partly escape and partly stay trapped, the sample charges up and
+explodes, and the ions fly apart in directions that still carry information on the original structure.
+The model follows all of this in one simulation: the electronic state of every atom, the electrons released, and the
+nuclear motion.
+
+It is part of the MolDStruct toolbox and is built on GROMACS~4.5.4~\cite{pronk2013}, extended with an ionization
+module.
+Everything GROMACS does still works the same way; the ionization model is switched on with \code{mdrun -ionize} and
+controlled by \opt{mcmd-*} options in the \file{.mdp} file.
+
+\section{The model in one page}
+
+\begin{description}
+  \item[Atoms] are classical particles that also carry an electronic configuration: the number of electrons in their
+    K, L and M shells.
+    Each configuration has a charge, and the charges enter the force field.
+  \item[Electronic transitions] (photoionization by the pulse, Auger--Meitner decay, fluorescence) change those
+    configurations.
+    They are sampled every MD step by kinetic Monte Carlo from tabulated rates and cross sections
+    (Chapter~\ref{ch:atomic}).
+  \item[Charge transfer] moves electrons between nearby atoms when a classical over-the-barrier criterion allows it
+    (Chapter~\ref{ch:ct}).
+  \item[The force field] is modified so that ionized atoms lose their chemical bonds: bonded terms fade out with the
+    charge, bonds break irreversibly, and the Coulomb interactions between bonded neighbours are restored
+    (Chapter~\ref{ch:ff}).
+  \item[Released electrons] either escape or are trapped by the growing positive charge.
+    The trapped ones form a hot electron cloud, described as a continuous density in thermal equilibrium with the ions:
+    a Poisson--Boltzmann problem solved on a three-dimensional grid every 0.2\,fs (Chapter~\ref{ch:pb}).
+    The cloud screens the ions, pulls on them, decides which new electrons escape, and evaporates as the sample
+    expands.
+  \item[Electron--ion collisions] in the cloud ionize further (Chapter~\ref{ch:coll}).
+  \item[Atomic data] (energies, rates and cross sections per configuration) are computed at start-up from a
+    screened-hydrogenic shell model, or read from plain-text tables, which can be generated with XATOM (open source)
+    or from CRETIN models (Chapter~\ref{ch:data}).
+\end{description}
+
+With \opt{mcmd-electrons = none} the electron cloud is switched off: every released electron leaves, and the model is
+the original MolDStruct model~\cite{ostlin2018}.
+
+\section{How this manual is organized}
+
+Chapter~\ref{ch:start} gets a first run going.
+Chapters~\ref{ch:atomic}--\ref{ch:coll} describe the physics, each with the options that control it.
+Chapter~\ref{ch:data} specifies the atomic data, Chapter~\ref{ch:output} every output file.
+Chapters~\ref{ch:mdp} and~\ref{ch:env} are the reference: every mdp option and every diagnostic environment variable.
+The appendices cover the numerics of the electron model (Appendix~\ref{app:numerics}), parallel runs
+(Appendix~\ref{app:parallel}), validation and limitations (Appendix~\ref{app:validation}), and units, the source
+files and the version history (Appendix~\ref{app:misc}).
+
+Basic knowledge of GROMACS is assumed; see the GROMACS documentation for anything not specific to the ionization
+model.
+
+\section{Conventions}
+
+Inside the model energies are in eV, lengths in nm, and times in ps as in GROMACS --- except the pulse options and
+the electron-model intervals, which are in \textbf{femtoseconds}.
+Charges are in units of $e$.
+A configuration is written \code{K L M}, e.g.\ \code{2 4 0} for neutral carbon and \code{1 4 0} for carbon with a
+K-shell hole.
+Potentials are \emph{potential energies of an electron}, in eV.
+
+\section{Citing}
+
+If you use MolDStruct MC/MD, please cite the MolDStruct paper (to be added on publication), and GROMACS~4.5
+\cite{pronk2013}.
+The built-in atomic data follow Scott and Hansen~\cite{scott2010}; if you use atomic data generated with XATOM, cite
+XATOM~\cite{jurek2016}.

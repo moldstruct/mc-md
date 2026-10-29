@@ -1,0 +1,133 @@
+\chapter{Getting started}
+\label{ch:start}
+
+\section{Installation}
+
+The build is that of GROMACS~4.5.4 with CMake.
+FFTW~3 (single precision) is required; it is also what the electron model uses for its grid convolutions.
+\begin{lstlisting}
+cd gromacs-4.5.4-MCMD
+mkdir build && cd build
+cmake .. -DCMAKE_INSTALL_PREFIX=/path/to/install
+make -j8 install
+\end{lstlisting}
+Use the \code{grompp} of this build to write run inputs: the \file{.tpr} format carries the \opt{mcmd-*} options
+(format 80), which a stock GROMACS cannot read (and an older stock GROMACS tool would silently misread).
+Set \env{GMXLIB} to the build's \file{share/top} if the force fields are not found.
+
+\section{The example}
+
+\file{example/} holds a complete run: hen egg-white lysozyme (PDB 1AKI, 1960 atoms) in vacuum, exploded by a
+Gaussian pulse of $10^{11}$ photons at 1000\,eV, 2.94\,fs FWHM, focused to 100\,nm.
+\begin{lstlisting}
+cd example
+pdb2gmx -f 1aki.pdb -ff charmm27 -water none
+grompp  -f exp.mdp -c conf.gro -p topol.top -o explode.tpr
+mdrun   -deffnm explode -v -nt 4 -pd -ionize
+\end{lstlisting}
+(\file{run\_example.sh} does the same.)
+The run is 15\,000 steps of 2\,as, i.e.\ 30\,fs with the pulse peaking at $t=0$, and takes about 10 minutes on 4
+threads.
+No atomic data files are needed: the module computes them for 1000\,eV at start-up (Section~\ref{sec:builtin}).
+The model is the default one; the ``Model'' block of \file{exp.mdp} lists its main options.
+
+\paragraph{What to expect.}
+\opt{mcmd-seed = -1} draws a new random seed every run, so the numbers differ by about a percent between runs.
+Roughly:
+\begin{itemize}
+  \item every atom ends up ionized; the mean charge is about 3.5 per atom (hydrogen fully stripped, carbon $\sim$5.4,
+    nitrogen $\sim$6.2, oxygen $\sim$7.1, sulfur $\sim$13.6);
+  \item about 4000 photoionizations, 800 Auger decays, 2100 electron-impact ionizations and 820 charge transfers;
+  \item of the $\sim$6900 electrons released, $\sim$1350 have escaped and $\sim$5600 are still trapped at 30\,fs, at a
+    temperature of $\sim$18\,eV; the radius of gyration has grown 3.6-fold, to $\sim$5.7\,nm.
+\end{itemize}
+\code{tools/mcmd\_output.py plot} draws an overview of the whole run (Section~\ref{sec:viewer}).
+
+\section{The run summary}
+\label{sec:summary}
+
+At start-up \code{mdrun} prints a summary of what the module will do, and writes the same block to \file{md.log}
+(after GROMACS's own parameter listing): the system, the pulse, the run length and seed, the atomic data found, every
+process and whether it is on, and the output.
+For the example:
+\begin{lstlisting}
+==================================================================================
+ MolDStruct MC/MD
+ System        1960 atoms (H 959, C 613, N 193, O 185, S 10), all neutral at the start
+ Pulse         1000 eV, Gaussian, FWHM 2.9435 fs, peak at 0 fs, 1e+11 photons into 100 nm
+               (1.27e+13 photons/um^2); bandwidth 0.003
+ Run           15000 steps x 2 as = 30 fs; seed 3104721958 (chosen at start, mcmd-seed = -1); 4 ranks
+ Atomic data   built in: screened-hydrogenic shells (K, L, M) at 1000 eV, mcmd-atomic-data = hydrogenic
+               (written to ./simulation_output/Atomic_data)
+
+ Processes
+   photoionization, Auger, fluorescence     on (always)
+   charge transfer                          on   hydrogen donors only, H-H off, downhill off
+   trapped electrons (Poisson-Boltzmann)    on   mcmd-electrons = pbgrid
+       grid                                 s_e 0.25 nm, 2.5 cells/s_e, box <= 3 R, <= 384 cells,
+                                            solve every 0.2 fs, Newton tol 0.01
+       evaporation                          on
+   ion-ion forces                           all pairs
+   electron-impact ionization               on   Lotz, built in (mcmd-coll-data = lotz)
+   three-body recombination                 off
+   collisional excitation                   off
+   field ionization                         off
+
+ Output        simulation_output/: transitions.bin (mcmd-detailed-output = 1), charges_over_time.bin every 500 steps;
+               autostop off
+ Settings      all at the validated production values
+==================================================================================
+\end{lstlisting}
+Settings outside the validated model are listed as warnings instead of the last line --- an MD step above 2\,as, a
+PB solver coarser than the converged settings, a non-default smoothing, three-body recombination, collisional
+excitation, H--H charge transfer, all pairs above 10\,000 atoms, harmonic bonds that cannot break, a pulse without
+photons.
+The run goes on; the warnings say that the result is not covered by the validation of
+Appendix~\ref{app:validation}.
+
+\section{Running your own system}
+
+\begin{enumerate}
+  \item Prepare the system as for any vacuum GROMACS run: \code{pbc = no}, no pressure or temperature coupling during
+    the explosion.
+    Equilibrate it beforehand without \code{-ionize}.
+  \item Set \code{morse = yes} so that \code{grompp} turns the bonds into Morse potentials, which can break
+    (Chapter~\ref{ch:ff}).
+  \item Use \code{dt = 0.000002} (2\,as) and the pulse options \opt{mcmd-pulse-*} (Chapter~\ref{ch:mdp}); note that
+    the pulse times are in fs.
+  \item The atomic data are computed for the photon energy of the pulse (H to Ar except He); for other data supply
+    \file{Atomic\_data/} and set \opt{mcmd-atomic-data = files} (Chapter~\ref{ch:data}).
+  \item Run \code{mdrun -ionize}, with \code{-nt N -pd} for more than one thread (Appendix~\ref{app:parallel}).
+\end{enumerate}
+Ion-ion Coulomb interactions are taken care of by \opt{mcmd-pb-long-range = auto}: all pairs up to 10\,000 atoms,
+a 2\,nm cutoff plus the long-range field from the grid above (\code{grompp} sets the cut-offs and says so).
+
+\section{Reproducible runs and continuation}
+\label{sec:seed}
+
+The Monte Carlo draws come from a random seed.
+With \opt{mcmd-seed = -1} (the default) it is drawn from the clock and the process id at start-up, so every run is
+a different realization --- which is what an ensemble needs.
+The seed is printed in the summary; set \opt{mcmd-seed} to it to repeat a run exactly (on the same number of
+ranks, Appendix~\ref{app:parallel}).
+Give every member of an ensemble its own seed, or leave it at $-1$.
+
+Runs can be continued from a GROMACS checkpoint with \code{mdrun -cpi}.
+At every checkpoint the module writes \file{simulation\_output/mcionize\_state.bin} (the previous one kept as
+\file{mcionize\_state\_prev.bin}): the electronic configurations, the electron cloud's state, the random streams, the
+reference radius the expansion is measured against, and the length of every output file.
+On restart the state of the checkpoint's step is read back, the output files are cut back to that step and appended
+to.
+The state file is required: the reference radius in particular cannot be recovered from an expanded sample.
+To extend a finished run, raise \code{nsteps} with \code{tpbconv -extend} and continue with \code{-cpi}.
+
+\section{The regression test}
+
+\file{test/regression.sh} runs the example for 300 steps with a pinned seed in two cases --- \code{none} (no
+electron cloud) and \code{full} (the defaults, on a coarse grid) --- and checks that the event counts match the
+stored references exactly and that the charge is conserved.
+Then, with \opt{mcmd-atomic-data = files} on the tables the full case wrote, it checks that they reproduce the run
+bit for bit, that a run without \code{-ionize} writes no ionization output, that the total energies are required
+exactly when charge transfer or collisions need them, and that the run is unchanged without the statistical weights.
+It takes under a minute; \code{--update} regenerates the references after a deliberate change of the physics.
+The references are only meaningful for the build and machine that wrote them.

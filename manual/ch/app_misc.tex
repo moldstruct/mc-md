@@ -1,0 +1,60 @@
+\chapter{Units, source files and history}
+\label{app:misc}
+
+\section{Units and constants}
+
+\begin{table}[H]
+\centering\small
+\begin{tabular}{@{}lll@{}}
+\toprule
+quantity & unit & note \\ \midrule
+length & nm & GROMACS \\
+time & ps & GROMACS; pulse and \code{mcmd-pb-interval} in fs \\
+energy (module) & eV & GROMACS uses kJ/mol: 1\,eV = 96.485\,kJ/mol \\
+charge & $e$ & integer ionization charges \\
+rates & s$^{-1}$ & cross sections in cm$^2$, $\langle\sigma v\rangle$ in cm$^3$\,s$^{-1}$, density in cm$^{-3}$ or nm$^{-3}$ \\
+$\kc = e^2/4\pi\varepsilon_0$ & 1.43996\,eV\,nm & \code{MCMD\_COULOMB\_EV\_NM} \\
+pulse FWHM / $\sigma_t$ & $2\sqrt{2\ln2} = 2.35482$ & \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Source files}
+
+\begin{table}[H]
+\centering\small
+\begin{tabularx}{\textwidth}{@{}lX@{}}
+\toprule
+file & content \\ \midrule
+\file{src/kernel/mcionize.c} & the ionization module: Monte Carlo, charge transfer, the electron cloud, collisions,
+  field ionization, output, restart state, run summary \\
+\file{src/kernel/mcionize.h} & its interface to \code{md.c} \\
+\file{src/kernel/atomic\_data.c}, \file{.h} & the element table, the readers of \file{Atomic\_data/}, the built-in
+  screened-hydrogenic data \\
+\file{src/kernel/md.c} & calls the module every step (\code{-ionize}) \\
+\file{src/gmxlib/bondfree.c} & the modified bonded terms, bond breaking \\
+\file{src/gmxlib/nonbonded/nonbonded.c} & the modified 1--4 Coulomb \\
+\file{src/kernel/readir.c}, \file{grompp.c} & the \code{mcmd-*} options, their checks, \code{mcmd-pb-long-range = auto} \\
+\file{src/gmxlib/tpxio.c}, \file{include/types/inputrec.h} & the options in the \file{.tpr} (format 76--80) \\
+\file{tools/} & \file{check\_atomic\_data.py}, \file{make\_atomic\_data\_xatom.py}, \file{make\_atomic\_data\_cretin.py},
+  \file{make\_collisional\_tables.py}, \file{mcmd\_output.py} \\
+\file{test/regression.sh} & the regression test \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{Version history}
+
+\begin{description}
+  \item[tpr 73--76] the original MolDStruct options as named \code{mcmd-*} parameters (formerly \code{userint},
+    \code{userreal}).
+  \item[tpr 77] the electron cloud and its options in the \file{.mdp} (formerly environment variables).
+  \item[tpr 78] the seed and the remaining physics switches in the \file{.mdp}; \code{mcmd-pb-long-range = auto}.
+  \item[tpr 79] \code{mcmd-coll-data}: Lotz's formula built in as the default; older \file{.tpr} files run as
+    \code{files}.
+  \item[tpr 80] \code{mcmd-atomic-data}: the screened-hydrogenic atomic data built in as the default; older
+    \file{.tpr} files run with \file{./Atomic\_data} (\code{files}).
+\end{description}
+The model's state at this version: binary \file{transitions.bin}; the run summary with warnings; built-in
+screened-hydrogenic atomic data by default, no input files; fluorescence rates corrected in both generators (earlier CRETIN-derived tables had
+fluorescence rates many orders of magnitude too small and are refused by the reader).

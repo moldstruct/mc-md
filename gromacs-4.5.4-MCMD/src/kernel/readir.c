@@ -84,6 +84,10 @@ static char anneal[STRLEN],anneal_npoints[STRLEN],
 static char QMmethod[STRLEN],QMbasis[STRLEN],QMcharge[STRLEN],QMmult[STRLEN],
   bSH[STRLEN],CASorbitals[STRLEN], CASelectrons[STRLEN],SAon[STRLEN],
   SAoff[STRLEN],SAsteps[STRLEN],bTS[STRLEN],bOPT[STRLEN]; 
+static char mcmd_electrons[STRLEN];
+static char mcmd_pb_long_range[STRLEN];
+static char mcmd_coll_data[STRLEN];
+static char mcmd_atomic_data[STRLEN];
 static char efield_x[STRLEN],efield_xt[STRLEN],efield_y[STRLEN],
   efield_yt[STRLEN],efield_z[STRLEN],efield_zt[STRLEN];
 
@@ -816,9 +820,17 @@ static void check_mcmd_unknown_entries(int ninp, t_inpfile *inp)
         "mcmd-charge-transfer-recheck", "mcmd-autostop",
         "mcmd-autostop-threshold", "mcmd-initial-charges",
         "mcmd-detailed-output", "mcmd-charge-output-stride",
-        "mcmd-collisional-ionization", "mcmd-pulse-peak-time",
+        "mcmd-pulse-peak-time",
         "mcmd-pulse-fwhm", "mcmd-pulse-photons",
         "mcmd-pulse-focal-diameter", "mcmd-pulse-photon-energy",
+        "mcmd-pulse-bandwidth", "mcmd-electrons", "mcmd-pb-interval",
+        "mcmd-pb-smoothing", "mcmd-pb-box-cut", "mcmd-pb-long-range",
+        "mcmd-evaporation", "mcmd-collisions", "mcmd-coll-excitation",
+        "mcmd-coll-recombination", "mcmd-coll-h-recombination",
+        "mcmd-ct-h-donor-only", "mcmd-field-ionization",
+        "mcmd-field-ionization-smoothing", "mcmd-pb-newton-tol",
+        "mcmd-pb-cells-per-smoothing", "mcmd-pb-box-max", "mcmd-pb-grid-limit",
+        "mcmd-seed", "mcmd-coll-data", "mcmd-atomic-data",
         NULL
     };
     int  i, k;
@@ -833,6 +845,11 @@ static void check_mcmd_unknown_entries(int ninp, t_inpfile *inp)
         if (gmx_strncasecmp(inp[i].name, "mcmd-", 5) != 0)
         {
             continue;   /* not ours; the generic warning still applies */
+        }
+        if (gmx_strcasecmp(inp[i].name, "mcmd-collisional-ionization") == 0)
+        {
+            gmx_fatal(FARGS, "mcmd-collisional-ionization was removed (it was never implemented); "
+                      "electron-impact ionization is mcmd-collisions.  Delete the line.");
         }
 
         list[0] = '\0';
@@ -1306,14 +1323,138 @@ void get_ir(const char *mdparin,const char *mdparout,
   ITYPE ("mcmd-autostop",                ir->mcmd_autostop,                0);
   RTYPE ("mcmd-autostop-threshold",      ir->mcmd_autostop_threshold,      0.99);
   ITYPE ("mcmd-initial-charges",         ir->mcmd_initial_charges,         0);
-  ITYPE ("mcmd-detailed-output",         ir->mcmd_detailed_output,         0);
-  ITYPE ("mcmd-charge-output-stride",    ir->mcmd_charge_output_stride,    50);
-  ITYPE ("mcmd-collisional-ionization",  ir->mcmd_collisional_ionization,  0);
+  ITYPE ("mcmd-detailed-output",         ir->mcmd_detailed_output,         1);
+  ITYPE ("mcmd-charge-output-stride",    ir->mcmd_charge_output_stride,    500);
   RTYPE ("mcmd-pulse-peak-time",         ir->mcmd_pulse_peak_time,         0);
   RTYPE ("mcmd-pulse-fwhm",              ir->mcmd_pulse_fwhm,              0);
   RTYPE ("mcmd-pulse-photons",           ir->mcmd_pulse_photons,           0);
   RTYPE ("mcmd-pulse-focal-diameter",    ir->mcmd_pulse_focal_diameter,    0);
   RTYPE ("mcmd-pulse-photon-energy",     ir->mcmd_pulse_photon_energy,     0);
+  RTYPE ("mcmd-pulse-bandwidth",         ir->mcmd_pulse_bandwidth,         0.003);
+  /* The trapped electrons (Poisson-Boltzmann cloud).  Defaults: the reference model. */
+  CCTYPE ("MOLDSTRUCT ELECTRONS");
+  CTYPE ("none: every emitted electron leaves; pbgrid: self-consistent Poisson-Boltzmann cloud on a grid");
+  STYPE ("mcmd-electrons",               mcmd_electrons,                   "pbgrid");
+  RTYPE ("mcmd-pb-interval",             ir->mcmd_pb_interval,             0.2);
+  RTYPE ("mcmd-pb-smoothing",            ir->mcmd_pb_smoothing,            0.25);
+  RTYPE ("mcmd-pb-box-cut",              ir->mcmd_pb_box_cut,              0.02);
+  CTYPE ("auto: long range (2 nm cutoff + grid) above 10000 atoms, all pairs below; sets the cut-offs (pbc = no)");
+  STYPE ("mcmd-pb-long-range",           mcmd_pb_long_range,               "auto");
+  ITYPE ("mcmd-evaporation",             ir->mcmd_evaporation,             1);
+  CTYPE ("atomic data: hydrogenic (built in, screened-hydrogenic shell model at the photon energy, H-Ar but He; no");
+  CTYPE ("input files) or files (./Atomic_data: energy_levels_X.txt, rate_transitions_X.txt, ...)");
+  STYPE ("mcmd-atomic-data",             mcmd_atomic_data,                 "hydrogenic");
+  ITYPE ("mcmd-collisions",              ir->mcmd_collisions,              1);
+  CTYPE ("collisional ionization: lotz (Lotz's formula from the total energies; no data file) or files");
+  CTYPE ("(collisional_ionization_table_X.txt, else collisional_parameters_X.txt); excitation always from files");
+  STYPE ("mcmd-coll-data",               mcmd_coll_data,                   "lotz");
+  /* off since 2026-10-23: step-wise ionization through excited states gave
+   * too much early collisional ionization against XMDYN (600 eV) */
+  ITYPE ("mcmd-coll-excitation",         ir->mcmd_coll_excitation,         0);
+  ITYPE ("mcmd-coll-recombination",      ir->mcmd_coll_recombination,      0);
+  ITYPE ("mcmd-coll-h-recombination",    ir->mcmd_coll_h_recombination,    0);
+  ITYPE ("mcmd-ct-h-donor-only",         ir->mcmd_ct_h_donor_only,         1);
+  ITYPE ("mcmd-field-ionization",        ir->mcmd_field_ionization,        0);
+  RTYPE ("mcmd-field-ionization-smoothing", ir->mcmd_field_ionization_smoothing, 0.5);
+  /* Numerical settings of the PB solve (environment variables until tpr 78).
+   * Defaults: the converged production settings (manual, appendix C). */
+  RTYPE ("mcmd-pb-newton-tol",           ir->mcmd_pb_newton_tol,           1e-2);
+  RTYPE ("mcmd-pb-cells-per-smoothing",  ir->mcmd_pb_cells_per_smoothing,  2.5);
+  RTYPE ("mcmd-pb-box-max",              ir->mcmd_pb_box_max,              3);
+  ITYPE ("mcmd-pb-grid-limit",           ir->mcmd_pb_grid_limit,           384);
+  CTYPE ("RNG seed of the ionization module; -1: from the time and the process id (written to the log)");
+  ITYPE ("mcmd-seed",                    ir->mcmd_seed,                    -1);
+
+  if (gmx_strcasecmp(mcmd_electrons, "pbgrid") == 0)
+  {
+      ir->mcmd_electrons = 1;
+  }
+  else if (gmx_strcasecmp(mcmd_electrons, "none") == 0 || gmx_strcasecmp(mcmd_electrons, "no") == 0)
+  {
+      ir->mcmd_electrons = 0;
+  }
+  else
+  {
+      gmx_fatal(FARGS, "mcmd-electrons must be pbgrid or none, not '%s'.", mcmd_electrons);
+  }
+  /* mcmd-pb-long-range: 1 / 0, or auto (-1 here), resolved by mcmd_resolve_long_range() once grompp knows the
+   * number of atoms */
+  if (gmx_strcasecmp(mcmd_coll_data, "lotz") == 0)
+  {
+      ir->mcmd_coll_data = 1;
+  }
+  else if (gmx_strcasecmp(mcmd_coll_data, "files") == 0)
+  {
+      ir->mcmd_coll_data = 0;
+  }
+  else
+  {
+      gmx_fatal(FARGS, "mcmd-coll-data must be lotz or files, not '%s'.", mcmd_coll_data);
+  }
+  if (gmx_strcasecmp(mcmd_atomic_data, "hydrogenic") == 0)
+  {
+      ir->mcmd_atomic_data = 1;
+  }
+  else if (gmx_strcasecmp(mcmd_atomic_data, "files") == 0)
+  {
+      ir->mcmd_atomic_data = 0;
+  }
+  else
+  {
+      gmx_fatal(FARGS, "mcmd-atomic-data must be hydrogenic or files, not '%s'.", mcmd_atomic_data);
+  }
+  if (ir->mcmd_atomic_data == 1 && ir->mcmd_collisions != 0 && ir->mcmd_coll_data == 0)
+  {
+      gmx_fatal(FARGS, "mcmd-coll-data = files reads the collisional data of ./Atomic_data; use it with "
+                "mcmd-atomic-data = files (the built-in data use mcmd-coll-data = lotz).");
+  }
+  if (ir->mcmd_atomic_data == 1 && ir->mcmd_collisions != 0 && ir->mcmd_coll_excitation != 0)
+  {
+      gmx_fatal(FARGS, "mcmd-coll-excitation needs collisional_excitation_X.txt from ./Atomic_data; use it with "
+                "mcmd-atomic-data = files (the built-in data have no excitation data).");
+  }
+  if (gmx_strcasecmp(mcmd_pb_long_range, "auto") == 0)
+  {
+      ir->mcmd_pb_long_range = (ir->mcmd_electrons == 1) ? -1 : 0;
+  }
+  else if (gmx_strcasecmp(mcmd_pb_long_range, "1") == 0 || gmx_strcasecmp(mcmd_pb_long_range, "yes") == 0 ||
+           gmx_strcasecmp(mcmd_pb_long_range, "on") == 0)
+  {
+      ir->mcmd_pb_long_range = 1;
+  }
+  else if (gmx_strcasecmp(mcmd_pb_long_range, "0") == 0 || gmx_strcasecmp(mcmd_pb_long_range, "no") == 0 ||
+           gmx_strcasecmp(mcmd_pb_long_range, "off") == 0)
+  {
+      ir->mcmd_pb_long_range = 0;
+  }
+  else
+  {
+      gmx_fatal(FARGS, "mcmd-pb-long-range must be auto, 1 or 0, not '%s'.", mcmd_pb_long_range);
+  }
+  if (ir->mcmd_electrons == 0 && (ir->mcmd_collisions || ir->mcmd_field_ionization || ir->mcmd_pb_long_range == 1))
+  {
+      gmx_fatal(FARGS, "mcmd-collisions, mcmd-field-ionization and mcmd-pb-long-range need the electron cloud "
+                "(mcmd-electrons = pbgrid).");
+  }
+  if (ir->mcmd_electrons == 1 && (ir->mcmd_pb_interval <= 0 || ir->mcmd_pb_smoothing <= 0))
+  {
+      gmx_fatal(FARGS, "mcmd-pb-interval and mcmd-pb-smoothing must be > 0.");
+  }
+  if (ir->mcmd_electrons == 1 && (ir->mcmd_pb_newton_tol <= 0 || ir->mcmd_pb_cells_per_smoothing <= 0 ||
+                                  ir->mcmd_pb_box_max < 1.3 || ir->mcmd_pb_grid_limit < 24))
+  {
+      gmx_fatal(FARGS, "mcmd-pb-newton-tol and mcmd-pb-cells-per-smoothing must be > 0, mcmd-pb-box-max >= 1.3 "
+                "(the smallest adaptive box) and mcmd-pb-grid-limit >= 24.");
+  }
+  if (ir->mcmd_seed < -1)
+  {
+      gmx_fatal(FARGS, "mcmd-seed must be -1 (from the time) or >= 0.");
+  }
+  if (ir->mcmd_pb_long_range == 1 && ir->rcoulomb <= 0)
+  {
+      gmx_fatal(FARGS, "mcmd-pb-long-range needs a Coulomb cutoff (rcoulomb > 0): GROMACS does the pairs within "
+                "it, the grid the rest.");
+  }
 
   /* Every mcmd-* option has now been read out, so anything still unread and
    * carrying that prefix is a typo. */
@@ -2424,6 +2565,57 @@ static gmx_bool absolute_reference(t_inputrec *ir,gmx_mtop_t *sys,ivec AbsRef)
   }
 
   return (AbsRef[XX] != 0 && AbsRef[YY] != 0 && AbsRef[ZZ] != 0);
+}
+
+/* mcmd-pb-long-range = auto (-1 from get_ir): on, with a 2 nm cutoff, above MCMD_LR_AUTO_NATOMS atoms, where the
+ * grid long range is faster than all pairs (~1.8x at GroEL, 55k atoms); all pairs (no cutoff) up to it, which is as
+ * fast and has no ion-KE offset (size benchmark 2026-10-27: long range +3..+6 % KE from ~4k atoms).  The cut-offs
+ * are set here (the mdp's are replaced, with a note).  Then the guard: the trapped-electron model with a Coulomb
+ * cutoff but no long range is a plain cutoff that loses the long-range push of the net charge (warning). */
+#define MCMD_LR_AUTO_NATOMS 10000
+#define MCMD_LR_AUTO_RC     2.0
+void mcmd_resolve_long_range(t_inputrec *ir, int natoms, warninp_t wi)
+{
+  char buf[STRLEN];
+
+  if (ir->mcmd_pb_long_range == -1)
+  {
+      if (ir->ePBC != epbcNONE || ir->coulombtype != eelCUT)
+      {
+          warning_error(wi, "mcmd-pb-long-range = auto sets the cut-offs itself and needs pbc = no and coulombtype = "
+                        "Cut-off; set mcmd-pb-long-range to 1 or 0 to keep your own.");
+          return;
+      }
+      if (natoms > MCMD_LR_AUTO_NATOMS)
+      {
+          ir->mcmd_pb_long_range = 1;
+          ir->rlist   = ir->rcoulomb = ir->rvdw = ir->rlistlong = MCMD_LR_AUTO_RC;
+          ir->nstlist = 5;
+          ir->ns_type = ensGRID;
+          sprintf(buf, "mcmd-pb-long-range = auto: %d atoms > %d, long range on: rcoulomb = rvdw = rlist = %g nm, "
+                  "nstlist = 5, ns-type = grid (the mdp's cut-offs are replaced)", natoms, MCMD_LR_AUTO_NATOMS,
+                  MCMD_LR_AUTO_RC);
+      }
+      else
+      {
+          ir->mcmd_pb_long_range = 0;
+          ir->rlist   = ir->rcoulomb = ir->rvdw = ir->rlistlong = 0;
+          ir->nstlist = 0;
+          ir->ns_type = ensSIMPLE;
+          sprintf(buf, "mcmd-pb-long-range = auto: %d atoms <= %d, all pairs: rcoulomb = rvdw = rlist = 0, "
+                  "nstlist = 0, ns-type = simple (the mdp's cut-offs are replaced)", natoms, MCMD_LR_AUTO_NATOMS);
+      }
+      ir->rcoulomb_switch = ir->rvdw_switch = 0;
+      fprintf(stderr, "\n%s\n\n", buf);
+      warning_note(wi, buf);
+  }
+  if (ir->mcmd_electrons == 1 && ir->mcmd_pb_long_range == 0 && ir->rcoulomb > 0)
+  {
+      sprintf(buf, "mcmd-electrons = pbgrid with rcoulomb = %g nm but mcmd-pb-long-range = 0: ion pairs beyond the "
+              "cutoff feel nothing, so the net charge's long-range push is lost and the sample under-explodes.  Use "
+              "mcmd-pb-long-range = 1 (or auto), or rcoulomb = rvdw = rlist = 0 for all pairs.", ir->rcoulomb);
+      warning(wi, buf);
+  }
 }
 
 void triple_check(const char *mdparin,t_inputrec *ir,gmx_mtop_t *sys,

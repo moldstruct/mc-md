@@ -94,6 +94,10 @@ extern void triple_check(const char *mdparin,t_inputrec *ir,gmx_mtop_t *sys,
 			 warninp_t wi);
 /* Do even more checks */
 
+extern void mcmd_resolve_long_range(t_inputrec *ir, int natoms, warninp_t wi);
+/* mcmd-pb-long-range = auto: on (2 nm cutoff) above 10000 atoms, all pairs below; sets the cut-offs.  Warns when
+ * the trapped-electron model has a Coulomb cutoff without long range.  Call once the atom count is known. */
+
 extern void check_chargegroup_radii(const gmx_mtop_t *mtop,const t_inputrec *ir,
 				    rvec *x,
 				    warninp_t wi);

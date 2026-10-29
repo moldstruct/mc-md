@@ -1,0 +1,138 @@
+\chapter{Reference: mdp options}
+\label{ch:mdp}
+
+All options of the model are \code{mcmd-*} entries in the \file{.mdp} file.
+They take effect only with \code{mdrun -ionize}; without it the run is stock GROMACS~4.5.4 whatever the \file{.mdp}
+says.
+\code{grompp} rejects unknown \code{mcmd-*} keys and the removed ones, with the replacement.
+The defaults are the validated model; settings marked ``not fully validated'' are listed by
+the run summary as warnings (Section~\ref{sec:summary}).
+Times of the pulse and of the electron model are in \textbf{fs}, unlike \code{dt} and \code{tinit}.
+
+\newcommand{\optrow}[4]{\code{#1} & #2 & #3 & #4 \\}
+
+\section{The pulse}
+\begin{longtable}{@{}p{0.36\textwidth} p{0.09\textwidth} p{0.07\textwidth} >{\raggedright\arraybackslash}p{0.4\textwidth}@{}}
+\toprule
+option & default & unit & meaning \\ \midrule \endhead
+\optrow{mcmd-pulse-peak-time}{0}{fs}{centre of the Gaussian pulse}
+\optrow{mcmd-pulse-fwhm}{0}{fs}{full width at half maximum}
+\optrow{mcmd-pulse-photons}{0}{}{photons in the pulse; 0: no ionization (warning)}
+\optrow{mcmd-pulse-focal-diameter}{0}{nm}{diameter of the focal spot, uniform over the sample}
+\optrow{mcmd-pulse-photon-energy}{0}{eV}{photon energy; the built-in data are computed for it, files must be
+  generated for it}
+\optrow{mcmd-pulse-bandwidth}{0.003}{}{relative FWHM of the photon energy: jitters the photoelectron energies}
+\bottomrule
+\end{longtable}
+
+\section{Atomic data}
+\begin{longtable}{@{}p{0.35\textwidth} p{0.12\textwidth} p{0.05\textwidth} >{\raggedright\arraybackslash}p{0.4\textwidth}@{}}
+\toprule
+option & default & unit & meaning \\ \midrule \endhead
+\optrow{mcmd-atomic-data}{hydrogenic}{}{\code{hydrogenic}: built in, screened-hydrogenic shells, H to Ar except He, no input
+  file (Section~\ref{sec:builtin}); \code{files}: the tables in \file{./Atomic\_data}}
+\bottomrule
+\end{longtable}
+
+\section{Charge transfer}
+\begin{longtable}{@{}p{0.36\textwidth} p{0.09\textwidth} p{0.07\textwidth} >{\raggedright\arraybackslash}p{0.4\textwidth}@{}}
+\toprule
+option & default & unit & meaning \\ \midrule \endhead
+\optrow{mcmd-charge-transfer}{1}{}{over-the-barrier charge transfer (Chapter~\ref{ch:ct})}
+\optrow{mcmd-ct-h-donor-only}{1}{}{only neutral hydrogen donates (the published model); 0 is not fully validated}
+\optrow{mcmd-allow-h-ct}{0}{}{allow H--H transfer (resonant); not fully validated}
+\optrow{mcmd-charge-transfer-downhill}{0}{}{require the transfer to be downhill, Coulomb release included}
+\optrow{mcmd-charge-transfer-idle}{2000}{steps}{steps without a transfer before the pass goes idle; negative: never}
+\optrow{mcmd-charge-transfer-recheck}{100}{steps}{interval of the idle pass}
+\bottomrule
+\end{longtable}
+
+\section{The electron cloud}
+\begin{longtable}{@{}p{0.36\textwidth} p{0.09\textwidth} p{0.07\textwidth} >{\raggedright\arraybackslash}p{0.4\textwidth}@{}}
+\toprule
+option & default & unit & meaning \\ \midrule \endhead
+\optrow{mcmd-electrons}{pbgrid}{}{\code{pbgrid}: the Poisson--Boltzmann cloud (Chapter~\ref{ch:pb}); \code{none}:
+  every electron leaves}
+\optrow{mcmd-pb-smoothing}{0.25}{nm}{the electron size $s_e$; the ion kinetic energy depends on it (warning if
+  changed)}
+\optrow{mcmd-pb-interval}{0.2}{fs}{time between PB solves (and long-range refreshes); converged at 0.2}
+\optrow{mcmd-pb-newton-tol}{0.01}{}{Newton stop: relative residual; converged at 0.01}
+\optrow{mcmd-pb-cells-per-smoothing}{2.5}{}{target spacing $s_e/$this at the start; converged at 2.5}
+\optrow{mcmd-pb-box-cut}{0.02}{}{the box grows when more than this fraction of the electrons would be outside;
+  0: fixed box of \code{mcmd-pb-box-max}}
+\optrow{mcmd-pb-box-max}{3}{$R$}{largest box half-width}
+\optrow{mcmd-pb-grid-limit}{384}{cells}{most cells per side; a warning in \file{md.log} says when a sample needs more}
+\optrow{mcmd-pb-long-range}{auto}{}{\code{auto}: above 10\,000 atoms a 2\,nm cutoff plus the long-range ion force
+  from the grid, else all pairs (\code{grompp} sets the cut-offs); \code{1}/\code{0} keep the mdp's cut-offs}
+\optrow{mcmd-evaporation}{1}{}{evaporation of the cloud; 0 is not fully validated}
+\bottomrule
+\end{longtable}
+
+\section{Collisions and field ionization}
+\begin{longtable}{@{}p{0.36\textwidth} p{0.09\textwidth} p{0.07\textwidth} >{\raggedright\arraybackslash}p{0.4\textwidth}@{}}
+\toprule
+option & default & unit & meaning \\ \midrule \endhead
+\optrow{mcmd-collisions}{1}{}{electron-impact ionization in the cloud (Chapter~\ref{ch:coll})}
+\optrow{mcmd-coll-data}{lotz}{}{\code{lotz}: built-in formula; \code{files}: tables or fits from \file{Atomic\_data}}
+\optrow{mcmd-coll-recombination}{0}{}{three-body recombination; not fully validated}
+\optrow{mcmd-coll-h-recombination}{0}{}{recombination also onto hydrogen}
+\optrow{mcmd-coll-excitation}{0}{}{collisional excitation and de-excitation; not fully validated}
+\optrow{mcmd-field-ionization}{0}{}{over-the-barrier ionization in the cloud's field}
+\optrow{mcmd-field-ionization-smoothing}{0.5}{nm}{$L$ of the collective field}
+\bottomrule
+\end{longtable}
+\code{mcmd-collisions}, \code{mcmd-field-ionization} and \code{mcmd-pb-long-range = 1} need the cloud, and
+\code{mcmd-coll-data = files} and \code{mcmd-coll-excitation = 1} need \code{mcmd-atomic-data = files}; \code{grompp}
+stops otherwise.
+
+\section{Run control and output}
+\begin{longtable}{@{}p{0.36\textwidth} p{0.09\textwidth} p{0.07\textwidth} >{\raggedright\arraybackslash}p{0.4\textwidth}@{}}
+\toprule
+option & default & unit & meaning \\ \midrule \endhead
+\optrow{mcmd-seed}{$-1$}{}{random seed; $-1$: new each run, printed in the summary}
+\optrow{mcmd-detailed-output}{1}{}{the time-resolved output (Chapter~\ref{ch:output})}
+\optrow{mcmd-charge-output-stride}{500}{steps}{frames of \file{charges\_over\_time.bin}}
+\optrow{mcmd-autostop}{0}{}{stop once the kinetic energy exceeds a fraction of the total}
+\optrow{mcmd-autostop-threshold}{0.99}{}{that fraction}
+\optrow{mcmd-initial-charges}{0}{}{read starting charges from \file{charges.txt} (atom, charge)}
+\bottomrule
+\end{longtable}
+
+\section{GROMACS settings for an explosion run}
+\begin{itemize}
+  \item \code{dt = 0.000002} (2\,as): the model is converged at $\le$2\,as (warning above);
+  \item \code{morse = yes}: bonds that can break (Chapter~\ref{ch:ff});
+  \item \code{pbc = no}, \code{coulombtype = Cut-off}, no temperature or pressure coupling;
+  \item cut-offs: left to \code{mcmd-pb-long-range = auto};
+  \item \code{nstenergy}: the interval of the module's time-resolved text output.
+\end{itemize}
+
+\section{Renamed and removed options}
+
+Earlier versions used GROMACS's generic \code{userint}/\code{userreal} slots; \code{grompp} rejects them and names
+the replacement:
+\begin{table}[H]
+\centering\small
+\begin{tabular}{@{}ll@{}}
+\toprule
+old & new \\ \midrule
+\code{userint1} & removed: \code{-ionize} alone enables the modified force field \\
+\code{userint2} & \code{mcmd-charge-transfer} \\
+\code{userint3} & \code{mcmd-autostop} \\
+\code{userint4} & removed: use \code{mdrun -cpi} \\
+\code{userint5} & \code{mcmd-detailed-output} \\
+\code{userint6} & removed (never implemented): electron-impact ionization is \code{mcmd-collisions} \\
+\code{userint7}, \code{userint8} & \code{mcmd-charge-transfer-idle}, \code{-recheck} \\
+\code{userint9} & \code{mcmd-initial-charges} \\
+\code{userreal1} & \code{mcmd-pulse-peak-time}, now in fs (multiply by 1000) \\
+\code{userreal2} & \code{mcmd-pulse-photons} \\
+\code{userreal3} & \code{mcmd-pulse-fwhm}, now the FWHM in fs (multiply by 2354.82) \\
+\code{userreal4}, \code{userreal5} & \code{mcmd-pulse-focal-diameter}, \code{-photon-energy} \\
+\code{userreal6} & \code{mcmd-autostop-threshold} \\
+\bottomrule
+\end{tabular}
+\end{table}
+The development versions of the electron model were controlled by \code{GMX\_MCMD\_*} environment variables.
+Those that became options (\code{GMX\_MCMD\_SCREEN}, \code{\_SEED}, \code{\_PB\_NSTEP}, \code{\_PBG\_SE}, \ldots) and those
+that were removed stop \code{mdrun} with a message naming the replacement, so an old launcher cannot run a different
+model unnoticed.
