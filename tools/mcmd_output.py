@@ -11,6 +11,8 @@
         one overview figure of everything the run wrote (panels for files that are missing are left out);
         default <run dir>/overview.png.  --gif: also explosion.gif, three views along the principal axes of the
         initial heavy-atom gyration tensor, atoms coloured by charge (reads the run's .trr; no GROMACS needed).
+        --no-h: with --gif, leave the hydrogens out (explosion_noH.gif; the mean charge in the title is then
+        the heavy-atom mean).
         --extract: also <run>/extracted/ with transitions.txt and charges_over_time.txt
 
 <simulation_output> may be omitted (default: the current directory) or be the run directory holding it.
@@ -413,14 +415,16 @@ def cmd_plot(a):
     plt.close(fig)
     print(out)
     if a.gif:
-        make_gif(d, os.path.join(os.path.dirname(out), "explosion.gif"), every=a.every)
+        make_gif(d, os.path.join(os.path.dirname(out), "explosion_noH.gif" if a.no_h else "explosion.gif"),
+                 every=a.every, no_h=a.no_h)
     if a.extract:
         extract(d, os.path.join(run, "extracted"))
 
 
-def make_gif(d, out, every=1, fps=10):
+def make_gif(d, out, every=1, fps=10, no_h=False):
     """explosion.gif: three views along the principal axes of the initial heavy-atom gyration tensor (longest
-    first), atoms coloured by charge, H smaller, zooming out with the expansion (never back in)."""
+    first), atoms coloured by charge, H smaller, zooming out with the expansion (never back in).  no_h: leave the
+    hydrogens out (the principal axes and the zoom already use the heavy atoms only)."""
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
@@ -436,6 +440,9 @@ def make_gif(d, out, every=1, fps=10):
     h = el == "H"
     mq = np.loadtxt(os.path.join(d, "mean_charge_vs_time.txt"), ndmin=2)
     Q = _charges_at(d, t, mq[-1, 0] * 1e3)
+    if no_h:
+        X, Q, m, el = X[:, ~h], Q[:, ~h], m[~h], el[~h]
+        h = el == "H"                                    # all False now
     w = m * ~h
     c0 = (X[0] * w[:, None]).sum(0) / w.sum()
     G = ((X[0] - c0).T * w) @ (X[0] - c0) / w.sum()
@@ -483,7 +490,7 @@ def make_gif(d, out, every=1, fps=10):
             ln.set_data([-0.9 * lim, -0.9 * lim + bar], [-0.9 * lim] * 2)
             tx.set_position((-0.9 * lim + bar / 2, -0.85 * lim)); tx.set_text(f"{bar:g} nm")
         pulse = "  pulse on (FWHM)" if on and on[0] <= t[k] <= on[1] else ""
-        head.set_text(f"{name}: {len(m)} atoms ({axes_txt})    t = {t[k]:5.1f} fs    "
+        head.set_text(f"{name}: {len(m)} {'heavy ' if no_h else ''}atoms ({axes_txt})    t = {t[k]:5.1f} fs    "
                       f"mean charge {Q[k].mean():.2f}{pulse}")
         return sc
 
@@ -531,6 +538,7 @@ def main():
     p = sub.add_parser("plot"); p.add_argument("dir", nargs="?", default=".", help="simulation_output or the run directory holding it (default: .)"); p.add_argument("-o", help="output png (default <run>/overview.png)")
     p.add_argument("--gif", action="store_true", help="also explosion.gif (three principal-axis views, by charge)")
     p.add_argument("--every", type=int, default=1, help="gif: every Nth trr frame")
+    p.add_argument("--no-h", action="store_true", help="gif: leave out the hydrogens (writes explosion_noH.gif)")
     p.add_argument("--extract", action="store_true",
                    help="also <run>/extracted/: transitions.txt, charges_over_time.txt")
     p.set_defaults(f=cmd_plot)

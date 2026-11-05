@@ -122,6 +122,22 @@ where $\vect n_T$ minimizes $F$ at $T$.
 A hotter cloud spreads into regions of higher potential energy, so $g$ decreases monotonically and has one root,
 found by a safeguarded secant iteration (Appendix~\ref{app:numerics}).
 
+\paragraph{Temperature floor.}
+A cloud can cool below any sensible temperature late in a weak explosion (in 1B7U at 8\,keV and $10^7$ photons $K$
+reaches zero with 6000 electrons still trapped).
+The solve, the evaporation and three-body recombination therefore use $\max(T, T_{\min})$, with $T_{\min}$ =
+\opt{mcmd-te-min} (1\,eV): the density never collapses into a zero-temperature well, and recombination, which grows as
+$n_e^2/T$ (Section~\ref{sec:recombination}), stays finite.
+The actual $T = \frac23K/N$ keeps its own bookkeeping and may go below $T_{\min}$, or below zero when
+$E_{\mathrm{tot}}$ is less than the potential energy of the floored density; the floor adds no energy.
+Electron-impact ionization uses the actual $T$; it vanishes at small $T$ by itself ($e^{-\Delta E/T}$).
+\file{screening\_log.txt} has both temperatures, and \code{mdrun} reports how long $T$ was below the floor.
+With \opt{mcmd-te-min = 0} (and in a \file{.tpr} older than version 81) the release model applies: the solve is floored
+at 1\,eV, evaporation and recombination use the actual $T$, and when $E_{\mathrm{tot}} - U$ falls below zero, $K$ is
+set to zero and $E_{\mathrm{tot}}$ raised to match (energy created, logged in \file{pb\_log.txt}).
+The production runs used that model; it made a difference only in the case above (6--28\,keV created after 64\,fs,
+${\le}5\,\%$ of the ion kinetic energy).
+
 \section{Energy bookkeeping}
 \label{sec:energy}
 

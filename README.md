@@ -28,7 +28,7 @@ cmake .. -DCMAKE_INSTALL_PREFIX=/path/to/install
 make -j8 install
 ```
 
-Write run inputs with this build's `grompp`. The `.tpr` carries the `mcmd-*` options (format 80), which stock GROMACS
+Write run inputs with this build's `grompp`. The `.tpr` carries the `mcmd-*` options (format 81), which stock GROMACS
 cannot read.
 
 ## Quick start: the example
@@ -82,6 +82,7 @@ the validated model; the full list is in the manual, chapter 10.
 | `mcmd-charge-transfer`                            | 1          | over-the-barrier charge transfer                                                      |
 | `mcmd-pb-smoothing`                               | 0.25       | electron size s_e (nm); the ion kinetic energy depends on it                          |
 | `mcmd-pb-long-range`                              | auto       | all pairs up to 10 000 atoms, 2 nm cutoff + grid long range above                     |
+| `mcmd-te-min`                                     | 1          | temperature floor (eV) of the PB solve, evaporation and recombination; 0: release     |
 | `mcmd-field-ionization`                           | 0          | over-the-barrier ionization in the cloud's field                                      |
 | `mcmd-seed`                                       | −1         | random seed; −1 draws a new one each run (printed)                                    |
 | `mcmd-detailed-output`                            | 1          | time-resolved output, including `transitions.bin`                                     |
@@ -110,6 +111,11 @@ statistical weights follow from the shell occupations, `g = C(2,K) C(8,L) C(18,M
 (`mcmd-coll-data = files`) and the data for collisional (de-)excitation (`mcmd-coll-excitation = 1`, off by default)
 are read from `Atomic_data/` and need `mcmd-atomic-data = files`. Three-body recombination (off by default) follows
 from the ionization rates by detailed balance and needs no data of its own.
+
+The cloud temperature has a floor, `mcmd-te-min` (1 eV): the PB solve, evaporation and three-body recombination use
+max(T_e, T_min), so a cloud that cools towards zero neither collapses into the well nor recombines without bound
+(recombination grows as n_e²/T). Electron-impact ionization uses the actual T_e, which is tracked below the floor (no
+energy is added). `mcmd-te-min = 0`, and any `.tpr` older than format 81, gives the model of the first release.
 
 Elements up to the M shell are supported: H to Ar except He, with built-in data. Ca, Fe, Ni and I need `files`.
 Helium is left out on purpose: a mass of ~4 is far more likely a heavy hydrogen (`pdb2gmx -heavyh`), and is refused.

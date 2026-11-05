@@ -65,6 +65,8 @@ option & default & unit & meaning \\ \midrule \endhead
 \optrow{mcmd-pb-long-range}{auto}{}{\code{auto}: above 10\,000 atoms a 2\,nm cutoff plus the long-range ion force
   from the grid, else all pairs (\code{grompp} sets the cut-offs); \code{1}/\code{0} keep the mdp's cut-offs}
 \optrow{mcmd-evaporation}{1}{}{evaporation of the cloud; 0 is not fully validated}
+\optrow{mcmd-te-min}{1}{eV}{temperature floor of the PB solve, the evaporation and three-body recombination; the
+  actual $T$ is tracked below it, ionization uses it; 0: the release model (Section~\ref{sec:temperature})}
 \bottomrule
 \end{longtable}
 

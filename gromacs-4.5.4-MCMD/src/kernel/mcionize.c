@@ -298,6 +298,10 @@ struct t_mcionize
     t_mcmd_cchan  *cch[MCMD_ATOM_TABLE_SIZE];       /* channels, by element  */
     double        *cch_g[MCMD_ATOM_TABLE_SIZE][2];  /* g of the tabulated ionization / excitation */
     double         ctab_clamped;                     /* steps with T_e outside a table's grid */
+    double         te_min;               /* mcmd-te-min, eV; 0: the release model */
+    double         te_floor_steps;       /* steps with the actual T_e below te_min (not in the
+                                          * restart state: counts this run segment only) */
+    double         te_floor_dt;          /* MD step, fs, for that report */
     int           *cch_start[MCMD_ATOM_TABLE_SIZE]; /* [num_rates + 1], by the
                                                      * element's rate state index */
     gmx_bool       coll_active;          /* rates nonzero this step         */
@@ -1732,6 +1736,24 @@ static double mcmd_plasma_Te(const t_mcionize *mc)
     return (2.0 / 3.0) * mc->screen_E_trapped / mc->num_free_electrons;
 }
 
+/* The temperature of the PB solve and the evaporation: the actual T_e, but
+ * at least mcmd-te-min (three-body recombination is evaluated there too,
+ * ionization and excitation at the actual T_e, see mcmd_coll_update_rates).  The actual T_e (above) keeps its
+ * own bookkeeping and may go below the floor, or below 0 when the cloud's
+ * total energy is under the potential energy of the floored density: the
+ * floor never adds energy.  mcmd-te-min = 0 is the release model: rates at the
+ * actual T_e, the solve floored at 1 eV, and E_kin clamped at 0. */
+static double mcmd_model_Te(const t_mcionize *mc)
+{
+    const double T = mcmd_plasma_Te(mc);
+
+    if (mc->te_min > 0 && mc->num_free_electrons > 0 && T < mc->te_min)
+    {
+        return mc->te_min;
+    }
+    return T;
+}
+
 #define MCMD_COLL_K    1.0899e-6   /* sqrt(8/pi m_e) pi a0^2 Ry^2, cm^3 s^-1 eV^3/2 */
 #define MCMD_LOTZ_K    6.7e-7      /* Lotz (1968) Maxwellian coefficient, cm^3 s^-1 eV^3/2 per a (1e-14 cm^2 eV^2) */
 #define MCMD_LOTZ_A    4.5
@@ -2184,11 +2206,20 @@ static void mcmd_coll_update_rates(t_mcionize *mc)
 {
     const double N = mc->num_free_electrons, R = mc->radius_now;
     const double T = mcmd_plasma_Te(mc);
+    /* three-body recombination grows as n_e^2 / T and diverges as T_e -> 0:
+     * mcmd-te-min > 0 evaluates it at max(T_e, te_min), capping it at its
+     * value there (never switched off).  Ionization and excitation stay at
+     * the actual T_e (they vanish at small T_e by themselves). */
+    const double Tr = (mc->te_min > 0 && T < mc->te_min) ? mc->te_min : T;
     double       ne;
     int          el, i;
     gmx_bool     clamped = FALSE;
 
-    mc->coll_active = (N >= 1.0 && T > 0 && R > 0);
+    mc->coll_active = (N >= 1.0 && Tr > 0 && R > 0);
+    if (mc->te_min > 0 && N >= 1.0 && T < mc->te_min)
+    {
+        mc->te_floor_steps += 1;
+    }
     mc->coll_T      = T;
     mc->coll_ne     = ne = mc->coll_active ? N / (4.0 / 3.0 * M_PI * R * R * R * 1e-21) : 0;
     if (!mc->coll_active)
@@ -2204,14 +2235,21 @@ static void mcmd_coll_update_rates(t_mcionize *mc)
         for (i = 0; i < n; i++)
         {
             t_mcmd_cchan *ch = &mc->cch[el][i];
-            double        b  = ch->dE / T;
-            double        k;
+            const double  Tc = ch->recomb ? Tr : T;   /* recombination capped, see above */
+            double        b, k;
+
+            if (Tc <= 0)
+            {
+                ch->rate = 0;   /* an ionization or excitation channel of a cloud at actual T_e <= 0 */
+                continue;
+            }
+            b = ch->dE / Tc;
 
             if (ch->lotz > 0)
             {
                 /* Lotz, without its Boltzmann factor: 6.7e-7 a q T^-3/2 e^b E1(b) / b */
-                k        = ch->lotz * pow(T, -1.5) * mcmd_e1x(b) / b;
-                ch->rate = ch->recomb ? ne * ne * k * ch->gratio * MCMD_SAHA_K * pow(T, -1.5) : ne * k * exp(-b);
+                k        = ch->lotz * pow(Tc, -1.5) * mcmd_e1x(b) / b;
+                ch->rate = ch->recomb ? ne * ne * k * ch->gratio * MCMD_SAHA_K * pow(Tc, -1.5) : ne * k * exp(-b);
                 continue;
             }
             if (ch->g != NULL)
@@ -2219,7 +2257,7 @@ static void mcmd_coll_update_rates(t_mcionize *mc)
                 /* tabulated: g = ln <sigma v> + dE/T is smooth in ln T (the Boltzmann factor taken out),
                  * so it is interpolated linearly there; outside the grid it is held at the edge */
                 const double *x = ch->lnT;
-                double        lt = log(T), w;
+                double        lt = log(Tc), w;
                 int           lo = 0, hi = ch->nT - 1;
 
                 if (lt <= x[0] || lt >= x[hi])
@@ -2245,7 +2283,7 @@ static void mcmd_coll_update_rates(t_mcionize *mc)
                 }
                 else
                 {
-                    ch->rate = ch->recomb ? ne * ne * k * ch->gratio * MCMD_SAHA_K * pow(T, -1.5)
+                    ch->rate = ch->recomb ? ne * ne * k * ch->gratio * MCMD_SAHA_K * pow(Tc, -1.5)
                                           : ne * k * exp(-b);
                 }
                 continue;
@@ -2255,13 +2293,13 @@ static void mcmd_coll_update_rates(t_mcionize *mc)
                 /* CRETIN colex: k_up = 8.01e-8 q(b) e^-b / sqrt(T) cm^3/s per ion
                  * in the lower level; de-excitation by detailed balance,
                  * k_down = k_up (g_lower/g_upper) e^b (the e^-b cancels). */
-                k        = MCMD_COLEX_K * mcmd_colex_q(ch, b) / sqrt(T);
+                k        = MCMD_COLEX_K * mcmd_colex_q(ch, b) / sqrt(Tc);
                 ch->rate = (ch->excite == 1) ? ne * k * exp(-b) : ne * k * ch->gratio;
                 continue;
             }
-            k = MCMD_COLL_K * ch->s0 * mcmd_coll_q(ch, b) / (ch->dE * sqrt(T));
+            k = MCMD_COLL_K * ch->s0 * mcmd_coll_q(ch, b) / (ch->dE * sqrt(Tc));
 
-            ch->rate = ch->recomb ? ne * ne * k * ch->gratio * MCMD_SAHA_K * pow(T, -1.5)
+            ch->rate = ch->recomb ? ne * ne * k * ch->gratio * MCMD_SAHA_K * pow(Tc, -1.5)
                                   : ne * k * exp(-b);
         }
     }
@@ -3281,7 +3319,7 @@ static void mcmd_pbg_solve(t_mcionize *mc, const t_inputrec *ir, const t_mdatoms
     int          ng = mc->pbg_n;
     size_t       G  = (size_t)ng * ng * ng;
     const double N  = mc->num_free_electrons;
-    const double Tmin = 1.0;
+    const double Tmin = (mc->te_min > 0) ? mc->te_min : 1.0;
     double       T  = (mcmd_plasma_Te(mc) > Tmin) ? mcmd_plasma_Te(mc) : Tmin;
     int          nT = 1;
     double       t0 = mcmd_pb_wallms(), Unew, dU = 0, F, resid = 0, sum, dV, Dmean = 0, Dmax = -1e30;
@@ -3704,7 +3742,10 @@ static void mcmd_pbg_solve(t_mcionize *mc, const t_inputrec *ir, const t_mdatoms
             mc->pb_etot_init = TRUE;
         }
         mc->screen_E_trapped = mc->pb_Etot - Unew;
-        if (mc->screen_E_trapped < 0)
+        /* release model: E_kin >= 0, E_tot raised to match (energy created,
+         * pb_Eclamp).  With mcmd-te-min > 0, E_kin is kept as it is, below 0
+         * if need be: the density is the floored one, the energy the actual. */
+        if (mc->te_min <= 0 && mc->screen_E_trapped < 0)
         {
             mc->pb_Eclamp        -= mc->screen_E_trapped;
             mc->screen_E_trapped  = 0;
@@ -4959,7 +5000,7 @@ static void mcmd_monte_carlo(t_mcionize *mc, const t_inputrec *ir,
                 mc->screen_E_trapped                 += dE;
                 mc->coll_energy                      -= dE;
                 mc->pb_Etot                          += dE;
-                if (mc->screen_E_trapped < 0) { mc->screen_E_trapped = 0; }
+                if (mc->te_min <= 0 && mc->screen_E_trapped < 0) { mc->screen_E_trapped = 0; }
             }
             else if (net_charge > 0)
             {
@@ -5810,6 +5851,16 @@ static void mcmd_print_summary(FILE *fp, const t_mcionize *mc, const t_inputrec 
                 mc->pbg_se, mc->pbg_se / mc->pbg_dxt, mc->pbg_box, mc->pbg_nglimit, "",
                 mc->pb_nstep * dt_as * 1e-3, mc->pbg_ntol);
         fprintf(fp, "   %-40s %s\n", "    evaporation", mc->screen_evap ? "on" : "off");
+        if (mc->te_min > 0)
+        {
+            fprintf(fp, "   %-40s %g eV: solve, evaporation, recombination at >= it (mcmd-te-min)\n",
+                    "    temperature floor", mc->te_min);
+        }
+        else
+        {
+            fprintf(fp, "   %-40s release model (mcmd-te-min = 0): solve 1 eV, rates unfloored, E_kin >= 0\n",
+                    "    temperature floor");
+        }
         if (mc->pbg_lr)
         {
             fprintf(fp, "   %-40s %g nm cutoff + grid long range\n", "ion-ion forces", mc->lr_rc);
@@ -6069,6 +6120,8 @@ t_mcionize *mcionize_init(FILE *fplog, const t_inputrec *ir,
         mc->coll_recomb      = (ir->mcmd_coll_recombination != 0);
         mc->coll_no_h_recomb = (ir->mcmd_coll_h_recombination == 0);
         mc->coll_excite      = (ir->mcmd_coll_excitation != 0);
+        mc->te_min           = mcmd_mdp_real(ir->mcmd_te_min);
+        mc->te_floor_dt      = ir->delta_t * 1e3;
         /* sample geometry (centre, R_g, ellipsoid from the gyration tensor)
          * from the non-hydrogen atoms: fast protons leave the cloud behind */
         mc->geom_heavy = TRUE;
@@ -6701,7 +6754,7 @@ void mcionize_step(t_mcionize *mc, FILE *fplog, const t_inputrec *ir,
                      * cells' depths (rebuilt after every solve) */
                     double dN = 0, dE = 0, dND = 0, sc = mc->num_free_electrons / mc->pb_N;
 
-                    T = mcmd_plasma_Te(mc);
+                    T = mcmd_model_Te(mc);
                     if (T > 0)
                     {
                         if (mc->pb_evh_ver != mc->pb_nsolve)
@@ -6717,7 +6770,8 @@ void mcionize_step(t_mcionize *mc, FILE *fplog, const t_inputrec *ir,
                         if (frac > 1.0) { frac = 1.0; }
                         dN *= sc * frac; dE *= sc * frac; dND *= sc * frac;
                         if (dN > mc->num_free_electrons) { dN = mc->num_free_electrons; }
-                        if (dE > mc->screen_E_trapped)   { dE = mc->screen_E_trapped; }
+                        /* never more kinetic energy than the cloud has (E_kin may be < 0 under a T floor) */
+                        if (dE > mc->screen_E_trapped)   { dE = (mc->screen_E_trapped > 0) ? mc->screen_E_trapped : 0; }
                         mc->pb_Etot                -= dE - dND;    /* kinetic energy minus depth of the leavers */
                         mc->pbd_N                  += dND;
                         mc->num_free_electrons     -= dN;
@@ -6854,13 +6908,14 @@ void mcionize_screen_forces(t_mcionize *mc, const t_inputrec *ir,
             mc->fscreen = mcmd_open_output("screening_log.txt", "w");
             fprintf(mc->fscreen, "# step escaped trapped trapped_frac mean_E_trapped[eV] "
                     "R[nm] lambda_D[nm] N_Debye applied evaporated T_e[eV] pressure_work[eV] "
-                    "pressure_h[nm]\n");
+                    "pressure_h[nm] T_model[eV]\n"
+                    "# (T_e: actual, 2/3 E_kin/N, may be below mcmd-te-min or 0; T_model: the solve's, evaporation's, recombination's)\n");
         }
-        fprintf(mc->fscreen, "%ld %.0f %.0f %.4f %.2f %.4f %.5f %.4g %d %.0f %.2f %.1f %.4f\n",
+        fprintf(mc->fscreen, "%ld %.0f %.0f %.4f %.2f %.4f %.5f %.4g %d %.0f %.2f %.1f %.4f %.2f\n",
                 (long)mc->screen_step, mc->escaped_photoelectrons, N_tr, f_trap,
                 N_tr > 0 ? mc->screen_E_trapped / N_tr : 0.0, mc->radius_now,
                 mc->screen_lambda_nm, mc->screen_ND, applied, mc->screen_evaporated,
-                mcmd_plasma_Te(mc), mc->pressure_work, mc->pressure_h_now);
+                mcmd_plasma_Te(mc), mc->pressure_work, mc->pressure_h_now, mcmd_model_Te(mc));
     }
 }
 
@@ -7002,6 +7057,12 @@ void mcionize_done(t_mcionize *mc, t_mdatoms *mdatoms, const t_commrec *cr)
             "\nmcionize: %.0f electrons escaped, %.0f trapped in the sample "
             "(final radius %.2f nm).\n",
             mc->escaped_photoelectrons, mc->num_free_electrons, mc->radius_now);
+    if (mc->te_floor_steps > 0)
+    {
+        fprintf(stderr, "mcionize: %.0f steps (%.2f fs) with the actual T_e below mcmd-te-min = %g eV "
+                "(solve, evaporation and recombination at the floor)\n", mc->te_floor_steps, mc->te_floor_steps * mc->te_floor_dt,
+                mc->te_min);
+    }
     if (mc->ctab_clamped > 0)
     {
         fprintf(stderr, "mcionize: %.0f steps with T_e outside a collisional table's grid (coefficients held at "

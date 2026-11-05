@@ -12,7 +12,7 @@ cmake .. -DCMAKE_INSTALL_PREFIX=/path/to/install
 make -j8 install
 \end{lstlisting}
 Use the \code{grompp} of this build to write run inputs: the \file{.tpr} format carries the \opt{mcmd-*} options
-(format 80), which a stock GROMACS cannot read (and an older stock GROMACS tool would silently misread).
+(format 81), which a stock GROMACS cannot read (and an older stock GROMACS tool would silently misread).
 Set \env{GMXLIB} to the build's \file{share/top} if the force fields are not found.
 
 \section{The example}

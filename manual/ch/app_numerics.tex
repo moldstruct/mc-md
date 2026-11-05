@@ -71,7 +71,7 @@ $10^{-3}$ of the electrons are spread uniformly, which keeps every $n_i>0$ and l
 
 $T$ and $\vect n$ are found together from $g(T) = E_{\mathrm{tot}} - U(\vect n_T) - \frac32NT = 0$
 (Section~\ref{sec:temperature}):
-start from the temperature of the current kinetic energy (at least 1\,eV); solve for $\vect n_T$; stop if
+start from the temperature of the current kinetic energy (at least \opt{mcmd-te-min}, or 1\,eV when that is 0); solve for $\vect n_T$; stop if
 $|g|\le0.01\cdot\frac32NT$; otherwise move towards $T_t = (E_{\mathrm{tot}}-U)/\frac32N$ by at most a factor 4 until the
 root is bracketed, then take secant steps (the geometric mean of the bracket if the secant lands within 5\,\% of an
 end); at most 12 iterations, each warm-started.

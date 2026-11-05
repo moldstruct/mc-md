@@ -48,7 +48,9 @@ buffered and flushed every 1000 steps.
     $U$ since the last solve, the kinetic energy, any clamped energy, the core neutralization (electrons per ion charge
     within $R/2$), convolutions, rebuilds, temperature iterations.
   \item[\file{screening\_log.txt}] every \code{nstenergy} steps: escaped and trapped electrons, trapped fraction, mean
-    energy of the trapped electrons, $R$, Debye length and number, evaporated electrons, $T$.
+    energy of the trapped electrons, $R$, Debye length and number, evaporated electrons, $T$ (the actual one, may be
+    below \opt{mcmd-te-min} or negative), the work on the ions, the smoothing width, and the temperature of the solve
+    and recombination, $\max(T, T_{\min})$.
   \item[\file{collisional\_log.txt}] every \code{nstenergy} steps: $T$, mean $n_e$, $N$, the cloud's energy, cumulative
     electron-impact ionizations and recombinations, the energy spent on ionization, the energy brought in by trapped
     electrons, the adiabatic and evaporated energy, $R$, $Q$.

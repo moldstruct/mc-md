@@ -35,7 +35,7 @@ file & content \\ \midrule
 \file{src/gmxlib/bondfree.c} & the modified bonded terms, bond breaking \\
 \file{src/gmxlib/nonbonded/nonbonded.c} & the modified 1--4 Coulomb \\
 \file{src/kernel/readir.c}, \file{grompp.c} & the \code{mcmd-*} options, their checks, \code{mcmd-pb-long-range = auto} \\
-\file{src/gmxlib/tpxio.c}, \file{include/types/inputrec.h} & the options in the \file{.tpr} (format 76--80) \\
+\file{src/gmxlib/tpxio.c}, \file{include/types/inputrec.h} & the options in the \file{.tpr} (format 76--81) \\
 \file{tools/} & \file{check\_atomic\_data.py}, \file{make\_atomic\_data\_xatom.py}, \file{make\_atomic\_data\_cretin.py},
   \file{make\_collisional\_tables.py}, \file{mcmd\_output.py} \\
 \file{test/regression.sh} & the regression test \\
@@ -54,6 +54,9 @@ file & content \\ \midrule
     \code{files}.
   \item[tpr 80] \code{mcmd-atomic-data}: the screened-hydrogenic atomic data built in as the default; older
     \file{.tpr} files run with \file{./Atomic\_data} (\code{files}).
+  \item[tpr 81] \code{mcmd-te-min}: a temperature floor (1\,eV) for the PB solve, evaporation and three-body
+    recombination, with the actual $T$ tracked below it and no energy created; older \file{.tpr} files run with 0, the
+    model of the first release.
 \end{description}
 The model's state at this version: binary \file{transitions.bin}; the run summary with warnings; built-in
 screened-hydrogenic atomic data by default, no input files; fluorescence rates corrected in both generators (earlier CRETIN-derived tables had

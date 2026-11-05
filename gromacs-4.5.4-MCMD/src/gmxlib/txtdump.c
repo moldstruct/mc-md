@@ -716,6 +716,7 @@ void pr_inputrec(FILE *fp,int indent,const char *title,t_inputrec *ir,
     PI("mcmd-pb-grid-limit",ir->mcmd_pb_grid_limit);
     PI("mcmd-coll-data",ir->mcmd_coll_data);
     PI("mcmd-atomic-data",ir->mcmd_atomic_data);
+    PR("mcmd-te-min",ir->mcmd_te_min);
     
     pr_grp_opts(fp,indent,"grpopts",&(ir->opts),bMDPformat);
     pr_cosine(fp,indent,"efield-x",&(ir->ex[XX]),bMDPformat);

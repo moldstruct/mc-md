@@ -322,6 +322,8 @@ typedef struct {
   real mcmd_pb_box_max;                /* largest grid half-width, in R   */
   int  mcmd_coll_data;                 /* collisional ionization data: 0 files, 1 lotz (tpr 79) */
   int  mcmd_atomic_data;               /* atomic data: 0 files (./Atomic_data), 1 hydrogenic, built in (tpr 80) */
+  real mcmd_te_min;                    /* eV: PB solve, evaporation, recombination at >= it;
+                                        * 0: the release model (solve floor 1 eV, E_kin >= 0) (tpr 81) */
 
   t_grpopts opts;	/* Group options				*/
   t_cosines ex[DIM];	/* Electric field stuff	(spatial part)		*/

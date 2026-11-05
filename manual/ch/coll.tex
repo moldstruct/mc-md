@@ -44,6 +44,7 @@ On lysozyme at 600\,eV this changes the ion kinetic energy by $-2.5$\,\% and not
 A \file{.tpr} older than format 79 runs as \code{files}.
 
 \section{Three-body recombination}
+\label{sec:recombination}
 
 The inverse of collisional ionization, two cloud electrons colliding at an ion with one of them captured, follows by
 detailed balance with the statistical weights $g$:
@@ -52,6 +53,8 @@ detailed balance with the statistical weights $g$:
 \end{equation}
 It is off by default (\opt{mcmd-coll-recombination = 0}) and \textbf{not fully validated}: in the classical
 continuum picture it recaptures far too many electrons in the dense, cool cloud late in the explosion.
+It grows as $n_e^2/T$ at small $T$ and diverges as $T\to0$; it is therefore evaluated at $\max(T, T_{\min})$,
+$T_{\min}$ = \opt{mcmd-te-min} (1\,eV), which caps it there without switching it off (Section~\ref{sec:temperature}).
 \opt{mcmd-coll-h-recombination} additionally allows recombination onto hydrogen (off: a proton stays a proton).
 
 \section{Collisional excitation}

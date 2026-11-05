@@ -830,7 +830,7 @@ static void check_mcmd_unknown_entries(int ninp, t_inpfile *inp)
         "mcmd-ct-h-donor-only", "mcmd-field-ionization",
         "mcmd-field-ionization-smoothing", "mcmd-pb-newton-tol",
         "mcmd-pb-cells-per-smoothing", "mcmd-pb-box-max", "mcmd-pb-grid-limit",
-        "mcmd-seed", "mcmd-coll-data", "mcmd-atomic-data",
+        "mcmd-seed", "mcmd-coll-data", "mcmd-atomic-data", "mcmd-te-min",
         NULL
     };
     int  i, k;
@@ -1341,6 +1341,9 @@ void get_ir(const char *mdparin,const char *mdparout,
   CTYPE ("auto: long range (2 nm cutoff + grid) above 10000 atoms, all pairs below; sets the cut-offs (pbc = no)");
   STYPE ("mcmd-pb-long-range",           mcmd_pb_long_range,               "auto");
   ITYPE ("mcmd-evaporation",             ir->mcmd_evaporation,             1);
+  CTYPE ("cloud temperature floor (eV) of the PB solve, evaporation and three-body recombination (capped at its value");
+  CTYPE ("there); ionization at the actual T_e, which is tracked below it; 0: the release model (solve floor 1 eV)");
+  RTYPE ("mcmd-te-min",                  ir->mcmd_te_min,                  1);
   CTYPE ("atomic data: hydrogenic (built in, screened-hydrogenic shell model at the photon energy, H-Ar but He; no");
   CTYPE ("input files) or files (./Atomic_data: energy_levels_X.txt, rate_transitions_X.txt, ...)");
   STYPE ("mcmd-atomic-data",             mcmd_atomic_data,                 "hydrogenic");
@@ -1445,6 +1448,10 @@ void get_ir(const char *mdparin,const char *mdparout,
   {
       gmx_fatal(FARGS, "mcmd-pb-newton-tol and mcmd-pb-cells-per-smoothing must be > 0, mcmd-pb-box-max >= 1.3 "
                 "(the smallest adaptive box) and mcmd-pb-grid-limit >= 24.");
+  }
+  if (ir->mcmd_te_min < 0)
+  {
+      gmx_fatal(FARGS, "mcmd-te-min must be >= 0 (eV; 0 gives the release model).");
   }
   if (ir->mcmd_seed < -1)
   {

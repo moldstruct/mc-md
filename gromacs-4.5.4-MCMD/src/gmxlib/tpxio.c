@@ -75,8 +75,9 @@
  * 78: mcmd-seed and the numerical PB settings (newton tolerance, cells per
  * smoothing, box max, grid limit) moved from environment variables.
  * 79: mcmd-coll-data (collisional ionization from Lotz's formula or from files).
- * 80: mcmd-atomic-data (built-in screened-hydrogenic data or ./Atomic_data). */
-static const int tpx_version = 80;
+ * 80: mcmd-atomic-data (built-in screened-hydrogenic data or ./Atomic_data).
+ * 81: mcmd-te-min (temperature floor of the PB solve, evaporation, recombination). */
+static const int tpx_version = 81;
 
 /* This number should only be increased when you edit the TOPOLOGY section
  * of the tpx format. This way we can maintain forward compatibility too
@@ -855,6 +856,12 @@ static void do_inputrec(t_fileio *fio, t_inputrec *ir,gmx_bool bRead,
       gmx_fio_do_int(fio,ir->mcmd_atomic_data);
     } else if (bRead) {
       ir->mcmd_atomic_data = 0;
+    }
+    /* Added in version 81; an older tpr keeps the release model (0) */
+    if (file_version >= 81) {
+      gmx_fio_do_real(fio,ir->mcmd_te_min);
+    } else if (bRead) {
+      ir->mcmd_te_min = 0;
     }
     if (file_version < 74 && bRead) {
       ir->mcmd_charge_transfer         = 1;
