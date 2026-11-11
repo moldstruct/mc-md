@@ -231,13 +231,14 @@ def _table(path, names=None):
     return {n: a[:, i] for i, n in enumerate(names)}
 
 
-def _time_per_step(d):
-    """MD time step [fs] from energy_ledger.txt (step and t columns), for logs that count steps."""
+def _step_to_fs(d, steps):
+    """Times [fs] of MD steps, for logs that count steps (screening_log.txt): interpolated in
+    energy_ledger.txt, which has both columns.  Not steps x dt: under mcmd-schedule the step grows
+    during the run, and the ledger's times follow it."""
     led = _table(os.path.join(d, "energy_ledger.txt"))
-    if led is None or "step" not in led:
+    if led is None or "step" not in led or len(led["step"]) < 2:
         return None
-    k = np.argmax(led["step"] > 0)
-    return led["t[ps]"][k] * 1e3 / led["step"][k] if led["step"][k] > 0 else None
+    return np.interp(steps, led["step"], led["t[ps]"] * 1e3)
 
 
 def cmd_plot(a):
@@ -263,7 +264,6 @@ def cmd_plot(a):
     scr, col, pb, led = (_table(os.path.join(d, f)) for f in
                          ("screening_log.txt", "collisional_log.txt", "pb_log.txt", "energy_ledger.txt"))
     box = _table(os.path.join(d, "pbg_box.txt"), ["t[ps]", "R[nm]", "box[R]", "dx[nm]", "outside", "rebuilt", "N"])
-    dts = _time_per_step(d)
     ev = read_transitions(d) if any(os.path.exists(os.path.join(d, f)) for f in
                                     ("transitions.bin", "electronic_transition_log.txt")) else None
     panels = []
@@ -324,8 +324,8 @@ def cmd_plot(a):
             ax.legend(fontsize=7)
             ax.set_title("events per atom, cumulative (legend: total)")
 
-    if scr is not None and dts:
-        ts = scr["step"] * dts
+    ts = _step_to_fs(d, scr["step"]) if scr is not None else None
+    if ts is not None:
 
         @panel
         def _(ax):
