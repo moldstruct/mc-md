@@ -5,7 +5,7 @@ notes.md
 /claude/
 /.claude/
 # backups of the working tree (not part of the release)
-/backups/
+backups/
 # Python
 __pycache__/
 *.pyc
