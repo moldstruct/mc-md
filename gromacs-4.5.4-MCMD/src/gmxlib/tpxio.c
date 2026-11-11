@@ -76,8 +76,10 @@
  * smoothing, box max, grid limit) moved from environment variables.
  * 79: mcmd-coll-data (collisional ionization from Lotz's formula or from files).
  * 80: mcmd-atomic-data (built-in screened-hydrogenic data or ./Atomic_data).
- * 81: mcmd-te-min (temperature floor of the PB solve, evaporation, recombination). */
-static const int tpx_version = 81;
+ * 81: mcmd-te-min (temperature floor of the PB solve, evaporation, recombination).
+ * 82: mcmd-autostop = 2 (ion directions settled): mcmd-autostop-angle, -interval, -min-time.
+ * 83: mcmd-schedule (step size and PB interval changed at given times during the run). */
+static const int tpx_version = 83;
 
 /* This number should only be increased when you edit the TOPOLOGY section
  * of the tpx format. This way we can maintain forward compatibility too
@@ -775,7 +777,7 @@ static void do_inputrec(t_fileio *fio, t_inputrec *ir,gmx_bool bRead,
 
         gmx_fio_do_int(fio,idum);
       }
-      gmx_fio_do_real(fio,ir->mcmd_autostop_threshold);
+      gmx_fio_do_real(fio,ir->mcmd_autostop_energy_ratio);
       gmx_fio_do_real(fio,ir->mcmd_pulse_peak_time);
       gmx_fio_do_real(fio,ir->mcmd_pulse_fwhm);
       gmx_fio_do_real(fio,ir->mcmd_pulse_photons);
@@ -863,6 +865,30 @@ static void do_inputrec(t_fileio *fio, t_inputrec *ir,gmx_bool bRead,
     } else if (bRead) {
       ir->mcmd_te_min = 0;
     }
+    /* Added in version 82; only read by mcmd-autostop = 2, which an older tpr cannot have */
+    if (file_version >= 82) {
+      gmx_fio_do_real(fio,ir->mcmd_autostop_angle);
+      gmx_fio_do_real(fio,ir->mcmd_autostop_interval);
+      gmx_fio_do_real(fio,ir->mcmd_autostop_min_time);
+    } else if (bRead) {
+      ir->mcmd_autostop_angle    = 2;
+      ir->mcmd_autostop_interval = 5;
+      ir->mcmd_autostop_min_time = 60;
+    }
+    /* Added in version 83: mcmd-schedule; an older tpr runs with one step size (no schedule) */
+    if (file_version >= 83) {
+      int k;
+      gmx_fio_do_int(fio,ir->mcmd_sched_n);
+      if (ir->mcmd_sched_n < 0 || ir->mcmd_sched_n > MCMD_SCHED_MAX)
+        gmx_fatal(FARGS,"mcmd-schedule in the tpr has %d entries (at most %d)",ir->mcmd_sched_n,MCMD_SCHED_MAX);
+      for (k = 0; k < ir->mcmd_sched_n; k++) {
+        gmx_fio_do_real(fio,ir->mcmd_sched_t[k]);
+        gmx_fio_do_real(fio,ir->mcmd_sched_dt[k]);
+        gmx_fio_do_real(fio,ir->mcmd_sched_pb[k]);
+      }
+    } else if (bRead) {
+      ir->mcmd_sched_n = 0;
+    }
     if (file_version < 74 && bRead) {
       ir->mcmd_charge_transfer         = 1;
       ir->mcmd_allow_H_CT              = 0;
@@ -873,7 +899,7 @@ static void do_inputrec(t_fileio *fio, t_inputrec *ir,gmx_bool bRead,
       ir->mcmd_initial_charges         = 0;
       ir->mcmd_charge_output_stride    = 50;
       ir->mcmd_detailed_output         = 0;
-      ir->mcmd_autostop_threshold      = 0.99;
+      ir->mcmd_autostop_energy_ratio   = 0.99;
       ir->mcmd_pulse_peak_time         = 0;
       ir->mcmd_pulse_fwhm              = 0;
       ir->mcmd_pulse_photons           = 0;

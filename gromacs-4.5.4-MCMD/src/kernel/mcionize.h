@@ -55,8 +55,8 @@ void mcionize_step(t_mcionize *mc, FILE *fplog, const t_inputrec *ir,
                    t_mdatoms *mdatoms, t_state *state,
                    double t, const t_commrec *cr, t_nrnb *nrnb);
 
-/* Autostop test (mcmd-autostop): TRUE once E_kin/E_tot exceeds
- * mcmd-autostop-threshold.  Kept out of the step function because do_md only
+/* Autostop test (mcmd-autostop = 1): TRUE once E_kin/E_tot exceeds
+ * mcmd-autostop-energy-ratio.  Kept out of the step function because do_md only
  * knows the energies later in the step.
  *
  * bEnergiesGlobal must be do_md's bGStat: enerd->term[] is only reduced
@@ -68,6 +68,15 @@ void mcionize_step(t_mcionize *mc, FILE *fplog, const t_inputrec *ir,
 gmx_bool mcionize_autostop(const t_mcionize *mc, const t_inputrec *ir,
                            double E_kin, double E_tot, gmx_large_int_t step,
                            gmx_bool bEnergiesGlobal, const t_commrec *cr);
+
+/* Direction autostop (mcmd-autostop = 2): TRUE once the predicted remaining
+ * median turn of the heavy-ion velocity directions is under
+ * mcmd-autostop-angle (degrees), at least mcmd-autostop-min-time fs after the
+ * pulse peak.  Checked every mcmd-autostop-interval fs from the home atoms'
+ * velocities, summed over the ranks and decided on the master; every rank
+ * must call it every step.  Writes simulation_output/autostop_dirs.txt. */
+gmx_bool mcionize_dirstop(t_mcionize *mc, const t_inputrec *ir, const t_mdatoms *md, rvec *v,
+                          gmx_large_int_t step, double t, const t_commrec *cr);
 
 /* Correct the forces do_force() produced for screening by the trapped
  * electrons (mcmd-electrons).  No-op unless enabled.  Call right after
@@ -81,6 +90,20 @@ void mcionize_screen_forces(t_mcionize *mc, const t_inputrec *ir,
  * the start of every step a checkpoint is written on, before mcionize_step():
  * the continuation resumes at that step and runs it in full. */
 void mcionize_checkpoint(t_mcionize *mc, const t_mdatoms *mdatoms, gmx_large_int_t step, const t_commrec *cr);
+
+/* mcmd-schedule.  mcmd_sched_stage: the stage (0 = before the first entry) of
+ * MD step `step`, its first step and start time (ps); dt0 is the tpr's dt.
+ * mcmd_sched_steps_to: the MD steps from step 0 to t_end (ps).
+ * mcionize_schedule: set the module's step-counted intervals for that stage,
+ * with ir->delta_t and ir->nstenergy already the stage's; bChange when the
+ * stage starts at this step (dt_prev the step before it, ps), FALSE when a
+ * run starts inside it.  Call on every rank. */
+int mcmd_sched_stage(const t_inputrec *ir, double dt0, gmx_large_int_t step, gmx_large_int_t *step0, double *t0);
+gmx_large_int_t mcmd_sched_steps_to(const t_inputrec *ir, double dt0, double t_end);
+double mcmd_sched_dt(const t_inputrec *ir, int k, double dt0);
+double mcmd_sched_pb(const t_inputrec *ir, int k);
+void mcionize_schedule(t_mcionize *mc, FILE *fplog, const t_inputrec *ir, int stage, double pb_fs,
+                       gmx_large_int_t step0, double t0, gmx_large_int_t step_now, gmx_bool bChange, double dt_prev);
 
 /* Write the end-of-run output (process statistics, final charges and
  * configurations) and release everything.  Safe to call with mc == NULL. */

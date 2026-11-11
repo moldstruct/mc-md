@@ -12,7 +12,7 @@ cmake .. -DCMAKE_INSTALL_PREFIX=/path/to/install
 make -j8 install
 \end{lstlisting}
 Use the \code{grompp} of this build to write run inputs: the \file{.tpr} format carries the \opt{mcmd-*} options
-(format 81), which a stock GROMACS cannot read (and an older stock GROMACS tool would silently misread).
+(format 83), which a stock GROMACS cannot read (and an older stock GROMACS tool would silently misread).
 Set \env{GMXLIB} to the build's \file{share/top} if the force fields are not found.
 
 \section{The example}
@@ -101,6 +101,80 @@ Appendix~\ref{app:validation}.
 \end{enumerate}
 Ion-ion Coulomb interactions are taken care of by \opt{mcmd-pb-long-range = auto}: all pairs up to 10\,000 atoms,
 a 2\,nm cutoff plus the long-range field from the grid above (\code{grompp} sets the cut-offs and says so).
+
+\section{How long to run: autostop and the schedule}
+\label{sec:autostop}
+\label{sec:schedule}
+
+Most of a run's cost is spent after the pulse, while the sample expands and the ion directions slowly stop turning.
+Two options shorten that part; neither changes anything before the pulse is over.
+
+\paragraph{Stopping when the directions have settled.}
+\opt{mcmd-autostop = 2} checks the ions every \opt{mcmd-autostop-interval} (5\,fs).
+For the heavy ions (hydrogen is left out: the protons leave first) it takes the angle between the velocity direction
+now and at the last check, and the median $s$ of these turns over the ions.
+Late in the explosion the turning rate falls like $1/(t-t_{\mathrm{peak}})^2$, so the turn still to come is
+extrapolated as
+\begin{equation}
+  \theta_{\mathrm{rest}} = s\,\frac{t-\Delta t_c-t_{\mathrm{peak}}}{\Delta t_c},
+\end{equation}
+with $\Delta t_c$ the check interval.
+The run ends once $\theta_{\mathrm{rest}}<$ \opt{mcmd-autostop-angle} (2$^\circ$) and at least
+\opt{mcmd-autostop-min-time} (60\,fs) have passed since the pulse peak (earlier, the turning has not reached the
+$1/t^2$ regime and the extrapolation undershoots).
+The decision is taken on the master rank and broadcast; \code{nsteps} remains the upper limit, and the final frame and
+checkpoint are written as at a normal end.
+Every check is a line of \file{autostop\_dirs.txt} (Chapter~\ref{ch:output}); the stop is announced on stderr.
+
+The extrapolation overestimates: on 250\,fs runs (1.3k--21.6k atoms, heavy-atom charge 1.7--6.4, 2 and 4\,keV) it
+predicted 1.7--3 times the turn actually left up to 250\,fs.
+Against runs taken on to 1000\,fs (2\,keV, mean heavy-atom charge 4--5), the heavy ions turned by a median of
+1.1--1.6$^\circ$ after the stop --- far below the 7--16$^\circ$ by which the direction of one ion differs between two
+seeds, but systematic.
+The ion kinetic energy is still 4--7\,\% below its final value at the stop.
+A stopped run is the state at the stop, not the asymptote: compare runs stopped the same way.
+At 2\,keV and $2.6\times10^{10}$ photons into 100\,nm (10\,fs FWHM), the stop came at a median 85\,fs after
+the start for proteins below 2000 atoms, 105--115\,fs for 2000--7000 and 190--205\,fs above (pulse peak at 10\,fs).
+\opt{mcmd-autostop = 1}, the older energy criterion ($E_{\mathrm{kin}}/E_{\mathrm{tot}}>0.99$), says nothing about the
+directions.
+
+\paragraph{A larger step after the pulse.}
+The 2\,as step and the 0.2\,fs PB interval are needed while the sample is ionized and the cloud is hot.
+Afterwards the ions fly almost ballistically through a cooling cloud, and \opt{mcmd-schedule} lets both grow.
+Each entry \code{t:dt:pb} (all in fs) starts a stage at time \code{t} with MD step \code{dt} and PB interval \code{pb};
+before the first entry \code{dt} and \opt{mcmd-pb-interval} of the \file{.mdp} apply.
+The schedule recommended for production (``IS1c'') is
+\begin{lstlisting}
+mcmd-schedule = 40:0.01:0.2  70:0.1:2  110:0.1:5
+\end{lstlisting}
+\begin{table}[H]
+\centering\small
+\begin{tabular}{@{}lllll@{}}
+\toprule
+time & MD step & PB solve every & steps & solves \\ \midrule
+0--40\,fs (the \file{.mdp}) & 2\,as & 0.2\,fs & 20\,000 & 200 \\
+40--70\,fs & 10\,as & 0.2\,fs & 3\,000 & 150 \\
+70--110\,fs & 100\,as & 2\,fs & 400 & 20 \\
+110--250\,fs & 100\,as & 5\,fs & 1\,400 & 28 \\
+\bottomrule
+\end{tabular}
+\end{table}
+With a 10\,fs pulse peaking at 10\,fs it makes runs to 200\,fs 2.2--3.5 times cheaper on one thread (1.3k--11k
+atoms) and moves the ions by 0.16--0.9$^\circ$ (median, heavy ions) and the ion kinetic energy by $-0.4$ to $-2.6$\,\%,
+growing with size; the ion maps change 20--100 times less than between two seeds (Appendix~\ref{app:validation}).
+For other pulses, keep the first change about 30\,fs after the pulse peak; a change at 25\,fs (15\,fs after the
+peak) doubled the direction error at 11k atoms.
+Runs beyond 300\,fs can add \code{300:0.5:20}, which changed nothing measurable.
+With \opt{mcmd-autostop = 2} the gain is smaller (1.3--2 times), since autostop already cuts most of the late part.
+
+\code{grompp} checks the schedule: the times must increase; every stage must start on a whole number of steps of the
+stage before and of its own steps from \code{tinit}; every output interval (\code{nstenergy}, \code{nstlog},
+\code{nstxout}, \code{nstvout}, \code{nstfout}, \code{nstxtcout}, \opt{mcmd-charge-output-stride}) must be a whole number
+of every stage's steps; the integrator must be \code{md}; and, with photons in the pulse, the first change must come
+after the pulse peak plus 3$\sigma$ --- changing the step while atoms are still being ionized branches the Monte Carlo
+history.
+The end time stays \code{tinit + nsteps}$\times$\code{dt}; \code{grompp} notes how many steps that takes.
+The mechanics are in Appendix~\ref{app:numerics}, Section~\ref{sec:schedule-num}.
 
 \section{Reproducible runs and continuation}
 \label{sec:seed}

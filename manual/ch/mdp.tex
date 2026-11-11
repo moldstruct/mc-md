@@ -94,15 +94,24 @@ option & default & unit & meaning \\ \midrule \endhead
 \optrow{mcmd-seed}{$-1$}{}{random seed; $-1$: new each run, printed in the summary}
 \optrow{mcmd-detailed-output}{1}{}{the time-resolved output (Chapter~\ref{ch:output})}
 \optrow{mcmd-charge-output-stride}{500}{steps}{frames of \file{charges\_over\_time.bin}}
-\optrow{mcmd-autostop}{0}{}{stop once the kinetic energy exceeds a fraction of the total}
-\optrow{mcmd-autostop-threshold}{0.99}{}{that fraction}
+\optrow{mcmd-autostop}{0}{}{end the run early (\code{nsteps} stays the limit): 0 off; 1 once $E_{\mathrm{kin}}/E_{\mathrm{tot}}$
+  exceeds \code{mcmd-autostop-energy-ratio}; 2 once the ion directions have settled
+  (Section~\ref{sec:autostop})}
+\optrow{mcmd-autostop-energy-ratio}{0.99}{}{the ratio of \code{mcmd-autostop = 1} (was \code{mcmd-autostop-threshold})}
+\optrow{mcmd-autostop-angle}{2}{deg}{\code{mcmd-autostop = 2}: stop once the median heavy-ion turn still to come is
+  predicted below this}
+\optrow{mcmd-autostop-interval}{5}{fs}{time between the direction checks}
+\optrow{mcmd-autostop-min-time}{60}{fs}{no direction stop earlier than this after the pulse peak}
+\optrow{mcmd-schedule}{(empty)}{fs}{a larger MD step and PB interval later in the run, as \code{t:dt:pb} entries
+  (Section~\ref{sec:schedule}); empty: one step size throughout}
 \optrow{mcmd-initial-charges}{0}{}{read starting charges from \file{charges.txt} (atom, charge)}
 \bottomrule
 \end{longtable}
 
 \section{GROMACS settings for an explosion run}
 \begin{itemize}
-  \item \code{dt = 0.000002} (2\,as): the model is converged at $\le$2\,as (warning above);
+  \item \code{dt = 0.000002} (2\,as): the model is converged at $\le$2\,as (warning above); after the pulse
+    \opt{mcmd-schedule} can raise it (Section~\ref{sec:schedule});
   \item \code{morse = yes}: bonds that can break (Chapter~\ref{ch:ff});
   \item \code{pbc = no}, \code{coulombtype = Cut-off}, no temperature or pressure coupling;
   \item cut-offs: left to \code{mcmd-pb-long-range = auto};
@@ -130,10 +139,12 @@ old & new \\ \midrule
 \code{userreal2} & \code{mcmd-pulse-photons} \\
 \code{userreal3} & \code{mcmd-pulse-fwhm}, now the FWHM in fs (multiply by 2354.82) \\
 \code{userreal4}, \code{userreal5} & \code{mcmd-pulse-focal-diameter}, \code{-photon-energy} \\
-\code{userreal6} & \code{mcmd-autostop-threshold} \\
+\code{userreal6} & \code{mcmd-autostop-energy-ratio} \\
 \bottomrule
 \end{tabular}
 \end{table}
+\code{mcmd-autostop-threshold} is now \code{mcmd-autostop-energy-ratio} (same meaning); \code{grompp} names the
+new key.
 The development versions of the electron model were controlled by \code{GMX\_MCMD\_*} environment variables.
 Those that became options (\code{GMX\_MCMD\_SCREEN}, \code{\_SEED}, \code{\_PB\_NSTEP}, \code{\_PBG\_SE}, \ldots) and those
 that were removed stop \code{mdrun} with a message naming the replacement, so an old launcher cannot run a different

@@ -145,6 +145,9 @@ typedef struct {
   FILE       *out_f;      /* output file for pull data */
 } t_pull;
 
+/* mcmd-schedule: at most this many stages after the first (dt, mcmd-pb-interval) */
+#define MCMD_SCHED_MAX 16
+
 typedef struct {
   int  eI;              /* Integration method 				*/
   gmx_large_int_t nsteps;	/* number of steps to be taken			*/
@@ -285,7 +288,7 @@ typedef struct {
   int  mcmd_charge_transfer;           /* boolean                          */
   int  mcmd_allow_H_CT;                /* boolean, H-H charge transfer     */
   int  mcmd_charge_transfer_downhill;  /* boolean, require downhill CT     */
-  int  mcmd_autostop;                  /* boolean                          */
+  int  mcmd_autostop;                  /* 0 off, 1 E_kin/E_tot, 2 ion directions settled */
   int  mcmd_detailed_output;           /* boolean                          */
   int  mcmd_charge_transfer_idle;      /* steps                            */
   int  mcmd_charge_transfer_recheck;   /* steps                            */
@@ -297,7 +300,7 @@ typedef struct {
   real mcmd_pulse_fwhm;                /* fs, full width at half maximum   */
   real mcmd_pulse_focal_diameter;      /* nm                               */
   real mcmd_pulse_photon_energy;       /* eV                               */
-  real mcmd_autostop_threshold;        /* E_kin/E_tot ratio                */
+  real mcmd_autostop_energy_ratio;     /* E_kin/E_tot of mcmd-autostop = 1 (mdp name renamed from -threshold) */
   real mcmd_pulse_bandwidth;           /* relative FWHM of the photon energy */
 
   /* The trapped electrons (mcionize.c, the Poisson-Boltzmann electron cloud) */
@@ -324,6 +327,15 @@ typedef struct {
   int  mcmd_atomic_data;               /* atomic data: 0 files (./Atomic_data), 1 hydrogenic, built in (tpr 80) */
   real mcmd_te_min;                    /* eV: PB solve, evaporation, recombination at >= it;
                                         * 0: the release model (solve floor 1 eV, E_kin >= 0) (tpr 81) */
+  /* tpr version 82: mcmd-autostop = 2, stop once the ion directions have settled */
+  real mcmd_autostop_angle;            /* degrees: predicted remaining median heavy-ion turn */
+  real mcmd_autostop_interval;         /* fs between direction checks      */
+  real mcmd_autostop_min_time;         /* fs after the pulse peak before a stop is allowed */
+  /* tpr version 83: mcmd-schedule, step size and PB interval changed during the run */
+  int  mcmd_sched_n;                   /* entries, 0 = no schedule        */
+  real mcmd_sched_t[MCMD_SCHED_MAX];   /* fs: the stage starts at this time */
+  real mcmd_sched_dt[MCMD_SCHED_MAX];  /* fs: its MD step                  */
+  real mcmd_sched_pb[MCMD_SCHED_MAX];  /* fs: its mcmd-pb-interval         */
 
   t_grpopts opts;	/* Group options				*/
   t_cosines ex[DIM];	/* Electric field stuff	(spatial part)		*/

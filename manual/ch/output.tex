@@ -20,7 +20,11 @@ buffered and flushed every 1000 steps.
   \item[\file{masses.bin}] the atom masses (float32), from which \file{tools/mcmd\_output.py} gets the elements.
   \item[\file{mcionize\_state.bin}] the restart state, written at every checkpoint (Section~\ref{sec:seed}); the
     previous one is kept as \file{mcionize\_state\_prev.bin}.
-  \item[\file{timing\_mcionize.txt}] wall time per part of the module (Monte Carlo, charge transfer, PB solves, \ldots).
+  \item[\file{timing\_mcionize.txt}] wall time per part of the module (Monte Carlo, charge transfer, PB solves, \ldots;
+    with the grid long range also the share of the long-range ion field).
+  \item[\file{autostop\_dirs.txt}] with \opt{mcmd-autostop = 2}: one line per direction check, $t$ in fs, the median
+    heavy-ion turn since the last check (degrees), the turn predicted still to come ($-1$ before there is a
+    prediction), the number of heavy ions counted (Section~\ref{sec:autostop}). Times here are in fs.
 \end{description}
 
 \section{Time-resolved output (\opt{mcmd-detailed-output = 1})}

@@ -686,7 +686,7 @@ void pr_inputrec(FILE *fp,int indent,const char *title,t_inputrec *ir,
     PI("mcmd-charge-transfer-idle",ir->mcmd_charge_transfer_idle);
     PI("mcmd-charge-transfer-recheck",ir->mcmd_charge_transfer_recheck);
     PI("mcmd-autostop",ir->mcmd_autostop);
-    PR("mcmd-autostop-threshold",ir->mcmd_autostop_threshold);
+    PR("mcmd-autostop-energy-ratio",ir->mcmd_autostop_energy_ratio);
     PI("mcmd-initial-charges",ir->mcmd_initial_charges);
     PI("mcmd-charge-output-stride",ir->mcmd_charge_output_stride);
     PI("mcmd-detailed-output",ir->mcmd_detailed_output);
@@ -717,6 +717,19 @@ void pr_inputrec(FILE *fp,int indent,const char *title,t_inputrec *ir,
     PI("mcmd-coll-data",ir->mcmd_coll_data);
     PI("mcmd-atomic-data",ir->mcmd_atomic_data);
     PR("mcmd-te-min",ir->mcmd_te_min);
+    PR("mcmd-autostop-angle",ir->mcmd_autostop_angle);
+    PR("mcmd-autostop-interval",ir->mcmd_autostop_interval);
+    PR("mcmd-autostop-min-time",ir->mcmd_autostop_min_time);
+    PI("mcmd-schedule-n",ir->mcmd_sched_n);
+    {
+      int k;
+      for (k = 0; k < ir->mcmd_sched_n; k++) {
+        char nm[64];
+        sprintf(nm,"mcmd-schedule[%d].t",k);  PR(nm,ir->mcmd_sched_t[k]);
+        sprintf(nm,"mcmd-schedule[%d].dt",k); PR(nm,ir->mcmd_sched_dt[k]);
+        sprintf(nm,"mcmd-schedule[%d].pb",k); PR(nm,ir->mcmd_sched_pb[k]);
+      }
+    }
     
     pr_grp_opts(fp,indent,"grpopts",&(ir->opts),bMDPformat);
     pr_cosine(fp,indent,"efield-x",&(ir->ex[XX]),bMDPformat);

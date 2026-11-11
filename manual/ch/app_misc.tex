@@ -35,7 +35,7 @@ file & content \\ \midrule
 \file{src/gmxlib/bondfree.c} & the modified bonded terms, bond breaking \\
 \file{src/gmxlib/nonbonded/nonbonded.c} & the modified 1--4 Coulomb \\
 \file{src/kernel/readir.c}, \file{grompp.c} & the \code{mcmd-*} options, their checks, \code{mcmd-pb-long-range = auto} \\
-\file{src/gmxlib/tpxio.c}, \file{include/types/inputrec.h} & the options in the \file{.tpr} (format 76--81) \\
+\file{src/gmxlib/tpxio.c}, \file{include/types/inputrec.h} & the options in the \file{.tpr} (format 76--83) \\
 \file{tools/} & \file{check\_atomic\_data.py}, \file{make\_atomic\_data\_xatom.py}, \file{make\_atomic\_data\_cretin.py},
   \file{make\_collisional\_tables.py}, \file{mcmd\_output.py} \\
 \file{test/regression.sh} & the regression test \\
@@ -57,6 +57,11 @@ file & content \\ \midrule
   \item[tpr 81] \code{mcmd-te-min}: a temperature floor (1\,eV) for the PB solve, evaporation and three-body
     recombination, with the actual $T$ tracked below it and no energy created; older \file{.tpr} files run with 0, the
     model of the first release.
+  \item[tpr 82] \code{mcmd-autostop = 2}: the run stops once the ion directions have settled (with the options
+    \code{-angle}, \code{-interval} and \code{-min-time}); the energy threshold is now called
+    \code{mcmd-autostop-energy-ratio}.
+  \item[tpr 83] \code{mcmd-schedule}: a larger MD step and PB interval after the pulse; older \file{.tpr} files run
+    with one step size.
 \end{description}
 The model's state at this version: binary \file{transitions.bin}; the run summary with warnings; built-in
 screened-hydrogenic atomic data by default, no input files; fluorescence rates corrected in both generators (earlier CRETIN-derived tables had

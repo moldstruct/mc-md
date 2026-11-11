@@ -21,6 +21,47 @@ by $-15$\,\% / $+13$--19\,\% for $s_e$ = 0.20 / 0.30\,nm.
 The long-range ion force (above 10\,000 atoms) leaves charge, escape and ion maps unchanged but raises the ion kinetic
 energy by 2--6\,\% against all pairs (GroEL at 8\,keV: +5.3\,\%).
 
+\section{The schedule and the direction stop}
+\label{sec:val-schedule}
+
+\opt{mcmd-schedule} was tested at 2\,keV, $2.6\times10^{10}$ photons into 100\,nm, 10\,fs FWHM peaking at 10\,fs
+(mean heavy-atom charge 4--5), on four proteins with 4 seeds each, every scheduled run paired with an unscheduled
+one of the same seed (median angle of the heavy-ion velocity directions, ion kinetic energy, and 10$^\circ$-smoothed
+ion maps, $1-r$), at 200\,fs:
+\begin{table}[H]
+\centering\small
+\begin{tabular}{@{}lrlllll@{}}
+\toprule
+& atoms & IS1b angle & IS1c angle & IS1c $\Delta E_{\mathrm{kin}}$ & IS1c map $1-r$ & seed vs seed map $1-r$ \\ \midrule
+1Z6C & 1271 & 0.21$^\circ$ & 0.16$^\circ$ & $-0.43$\,\% & $2.2\times10^{-4}$ & $2.4\times10^{-2}$ \\
+1G2P & 2666 & 0.27$^\circ$ & 0.19$^\circ$ & $-0.66$\,\% & $4.1\times10^{-4}$ & $3.0\times10^{-2}$ \\
+3ICK & 5748 & 0.52$^\circ$ & 0.38$^\circ$ & $-1.26$\,\% & $6.3\times10^{-4}$ & $9.1\times10^{-3}$ \\
+4TSN & 10\,991 & 1.25$^\circ$ & 0.90$^\circ$ & $-2.58$\,\% & $2.1\times10^{-3}$ & $5.6\times10^{-3}$ \\
+9S2H$^*$ & 21\,600 & 2.37$^\circ$ & 1.76$^\circ$ & $-4.2$\,\% & $4.8\times10^{-3}$ & --- \\
+\bottomrule
+\end{tabular}
+\end{table}
+\noindent IS1c is \code{40:0.01:0.2 70:0.1:2 110:0.1:5}, IS1b the same with a 0.5\,fs PB interval from 40\,fs;
+$^*$one seed, at 220\,fs.
+The 4 seeds agree to a few hundredths of a degree, so the 28\,\% between the two is real.
+The charge does not change.
+The direction of one heavy ion differs between two seeds by $\sim$10$^\circ$, and the maps by far more than the
+schedule moves them.
+The kinetic energy comes out low, and more so the larger the protein: the cloud, solved less often, holds the ions
+back.
+Most of it arises at the 70\,fs change (9S2H: $-0.05$\,\% at 70\,fs, $-1.2$\,\% at 75\,fs).
+It is a delay, not lost energy: in runs to 1000\,fs it fell from $-0.45$\,\% to $+0.14$\,\% (1Z6C) and from
+$-1.23$\,\% to $-0.02$\,\% (3ICK); the direction error stops growing by 300\,fs (1Z6C 0.19$^\circ$, 3ICK 0.47$^\circ$).
+A first change at 25\,fs instead of 40\,fs doubled the error at 11k atoms (3.0$^\circ$ against 1.5$^\circ$).
+A further stage \code{300:0.5:20} changed directions by 0.01--0.06$^\circ$ and the kinetic energy by $-0.3$\,\% up to
+1000\,fs.
+
+Wall time to 200\,fs on one thread, with IS1b / IS1c: 1Z6C 2.9 / 2.6 times faster, 1G2P 3.4 / 3.1, 3ICK 3.5 / 3.3,
+4TSN 2.2 / 2.2; one thread costs 27\,\% fewer core-hours than four (3ICK).
+With \opt{mcmd-autostop = 2} as well, the schedule saves 1.3--2 times (larger proteins more); the stop comes 5\,fs
+later with it, 25\,fs for 4TSN.
+For the direction stop itself see Section~\ref{sec:autostop}.
+
 \section{Against a particle code}
 
 The model was compared with XMDYN~\cite{jurek2016}, which follows every released electron as a classical particle,

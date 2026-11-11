@@ -88,6 +88,7 @@ static char mcmd_electrons[STRLEN];
 static char mcmd_pb_long_range[STRLEN];
 static char mcmd_coll_data[STRLEN];
 static char mcmd_atomic_data[STRLEN];
+static char mcmd_schedule[STRLEN];
 static char efield_x[STRLEN],efield_xt[STRLEN],efield_y[STRLEN],
   efield_yt[STRLEN],efield_z[STRLEN],efield_zt[STRLEN];
 
@@ -818,7 +819,7 @@ static void check_mcmd_unknown_entries(int ninp, t_inpfile *inp)
         "mcmd-charge-transfer", "mcmd-allow-h-ct",
         "mcmd-charge-transfer-downhill", "mcmd-charge-transfer-idle",
         "mcmd-charge-transfer-recheck", "mcmd-autostop",
-        "mcmd-autostop-threshold", "mcmd-initial-charges",
+        "mcmd-autostop-energy-ratio", "mcmd-initial-charges",
         "mcmd-detailed-output", "mcmd-charge-output-stride",
         "mcmd-pulse-peak-time",
         "mcmd-pulse-fwhm", "mcmd-pulse-photons",
@@ -831,6 +832,8 @@ static void check_mcmd_unknown_entries(int ninp, t_inpfile *inp)
         "mcmd-field-ionization-smoothing", "mcmd-pb-newton-tol",
         "mcmd-pb-cells-per-smoothing", "mcmd-pb-box-max", "mcmd-pb-grid-limit",
         "mcmd-seed", "mcmd-coll-data", "mcmd-atomic-data", "mcmd-te-min",
+        "mcmd-autostop-angle", "mcmd-autostop-interval", "mcmd-autostop-min-time",
+        "mcmd-schedule",
         NULL
     };
     int  i, k;
@@ -901,7 +904,7 @@ static void check_mcmd_legacy_entries(int ninp, t_inpfile *inp)
                        "2354.82" },
         { "userreal4", "mcmd-pulse-focal-diameter" },
         { "userreal5", "mcmd-pulse-photon-energy" },
-        { "userreal6", "mcmd-autostop-threshold" },
+        { "userreal6", "mcmd-autostop-energy-ratio" },
         { NULL, NULL }
     };
     int  i, k;
@@ -944,6 +947,30 @@ static void check_mcmd_legacy_entries(int ninp, t_inpfile *inp)
     }
 }
 
+/* mcmd-* options that were renamed.  Refused with the new name, not taken as
+ * aliases: the run scripts pass -maxwarn, so a warning would go unseen, and
+ * two names for one setting invite an mdp that sets both. */
+static void check_mcmd_renamed_entries(int ninp, t_inpfile *inp)
+{
+    static const char *renamed[][2] = {
+        { "mcmd-autostop-threshold", "mcmd-autostop-energy-ratio (same meaning and value; renamed when "
+                                     "mcmd-autostop = 2, the direction stop, was added)" },
+        { NULL, NULL }
+    };
+    int k, i;
+
+    for (k = 0; renamed[k][0] != NULL; k++)
+    {
+        for (i = 0; i < ninp; i++)
+        {
+            if (gmx_strcasecmp_min(renamed[k][0], inp[i].name) == 0)
+            {
+                gmx_fatal(FARGS, "The mdp option '%s' has been renamed: use %s.", renamed[k][0], renamed[k][1]);
+            }
+        }
+    }
+}
+
 void get_ir(const char *mdparin,const char *mdparout,
             t_inputrec *ir,t_gromppopts *opts,
             warninp_t wi)
@@ -962,6 +989,7 @@ void get_ir(const char *mdparin,const char *mdparout,
    * after them userint1-4 are always present whether the user wrote them or
    * not. */
   check_mcmd_legacy_entries(ninp, inp);
+  check_mcmd_renamed_entries(ninp, inp);
 
   snew(dumstr[0],STRLEN);
   snew(dumstr[1],STRLEN);
@@ -1320,8 +1348,15 @@ void get_ir(const char *mdparin,const char *mdparout,
   ITYPE ("mcmd-charge-transfer-downhill", ir->mcmd_charge_transfer_downhill, 0);
   ITYPE ("mcmd-charge-transfer-idle",    ir->mcmd_charge_transfer_idle,    2000);
   ITYPE ("mcmd-charge-transfer-recheck", ir->mcmd_charge_transfer_recheck, 100);
+  CTYPE ("autostop: 0 off; 1 once E_kin/E_tot > mcmd-autostop-energy-ratio; 2 once the ion directions have settled:");
+  CTYPE ("every mcmd-autostop-interval fs the median heavy-ion turn of the velocity direction is extrapolated");
+  CTYPE ("(turning rate ~ 1/(t - t_peak)^2) and the run stops when the turn still to come is < mcmd-autostop-angle");
+  CTYPE ("degrees, but not before mcmd-autostop-min-time fs after the pulse peak; nsteps stays the upper limit");
   ITYPE ("mcmd-autostop",                ir->mcmd_autostop,                0);
-  RTYPE ("mcmd-autostop-threshold",      ir->mcmd_autostop_threshold,      0.99);
+  RTYPE ("mcmd-autostop-energy-ratio",   ir->mcmd_autostop_energy_ratio,   0.99);
+  RTYPE ("mcmd-autostop-angle",          ir->mcmd_autostop_angle,          2);
+  RTYPE ("mcmd-autostop-interval",       ir->mcmd_autostop_interval,       5);
+  RTYPE ("mcmd-autostop-min-time",       ir->mcmd_autostop_min_time,       60);
   ITYPE ("mcmd-initial-charges",         ir->mcmd_initial_charges,         0);
   ITYPE ("mcmd-detailed-output",         ir->mcmd_detailed_output,         1);
   ITYPE ("mcmd-charge-output-stride",    ir->mcmd_charge_output_stride,    500);
@@ -1367,6 +1402,9 @@ void get_ir(const char *mdparin,const char *mdparout,
   ITYPE ("mcmd-pb-grid-limit",           ir->mcmd_pb_grid_limit,           384);
   CTYPE ("RNG seed of the ionization module; -1: from the time and the process id (written to the log)");
   ITYPE ("mcmd-seed",                    ir->mcmd_seed,                    -1);
+  CTYPE ("schedule: from time t (fs) on, MD step dt (fs) and mcmd-pb-interval pb (fs), as t:dt:pb entries;");
+  CTYPE ("before the first, dt and mcmd-pb-interval above; nsteps * dt still sets the end time");
+  STYPE ("mcmd-schedule",                mcmd_schedule,                    "");
 
   if (gmx_strcasecmp(mcmd_electrons, "pbgrid") == 0)
   {
@@ -1453,6 +1491,17 @@ void get_ir(const char *mdparin,const char *mdparout,
   {
       gmx_fatal(FARGS, "mcmd-te-min must be >= 0 (eV; 0 gives the release model).");
   }
+  if (ir->mcmd_autostop < 0 || ir->mcmd_autostop > 2)
+  {
+      gmx_fatal(FARGS, "mcmd-autostop must be 0 (off), 1 (E_kin/E_tot over mcmd-autostop-energy-ratio) or 2 (ion "
+                "directions settled, mcmd-autostop-angle).");
+  }
+  if (ir->mcmd_autostop == 2 && (ir->mcmd_autostop_angle <= 0 || ir->mcmd_autostop_min_time < 0 ||
+                                 ir->mcmd_autostop_interval < ir->delta_t * 1e3))
+  {
+      gmx_fatal(FARGS, "mcmd-autostop = 2 needs mcmd-autostop-angle > 0 (degrees), mcmd-autostop-min-time >= 0 (fs) "
+                "and mcmd-autostop-interval (fs) at least one time step (dt = %g fs).", ir->delta_t * 1e3);
+  }
   if (ir->mcmd_seed < -1)
   {
       gmx_fatal(FARGS, "mcmd-seed must be -1 (from the time) or >= 0.");
@@ -1461,6 +1510,138 @@ void get_ir(const char *mdparin,const char *mdparout,
   {
       gmx_fatal(FARGS, "mcmd-pb-long-range needs a Coulomb cutoff (rcoulomb > 0): GROMACS does the pairs within "
                 "it, the grid the rest.");
+  }
+
+  /* mcmd-schedule: "t:dt:pb t:dt:pb ..." (fs).  Each stage must start on a
+   * step of the one before, and the first not before the pulse peak + 3 sigma:
+   * a change while the sample is still being ionized branches the Monte Carlo
+   * history (a 15 fs switch, 10 fs FWHM at 10 fs, decorrelated the ions by ~2
+   * degrees within 5 fs whatever was changed). */
+  ir->mcmd_sched_n = 0;
+  {
+      char   buf[STRLEN], *tok, *save = NULL;
+      double tprev = ir->init_t * 1e3, dtprev = ir->delta_t * 1e3, tend;
+      int    k;
+
+      strncpy(buf, mcmd_schedule, STRLEN - 1);
+      buf[STRLEN - 1] = '\0';
+      for (tok = strtok_r(buf, " \t,;", &save); tok != NULL; tok = strtok_r(NULL, " \t,;", &save))
+      {
+          double t, dt, pb, nst;
+
+          if (ir->mcmd_sched_n >= MCMD_SCHED_MAX)
+          {
+              gmx_fatal(FARGS, "mcmd-schedule: at most %d entries.", MCMD_SCHED_MAX);
+          }
+          if (sscanf(tok, "%lf:%lf:%lf", &t, &dt, &pb) != 3)
+          {
+              gmx_fatal(FARGS, "mcmd-schedule: '%s' is not t:dt:pb (fs, e.g. 40:0.01:0.5).", tok);
+          }
+          if (t <= tprev || dt <= 0 || pb <= 0)
+          {
+              gmx_fatal(FARGS, "mcmd-schedule: '%s': the times must increase (and come after tinit), dt and pb be > 0.",
+                        tok);
+          }
+          nst = (t - tprev) / dtprev;
+          if (fabs(nst - floor(nst + 0.5)) > 1e-3)
+          {
+              gmx_fatal(FARGS, "mcmd-schedule: '%s' starts %g fs after the stage before, which is not a whole number of "
+                        "its steps (%g fs).", tok, t - tprev, dtprev);
+          }
+          k = ir->mcmd_sched_n++;
+          ir->mcmd_sched_t[k]  = t;
+          ir->mcmd_sched_dt[k] = dt;
+          ir->mcmd_sched_pb[k] = pb;
+          tprev = t; dtprev = dt;
+      }
+      if (ir->mcmd_sched_n > 0)
+      {
+          const double sig = ir->mcmd_pulse_fwhm / 2.3548200450309493, tmin = ir->mcmd_pulse_peak_time + 3 * sig;
+          double       nsteps_true = 0, ta = ir->init_t * 1e3, dta = ir->delta_t * 1e3;
+
+          if (ir->eI != eiMD)
+          {
+              gmx_fatal(FARGS, "mcmd-schedule needs integrator = md (leap-frog).");
+          }
+          if (ir->nstlist < 0)
+          {
+              gmx_fatal(FARGS, "mcmd-schedule needs nstlist >= 0.");
+          }
+          if (ir->mcmd_pulse_photons > 0 && ir->mcmd_sched_t[0] < tmin - 1e-6)
+          {
+              gmx_fatal(FARGS, "mcmd-schedule: the first change (%g fs) comes before the pulse peak + 3 sigma (%g + 3 x "
+                        "%g = %g fs). Changing the step or the PB interval while the sample is still being "
+                        "ionized branches the Monte Carlo history.", ir->mcmd_sched_t[0], ir->mcmd_pulse_peak_time,
+                        floor(sig * 1e3 + 0.5) * 1e-3, floor(tmin * 1e3 + 0.5) * 1e-3);
+          }
+          /* The output intervals count on the grid tinit + k x interval in every
+           * stage (md.c; an output step computes its energies whatever
+           * nstcalcenergy says, so that one only rounds), so each stage's first
+           * step must be a whole number of its own steps from tinit, and every
+           * interval a whole number of every stage's steps. */
+          {
+              const char *onm[] = { "nstenergy", "nstlog", "nstxout", "nstvout", "nstfout",
+                                    "nstxtcout", "mcmd-charge-output-stride" };
+              const int   onst[] = { ir->nstenergy, ir->nstlog, ir->nstxout, ir->nstvout,
+                                     ir->nstfout, ir->nstxtcout, ir->mcmd_charge_output_stride };
+              const double dt0 = ir->delta_t * 1e3;
+              double       x;
+              int          j;
+
+              for (k = 0; k < ir->mcmd_sched_n; k++)
+              {
+                  const double dtk = ir->mcmd_sched_dt[k];
+
+                  x = (ir->mcmd_sched_t[k] - ir->init_t * 1e3) / dtk;
+                  if (fabs(x - floor(x + 0.5)) > 1e-3)
+                  {
+                      gmx_fatal(FARGS, "mcmd-schedule: stage %d starts at %g fs, %g fs after tinit, which is not a whole "
+                                "number of its own steps (%g fs); the output would leave the time grid. Move the start "
+                                "to a multiple of %g fs.", k + 1, ir->mcmd_sched_t[k],
+                                ir->mcmd_sched_t[k] - ir->init_t * 1e3, dtk, dtk);
+                  }
+                  for (j = 0; j < (int)(sizeof(onst) / sizeof(onst[0])); j++)
+                  {
+                      if (onst[j] <= 0)
+                      {
+                          continue;
+                      }
+                      x = onst[j] * dt0 / dtk;
+                      if (x < 1 - 1e-3 || fabs(x - floor(x + 0.5)) > 1e-3)
+                      {
+                          gmx_fatal(FARGS, "mcmd-schedule: %s = %d is every %g fs, which is not a whole number of stage "
+                                    "%d's steps (%g fs). Choose intervals that every stage's dt divides.",
+                                    onm[j], onst[j], onst[j] * dt0, k + 1, dtk);
+                      }
+                  }
+              }
+          }
+          /* the end time stays tinit + nsteps * dt; count the steps it takes */
+          tend = ta + ir->nsteps * dta;
+          for (k = 0; k <= ir->mcmd_sched_n; k++)
+          {
+              const double tb = (k < ir->mcmd_sched_n) ? ir->mcmd_sched_t[k] : 1e30;
+
+              if (tend <= tb)
+              {
+                  nsteps_true += floor((tend - ta) / dta + 0.5);
+                  break;
+              }
+              nsteps_true += floor((tb - ta) / dta + 0.5);
+              ta = tb; dta = ir->mcmd_sched_dt[k];
+          }
+          if (ir->nsteps >= 0)
+          {
+              sprintf(warn_buf, "mcmd-schedule: %d stage%s after the first; the run ends at %g fs (tinit + nsteps x dt) "
+                      "after %.0f steps instead of %s.", ir->mcmd_sched_n, ir->mcmd_sched_n > 1 ? "s" : "", tend,
+                      nsteps_true, gmx_step_str(ir->nsteps, buf));
+              warning_note(wi, warn_buf);
+          }
+          if (ir->nsteps >= 0 && tend <= ir->mcmd_sched_t[0])
+          {
+              warning(wi, "mcmd-schedule: the run ends before the first change, the schedule does nothing.");
+          }
+      }
   }
 
   /* Every mcmd-* option has now been read out, so anything still unread and

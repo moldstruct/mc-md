@@ -302,6 +302,16 @@ struct t_mcionize
     double         te_floor_steps;       /* steps with the actual T_e below te_min (not in the
                                           * restart state: counts this run segment only) */
     double         te_floor_dt;          /* MD step, fs, for that report */
+
+    /* mcmd-autostop = 2, the ion directions have settled (mcionize_dirstop).
+     * ds_u holds the unit velocity of each home heavy ion at the last check
+     * (zero: none yet, or the ion was at rest).  Not in the restart state: a
+     * continuation takes its first check as the new reference. */
+    int            ds_nint;              /* steps between checks */
+    gmx_bool       ds_have_ref;          /* a previous check exists */
+    rvec          *ds_u;                 /* natoms, only home heavy ions filled */
+    FILE          *ds_fp;                /* simulation_output/autostop_dirs.txt (master) */
+    double         ds_t, ds_turn, ds_pred; /* last check: fs, median turn (deg), predicted rest (deg) */
     int           *cch_start[MCMD_ATOM_TABLE_SIZE]; /* [num_rates + 1], by the
                                                      * element's rate state index */
     gmx_bool       coll_active;          /* rates nonzero this step         */
@@ -539,6 +549,18 @@ struct t_mcionize
     gmx_large_int_t output_step;
     int             charge_stride;  /* mcmd-charge-output-stride */
     int             text_stride;    /* the per-step text files every nstenergy steps */
+    /* mcmd-schedule (mcionize_schedule): the stage's first MD step and time, the phase of the output strides
+     * (set at the first output after a change), and what the intervals were at the tpr's step dt0 */
+    gmx_bool        sched_on;
+    gmx_large_int_t sched_step0;
+    double          sched_t0;       /* ps */
+    gmx_large_int_t out_step0, out_lag, out_k0;
+    gmx_bool        out_pending;
+    double          dt0_ps, dt_fs;
+    int             charge_stride0;
+    gmx_large_int_t ct_idle0;
+    int             ct_recheck0;
+    double          te_floor_fs;
 
     gmx_bool bInitialised; /* set on the first step */
     /* Continuation (-cpi), see mcmd_state_load() */
@@ -578,6 +600,16 @@ static double mcmd_mdp_real(real r)
 
     sprintf(buf, "%.7g", (double)r);
     return atof(buf);
+}
+
+/* Time (ps) of module step s: with mcmd-schedule from the current stage's start, else as GROMACS has it */
+static double mcmd_time(const t_mcionize *mc, const t_inputrec *ir, gmx_large_int_t s)
+{
+    if (mc->sched_on)
+    {
+        return mc->sched_t0 + (s - mc->sched_step0) * ir->delta_t;
+    }
+    return s * ir->delta_t + ir->init_t;
 }
 
 static FILE *mcmd_open_output(const char *name, const char *mode)
@@ -2219,6 +2251,7 @@ static void mcmd_coll_update_rates(t_mcionize *mc)
     if (mc->te_min > 0 && N >= 1.0 && T < mc->te_min)
     {
         mc->te_floor_steps += 1;
+        mc->te_floor_fs    += mc->dt_fs;
     }
     mc->coll_T      = T;
     mc->coll_ne     = ne = mc->coll_active ? N / (4.0 / 3.0 * M_PI * R * R * R * 1e-21) : 0;
@@ -4077,7 +4110,7 @@ static void mcmd_pbg_lr(t_mcionize *mc, const t_inputrec *ir, const t_mdatoms *m
 
     if (!mc->lr_ready || mc->screen_step - mc->lr_step >= mc->pbg_lr_nstep)
     {
-        const double t  = mc->screen_step * ir->delta_t + ir->init_t;
+        const double t  = mcmd_time(mc, ir, mc->screen_step);
         double       hb[6], U[2] = {0, 0}, cr_rms = -1, cr_max = -1;
         size_t       c;
 
@@ -4670,9 +4703,9 @@ static void mcmd_pbg_forces(t_mcionize *mc, const t_inputrec *ir, const t_mdatom
 
     if (N <= 0)
     {
-        const double t = mc->screen_step * ir->delta_t + ir->init_t;
+        const double t = mcmd_time(mc, ir, mc->screen_step);
 
-        if (MASTER(cr) && mc->screen_step % mc->pb_nstep == 0 && mcmd_pbfi_due(mc, t))
+        if (MASTER(cr) && (mc->screen_step - mc->sched_step0) % mc->pb_nstep == 0 && mcmd_pbfi_due(mc, t))
         {
             mcmd_pbfi_field(mc, md, x, FALSE, t);
         }
@@ -4690,8 +4723,8 @@ static void mcmd_pbg_forces(t_mcionize *mc, const t_inputrec *ir, const t_mdatom
 
         if (MASTER(cr))
         {
-            mcmd_pbg_solve(mc, ir, md, x, mc->screen_step * ir->delta_t + ir->init_t);
-            const double t = mc->screen_step * ir->delta_t + ir->init_t;
+            mcmd_pbg_solve(mc, ir, md, x, mcmd_time(mc, ir, mc->screen_step));
+            const double t = mcmd_time(mc, ir, mc->screen_step);
 
             if (mcmd_pbfi_due(mc, t))
             {
@@ -5141,13 +5174,21 @@ static void mcmd_write_step_output(t_mcionize *mc, t_mdatoms *mdatoms, double t)
         return;
     }
 
-    if ((mc->output_step % mc->charge_stride) == 0)
+    if (mc->out_pending)
+    {
+        /* the strides count from the stage's first step (mcionize_schedule) */
+        mc->out_step0   = mc->output_step - mc->out_lag;
+        mc->out_pending = FALSE;
+    }
+    /* out_k0: the stage's first step counted in its dt from tinit, so the
+     * strides stay on the time grid tinit + k x interval (md.c's step_ph) */
+    if (((mc->output_step - mc->out_step0 + mc->out_k0) % mc->charge_stride) == 0)
     {
         fwrite(mdatoms->chargeA, sizeof(mdatoms->chargeA[0]), mdatoms->nr,
                mc->fcharges);
     }
 
-    if ((mc->output_step % mc->text_stride) == 0)
+    if (((mc->output_step - mc->out_step0 + mc->out_k0) % mc->text_stride) == 0)
     {
         fprintf(mc->fmean,  "%lf %lf\n", t, mean_charge);
         fprintf(mc->fpulse, "%lf %lf\n", t, mc->intensity);
@@ -5743,8 +5784,10 @@ static void mcmd_first_step(t_mcionize *mc, t_mdatoms *mdatoms, t_state *state)
  *   mcmd-charge-transfer-idle     quiet steps before the pass goes idle
  *                                 (0 = built-in default, negative = never)
  *   mcmd-charge-transfer-recheck  step interval to recheck on once idle
- *   mcmd-autostop                 stop once E_kin/E_tot exceeds the threshold
- *   mcmd-autostop-threshold       that threshold
+ *   mcmd-autostop                 1: stop once E_kin/E_tot exceeds the ratio below;
+ *                                 2: once the ion directions have settled (mcionize_dirstop)
+ *   mcmd-autostop-energy-ratio    that ratio (was mcmd-autostop-threshold)
+ *   mcmd-autostop-angle, -interval, -min-time   the direction stop
  *   mcmd-initial-charges          read initial charges from charges.txt
  *   mcmd-detailed-output          log electronic dynamics (heavy I/O)
  *   mcmd-collisional-ionization   NOT IMPLEMENTED
@@ -5816,10 +5859,37 @@ static void mcmd_print_summary(FILE *fp, const t_mcionize *mc, const t_inputrec 
                 ir->mcmd_pulse_photon_energy, ir->mcmd_pulse_fwhm, ir->mcmd_pulse_peak_time,
                 ir->mcmd_pulse_photons, ir->mcmd_pulse_focal_diameter, fluen, ir->mcmd_pulse_bandwidth);
     }
-    fprintf(fp, " Run           %s steps x %g as = %g fs; seed %u (%s); %d rank%s\n",
-            gmx_step_str(ir->nsteps, warn[0]), dt_as, ir->nsteps * dt_as * 1e-3, mc->seed,
-            ir->mcmd_seed >= 0 ? "mcmd-seed" : "chosen at start, mcmd-seed = -1", cr->nnodes,
-            cr->nnodes > 1 ? "s" : "");
+    if (ir->mcmd_sched_n > 0)
+    {
+        /* do_md has already counted the steps through the stages (still at the tpr's dt here) */
+        gmx_large_int_t s0, nend = ir->init_step + ir->nsteps;
+        double          t0;
+        const int       k = mcmd_sched_stage(ir, ir->delta_t, nend, &s0, &t0);
+
+        fprintf(fp, " Run           %s steps to %g fs (mcmd-schedule); seed %u (%s); %d rank%s\n",
+                gmx_step_str(ir->nsteps, warn[0]), (t0 + (nend - s0) * mcmd_sched_dt(ir, k, ir->delta_t)) * 1e3,
+                mc->seed, ir->mcmd_seed >= 0 ? "mcmd-seed" : "chosen at start, mcmd-seed = -1", cr->nnodes,
+                cr->nnodes > 1 ? "s" : "");
+    }
+    else
+    {
+        fprintf(fp, " Run           %s steps x %g as = %g fs; seed %u (%s); %d rank%s\n",
+                gmx_step_str(ir->nsteps, warn[0]), dt_as, ir->nsteps * dt_as * 1e-3, mc->seed,
+                ir->mcmd_seed >= 0 ? "mcmd-seed" : "chosen at start, mcmd-seed = -1", cr->nnodes,
+                cr->nnodes > 1 ? "s" : "");
+    }
+    if (ir->mcmd_sched_n > 0)
+    {
+        int k;
+
+        fprintf(fp, " Schedule      from %g fs: dt %g as, PB every %g fs\n",
+                ir->init_t * 1e3, dt_as, mcmd_mdp_real(ir->mcmd_pb_interval));
+        for (k = 0; k < ir->mcmd_sched_n; k++)
+        {
+            fprintf(fp, "               from %g fs: dt %g as, PB every %g fs\n", mcmd_mdp_real(ir->mcmd_sched_t[k]),
+                    mcmd_mdp_real(ir->mcmd_sched_dt[k]) * 1e3, mcmd_mdp_real(ir->mcmd_sched_pb[k]));
+        }
+    }
     if (ir->mcmd_atomic_data == 1)
     {
         fprintf(fp, " Atomic data   built in: screened-hydrogenic shells (K, L, M) at %g eV, mcmd-atomic-data = hydrogenic\n"
@@ -5895,10 +5965,29 @@ static void mcmd_print_summary(FILE *fp, const t_mcionize *mc, const t_inputrec 
     {
         fprintf(fp, "   %-40s none (mcmd-electrons = none: every electron leaves)\n", "trapped electrons");
     }
-    fprintf(fp, "\n Output        simulation_output/: %s, charges_over_time.bin every %d steps;\n"
-            "               autostop %s\n",
-            mc->bDetailedOutput ? "transitions.bin (mcmd-detailed-output = 1)" : "summary files only",
-            mc->charge_stride, ir->mcmd_autostop ? "on" : "off");
+    {
+        char as[256];
+
+        if (ir->mcmd_autostop == 1)
+        {
+            snprintf(as, sizeof(as), "on: E_kin/E_tot > %g (mcmd-autostop = 1)", (double)ir->mcmd_autostop_energy_ratio);
+        }
+        else if (ir->mcmd_autostop == 2)
+        {
+            snprintf(as, sizeof(as), "ion directions settled (mcmd-autostop = 2): predicted remaining heavy-ion turn "
+                     "< %g deg, checked every %g fs, from %g fs after the peak; at most nsteps",
+                     (double)ir->mcmd_autostop_angle, mc->ds_nint * ir->delta_t * 1e3,
+                     (double)ir->mcmd_autostop_min_time);
+        }
+        else
+        {
+            snprintf(as, sizeof(as), "off");
+        }
+        fprintf(fp, "\n Output        simulation_output/: %s, charges_over_time.bin every %d steps;\n"
+                "               autostop %s\n",
+                mc->bDetailedOutput ? "transitions.bin (mcmd-detailed-output = 1)" : "summary files only",
+                mc->charge_stride, as);
+    }
 
     /* warnings */
 #define MCMD_WARN(...) do { if (nw < 16) { snprintf(warn[nw++], sizeof(warn[0]), __VA_ARGS__); } } while (0)
@@ -6148,6 +6237,9 @@ t_mcionize *mcionize_init(FILE *fplog, const t_inputrec *ir,
     mc->charge_stride = (ir->mcmd_charge_output_stride > 0 ?
                          ir->mcmd_charge_output_stride : 1);
     mc->text_stride   = (ir->nstenergy > 0 ? ir->nstenergy : 1);
+    mc->charge_stride0 = mc->charge_stride;
+    mc->dt0_ps         = ir->delta_t;
+    mc->dt_fs          = ir->delta_t * 1e3;
 
     /* The module is active, so the altered force field is too.  This used to
      * be a separate mdp switch (userint1); it is now implied by -ionize,
@@ -6167,11 +6259,18 @@ t_mcionize *mcionize_init(FILE *fplog, const t_inputrec *ir,
     mc->ct_recheck    = (ir->mcmd_charge_transfer_recheck > 0 ?
                          ir->mcmd_charge_transfer_recheck :
                          MCMD_CT_RECHECK_DEFAULT);
+    mc->ct_idle0      = mc->ct_idle_steps;
+    mc->ct_recheck0   = mc->ct_recheck;
 
     mc->natoms = mdatoms->nr;
 
     /* Pulse, converted to SI once here rather than every step. */
     mc->t_mean_s         = ir->mcmd_pulse_peak_time * 1e-15;   /* fs -> s */
+    mc->ds_nint          = (int)floor(ir->mcmd_autostop_interval / (ir->delta_t * 1e3) + 0.5);
+    if (mc->ds_nint < 1)
+    {
+        mc->ds_nint = 1;
+    }
     nphot                = (double)ir->mcmd_pulse_photons;
     /* The mdp gives the FWHM; everything below works in the standard
      * deviation, so convert once here. */
@@ -6879,7 +6978,10 @@ void mcionize_screen_forces(t_mcionize *mc, const t_inputrec *ir,
     mcmd_pbg_forces(mc, ir, mdatoms, x, v, f, cr);
     if (mc->pbg_lr)
     {
+        const double tm_lr = mcmd_pb_wallms();
+
         mcmd_pbg_lr(mc, ir, mdatoms, x, v, f, cr);
+        mc->tm[6] += mcmd_pb_wallms() - tm_lr;
     }
     mc->pressure_h_now      = mc->pb_h;
     mc->tm[MCMD_TM_PBF]    += mcmd_pb_wallms() - tm_x;
@@ -6896,7 +6998,7 @@ void mcionize_screen_forces(t_mcionize *mc, const t_inputrec *ir,
                     "the ions)\n");
         }
         fprintf(mc->fled, "%ld %.5f %.3f %.3f %.3f %.3f %.1f %.0f\n", (long)(mc->screen_step - 1),
-                (mc->screen_step - 1) * ir->delta_t + ir->init_t, mc->led_Jii, mc->led_Jie, mc->pressure_work,
+                mcmd_time(mc, ir, mc->screen_step - 1), mc->led_Jii, mc->led_Jie, mc->pressure_work,
                 mc->screen_E_trapped, mc->num_free_electrons, mc->led_nchg);
         fflush(mc->fled);
     }
@@ -6928,7 +7030,7 @@ gmx_bool mcionize_autostop(const t_mcionize *mc, const t_inputrec *ir,
     /* mc == NULL already means -ionize was not given, which is what gates the
      * whole module.  All three of these tests are rank-independent, so every
      * rank returns here together and none is left behind at the broadcast. */
-    if (mc == NULL || ir->mcmd_autostop == 0)
+    if (mc == NULL || ir->mcmd_autostop != 1)
     {
         return FALSE;
     }
@@ -6946,11 +7048,11 @@ gmx_bool mcionize_autostop(const t_mcionize *mc, const t_inputrec *ir,
     {
         double ratio = E_kin / E_tot;
 
-        if (ratio > ir->mcmd_autostop_threshold && step > 10000)
+        if (ratio > ir->mcmd_autostop_energy_ratio && step > 10000)
         {
             fprintf(stderr,
                     "\nSimulation terminated: ratio %f is over threshold %f\n",
-                    ratio, (double)ir->mcmd_autostop_threshold);
+                    ratio, (double)ir->mcmd_autostop_energy_ratio);
             stop = 1;
         }
     }
@@ -6964,6 +7066,302 @@ gmx_bool mcionize_autostop(const t_mcionize *mc, const t_inputrec *ir,
     }
 
     return (stop != 0);
+}
+
+/* mcmd-autostop = 2: stop once the ion directions have settled.
+ *
+ * Every ds_nint steps each rank measures, for its home heavy ions (hydrogen
+ * is left out: the protons leave first and are not what the maps are made
+ * of), the angle between the velocity direction now and at the last check,
+ * and bins it into a log-spaced histogram that is summed over the ranks.  The
+ * master takes the median turn s over the interval dt_c and extrapolates it:
+ * late in the explosion the turning rate falls like 1/(t - t_peak)^2, so the
+ * turn still to come is
+ *
+ *     rest = s * (t - dt_c - t_peak) / dt_c,
+ *
+ * which on 250 fs reference runs (1.3k-21.6k atoms, heavy-atom charge 1.7-6.4,
+ * 2 and 4 keV) was 1.7-3x the turn actually left up to 250 fs at 100-150 fs:
+ * an overestimate, so the stop is on the safe side.  The run stops once
+ * rest < mcmd-autostop-angle and t - t_peak >= mcmd-autostop-min-time (early
+ * on the turning has not reached the 1/t^2 regime and the extrapolation
+ * undershoots).  Decided on the master and broadcast, like the energy test:
+ * a rank that leaves the MD loop alone hangs the others.
+ *
+ * The velocity in the state is the leap-frog half step; for a direction that
+ * makes no difference at the resolution this needs. */
+#define MCMD_DS_NB  512        /* histogram bins: [0, lo], then log-spaced lo..180 deg */
+#define MCMD_DS_LO  1e-4       /* degrees */
+
+gmx_bool mcionize_dirstop(t_mcionize *mc, const t_inputrec *ir, const t_mdatoms *md, rvec *v,
+                          gmx_large_int_t step, double t, const t_commrec *cr)
+{
+    double       hist[MCMD_DS_NB + 1];      /* last entry: the number of ions counted */
+    const double lr = log(180.0 / MCMD_DS_LO);
+    int          stop = 0, a, k;
+
+    /* All of these are rank-independent, so every rank returns together. */
+    if (mc == NULL || ir->mcmd_autostop != 2 || (step - mc->sched_step0) % mc->ds_nint != 0)
+    {
+        return FALSE;
+    }
+    if (mc->ds_u == NULL)
+    {
+        snew(mc->ds_u, mc->natoms);
+    }
+
+    for (k = 0; k <= MCMD_DS_NB; k++)
+    {
+        hist[k] = 0;
+    }
+    for (a = md->start; a < md->start + md->homenr; a++)
+    {
+        double vn, u[3];
+
+        if (mc->elem_of_atom[a] == mc->elem_H)
+        {
+            continue;
+        }
+        vn = sqrt((double)v[a][XX] * v[a][XX] + (double)v[a][YY] * v[a][YY] + (double)v[a][ZZ] * v[a][ZZ]);
+        if (vn <= 0)
+        {
+            clear_rvec(mc->ds_u[a]);
+            continue;
+        }
+        u[0] = v[a][XX] / vn;
+        u[1] = v[a][YY] / vn;
+        u[2] = v[a][ZZ] / vn;
+        if (mc->ds_have_ref && norm2(mc->ds_u[a]) > 0)
+        {
+            double c   = u[0] * mc->ds_u[a][XX] + u[1] * mc->ds_u[a][YY] + u[2] * mc->ds_u[a][ZZ];
+            double ang = acos(c > 1 ? 1 : (c < -1 ? -1 : c)) * 180.0 / M_PI;
+
+            k = (ang <= MCMD_DS_LO) ? 0 : 1 + (int)(log(ang / MCMD_DS_LO) / lr * (MCMD_DS_NB - 1));
+            if (k > MCMD_DS_NB - 1)
+            {
+                k = MCMD_DS_NB - 1;
+            }
+            hist[k] += 1;
+            hist[MCMD_DS_NB] += 1;
+        }
+        mc->ds_u[a][XX] = u[0];
+        mc->ds_u[a][YY] = u[1];
+        mc->ds_u[a][ZZ] = u[2];
+    }
+    if (!mc->ds_have_ref)
+    {
+        mc->ds_have_ref = TRUE;     /* the first check only sets the reference */
+        return FALSE;
+    }
+    if (PAR(cr))
+    {
+        gmx_sumd(MCMD_DS_NB + 1, hist, cr);
+    }
+
+    if (MASTER(cr))
+    {
+        const double n    = hist[MCMD_DS_NB];
+        const double t_fs = t * 1e3;
+        const double tp   = mc->t_mean_s * 1e15;
+        const double dtc  = mc->ds_nint * ir->delta_t * 1e3;
+        const double lev  = (t_fs - dtc - tp) / dtc;
+        double       med  = 0, cum = 0, pred;
+
+        if (n > 0)
+        {
+            for (k = 0; k < MCMD_DS_NB; k++)
+            {
+                if (cum + hist[k] >= 0.5 * n && hist[k] > 0)
+                {
+                    const double f  = (0.5 * n - cum) / hist[k];
+                    const double e0 = (k == 0) ? 0 : MCMD_DS_LO * exp(lr * (k - 1) / (MCMD_DS_NB - 1));
+                    const double e1 = MCMD_DS_LO * exp(lr * (k == 0 ? 0 : k) / (MCMD_DS_NB - 1));
+
+                    med = (k == 0) ? f * e1 : e0 * pow(e1 / e0, f);
+                    break;
+                }
+                cum += hist[k];
+            }
+        }
+        pred = (lev > 0 && n > 0) ? med * lev : -1;   /* -1: no prediction yet */
+
+        if (mc->ds_fp == NULL)
+        {
+            mc->ds_fp = mcmd_open_output("autostop_dirs.txt", "w");
+            fprintf(mc->ds_fp, "# mcmd-autostop = 2: every %g fs, the median turn of the heavy-ion velocity "
+                    "directions since the last check, and the turn predicted still to come (median * (t - %g fs - "
+                    "t_peak) / %g fs; -1 before there is one)\n# stop once it is < %g deg and t - t_peak >= %g fs "
+                    "(t_peak = %g fs)\n# t[fs] turn[deg] predicted_rest[deg] heavy_ions\n",
+                    dtc, dtc, dtc, (double)ir->mcmd_autostop_angle, (double)ir->mcmd_autostop_min_time, tp);
+        }
+        fprintf(mc->ds_fp, "%.3f %.5f %.4f %.0f\n", t_fs, med, pred, n);
+        fflush(mc->ds_fp);
+        mc->ds_t    = t_fs;
+        mc->ds_turn = med;
+        mc->ds_pred = pred;
+
+        if (pred >= 0 && pred < ir->mcmd_autostop_angle && t_fs - tp >= ir->mcmd_autostop_min_time)
+        {
+            fprintf(stderr, "\nSimulation terminated: ion directions settled at %.1f fs (%.1f fs after the pulse "
+                    "peak): median heavy-ion turn %.3f deg in the last %g fs, %.2f deg predicted still to come, under "
+                    "mcmd-autostop-angle = %g\n", t_fs, t_fs - tp, med, dtc, pred, (double)ir->mcmd_autostop_angle);
+            stop = 1;
+        }
+    }
+    if (PAR(cr))
+    {
+        gmx_bcast(sizeof(stop), &stop, cr);
+    }
+
+    return (stop != 0);
+}
+
+/* ---------------------------------------------------------------- *
+ * mcmd-schedule (2026-11-09): the MD step and the PB interval change at given
+ * times.  Stage 0 runs with the tpr's dt and mcmd-pb-interval from tinit;
+ * stage k >= 1 from mcmd_sched_t[k-1] (fs) with mcmd_sched_dt / _pb[k-1].
+ * The stage boundaries are steps that follow from the tpr alone (grompp makes
+ * every stage start on a step of the one before), so the stage of any step,
+ * and with it the time, is known without saving anything: a continuation
+ * (mdrun -cpi) finds its stage from its first step.
+ * ---------------------------------------------------------------- */
+
+/* Stage of MD step `step`, with its first step and start time (ps); dt0 is the tpr's dt (ps) */
+int mcmd_sched_stage(const t_inputrec *ir, double dt0, gmx_large_int_t step, gmx_large_int_t *step0, double *t0)
+{
+    gmx_large_int_t s = 0, sn;
+    double          ta = ir->init_t, dta = dt0;
+    int             k;
+
+    for (k = 0; k < ir->mcmd_sched_n; k++)
+    {
+        const double tb = mcmd_mdp_real(ir->mcmd_sched_t[k]) * 1e-3;
+
+        sn = s + (gmx_large_int_t)floor((tb - ta) / dta + 0.5);
+        if (step < sn)
+        {
+            break;
+        }
+        s   = sn;
+        ta  = tb;
+        dta = mcmd_sched_dt(ir, k + 1, dt0);
+    }
+    *step0 = s;
+    *t0    = ta;
+    return k;
+}
+
+/* Stage k's MD step (ps, as single-precision dt) and PB interval (fs); stage 0 is the tpr's */
+double mcmd_sched_dt(const t_inputrec *ir, int k, double dt0)
+{
+    return (k == 0) ? dt0 : (double)(real)(mcmd_mdp_real(ir->mcmd_sched_dt[k - 1]) * 1e-3);
+}
+
+double mcmd_sched_pb(const t_inputrec *ir, int k)
+{
+    return mcmd_mdp_real(k == 0 ? ir->mcmd_pb_interval : ir->mcmd_sched_pb[k - 1]);
+}
+
+/* MD steps from step 0 to t_end (ps) through the schedule */
+gmx_large_int_t mcmd_sched_steps_to(const t_inputrec *ir, double dt0, double t_end)
+{
+    gmx_large_int_t s = 0;
+    double          ta = ir->init_t, dta = dt0;
+    int             k;
+
+    for (k = 0; k < ir->mcmd_sched_n; k++)
+    {
+        const double tb = mcmd_mdp_real(ir->mcmd_sched_t[k]) * 1e-3;
+
+        if (t_end <= tb)
+        {
+            break;
+        }
+        s  += (gmx_large_int_t)floor((tb - ta) / dta + 0.5);
+        ta  = tb;
+        dta = mcmd_sched_dt(ir, k + 1, dt0);
+    }
+    return s + (gmx_large_int_t)floor((t_end - ta) / dta + 0.5);
+}
+
+/* The module's step-counted intervals for the stage that starts at MD step
+ * step0 and time t0 (ps), with ir->delta_t and ir->nstenergy already the
+ * stage's: the PB solve (and long range) every pb_fs, the direction checks
+ * every mcmd-autostop-interval, the text output every nstenergy, and the
+ * charge dumps and the charge-transfer idle skipping at the time intervals
+ * they had at the tpr's step.  bChange: the stage starts now, so the steps
+ * since the last solve and since the last transfer are converted from the old
+ * step (dt_prev, ps); otherwise (a continuation starting inside the stage)
+ * the restored counters are already in this stage's steps. */
+void mcionize_schedule(t_mcionize *mc, FILE *fplog, const t_inputrec *ir, int stage, double pb_fs,
+                       gmx_large_int_t step0, double t0, gmx_large_int_t step_now, gmx_bool bChange, double dt_prev)
+{
+    const double dt_fs = ir->delta_t * 1e3;
+    double       r0;
+    int          n;
+    char         sbuf[32];
+
+    if (mc == NULL)
+    {
+        return;
+    }
+    r0 = mc->dt0_ps / ir->delta_t;
+    mc->sched_on    = TRUE;
+    mc->sched_step0 = step0;
+    mc->sched_t0    = t0;
+    mc->dt_fs       = dt_fs;
+    if (mc->screen_mode != 0)
+    {
+        n = (int)floor(pb_fs / dt_fs + 0.5);
+        n = (n < 1) ? 1 : n;
+        if (bChange)
+        {
+            const double rr = dt_prev / ir->delta_t;
+
+            mc->pb_step_solve = mc->screen_step - (gmx_large_int_t)floor((mc->screen_step - mc->pb_step_solve) * rr + 0.5);
+            mc->lr_step       = mc->screen_step - (gmx_large_int_t)floor((mc->screen_step - mc->lr_step) * rr + 0.5);
+        }
+        mc->pb_nstep = n;
+        /* The long-range ion field (grid mode, mcmd-pb-long-range) is held
+         * between refreshes. It is the bare Coulomb push from beyond rcoulomb,
+         * which falls as the sample expands: held for the schedule's long PB
+         * intervals it over-drives the explosion (4TSN, 11k atoms: KE +17 to
+         * +50% at 200 fs). So it keeps the tpr's mcmd-pb-interval in time. */
+        n = (int)floor(mcmd_mdp_real(ir->mcmd_pb_interval) / dt_fs + 0.5);
+        mc->pbg_lr_nstep = (n < 1) ? 1 : n;
+    }
+    n           = (int)floor(ir->mcmd_autostop_interval / dt_fs + 0.5);
+    mc->ds_nint = (n < 1) ? 1 : n;
+    mc->text_stride = (ir->nstenergy > 0 ? ir->nstenergy : 1);
+    n                 = (int)floor(mc->charge_stride0 * r0 + 0.5);
+    mc->charge_stride = (n < 1) ? 1 : n;
+    if (mc->ct_idle0 >= 0)
+    {
+        n                 = (int)floor(mc->ct_idle0 * r0 + 0.5);
+        mc->ct_idle_steps = (n < 1) ? 1 : n;
+    }
+    n              = (int)floor(mc->ct_recheck0 * r0 + 0.5);
+    mc->ct_recheck = (n < 1) ? 1 : n;
+    if (bChange)
+    {
+        mc->ct_steps_since_transfer = (gmx_large_int_t)floor(mc->ct_steps_since_transfer * dt_prev / ir->delta_t + 0.5);
+    }
+    mc->out_lag     = step_now - step0;
+    mc->out_k0      = (gmx_large_int_t)floor((t0 - ir->init_t) / ir->delta_t + 0.5);
+    mc->out_pending = TRUE;
+    if (fplog != NULL && (bChange || stage > 0))
+    {
+        char lrbuf[64] = "";
+
+        if (mc->screen_mode != 0 && mc->pbg_lr)
+        {
+            sprintf(lrbuf, "long-range ion field every %d steps, ", mc->pbg_lr_nstep);
+        }
+        fprintf(fplog, "mcionize: schedule stage %d from %g fs (step %s): dt %g fs, PB every %d steps (%g fs), "
+                "%snstenergy %d%s\n", stage, t0 * 1e3, gmx_step_str(step0, sbuf), dt_fs,
+                mc->screen_mode != 0 ? mc->pb_nstep : 0, mc->screen_mode != 0 ? mc->pb_nstep * dt_fs : 0.0,
+                lrbuf, ir->nstenergy, bChange ? "" : " (continuation)");
+    }
 }
 
 void mcionize_checkpoint(t_mcionize *mc, const t_mdatoms *mdatoms, gmx_large_int_t step, const t_commrec *cr)
@@ -6995,7 +7393,8 @@ void mcionize_done(t_mcionize *mc, t_mdatoms *mdatoms, const t_commrec *cr)
     {
         static const char *nm[10] = {"charge transfer", "geometry + plasma update + rates", "Monte Carlo",
                                      "per-step output", "mcionize_step (master, total)", "PB forces (solves incl.)",
-                                     NULL, NULL, "mcionize_screen_forces (total)", "PB solves"};
+                                     "  of which long-range ion field", NULL, "mcionize_screen_forces (total)",
+                                     "PB solves"};
         FILE *ft = mcmd_open_output("timing_mcionize.txt", "w");
         int   k;
 
@@ -7004,7 +7403,11 @@ void mcionize_done(t_mcionize *mc, t_mdatoms *mdatoms, const t_commrec *cr)
         {
             if (nm[k] == NULL)
             {
-                continue;    /* 6, 7: the removed Debye and pressure forces */
+                continue;    /* 7: the removed pressure force (6 was the Debye force, now the long range) */
+            }
+            if (k == 6 && !mc->pbg_lr)
+            {
+                continue;
             }
             fprintf(stderr, "  %-36s %10.1f s\n", nm[k], 1e-3 * mc->tm[k]);
             if (ft) { fprintf(ft, "%-36s %10.1f s\n", nm[k], 1e-3 * mc->tm[k]); }
@@ -7060,7 +7463,7 @@ void mcionize_done(t_mcionize *mc, t_mdatoms *mdatoms, const t_commrec *cr)
     if (mc->te_floor_steps > 0)
     {
         fprintf(stderr, "mcionize: %.0f steps (%.2f fs) with the actual T_e below mcmd-te-min = %g eV "
-                "(solve, evaporation and recombination at the floor)\n", mc->te_floor_steps, mc->te_floor_steps * mc->te_floor_dt,
+                "(solve, evaporation and recombination at the floor)\n", mc->te_floor_steps, mc->te_floor_fs,
                 mc->te_min);
     }
     if (mc->ctab_clamped > 0)
@@ -7158,6 +7561,11 @@ static void mcionize_free(t_mcionize *mc)
     sfree(mc->energy_of_state);
     sfree(mc->outermost_shell);
     sfree(mc->elem_of_atom);
+    sfree(mc->ds_u);
+    if (mc->ds_fp != NULL)
+    {
+        fclose(mc->ds_fp);
+    }
     sfree(mc->ct_order);
     sfree(mc->mc_transitions);
     sfree(mc->mc_dt);

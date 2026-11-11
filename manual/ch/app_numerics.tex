@@ -127,6 +127,7 @@ distance from the box), and interpolated trilinearly to the full grid.
 The error is of order $(S\Delta x/d)^2$ of an already small correction.
 
 \section{The long-range ion force from the grid}
+\label{sec:longrange}
 
 Without a cutoff GROMACS evaluates all $O(N_{\mathrm{at}}^2)$ ion pairs.
 The grid already holds the smoothed potential $\Phi$ of all ions, so above 10\,000 atoms
@@ -140,8 +141,38 @@ To avoid counting the near pairs twice, the smoothed near pairs are subtracted f
 accurate to $\sim\mathrm{erfc}(r_c/s)$.
 The atom's own deposit is corrected exactly; atoms outside the grid stencil sum their far pairs directly; excluded pairs
 are subtracted too.
-The field is refreshed at every solve and multiplied by each atom's current charge in between.
+The field is refreshed every \opt{mcmd-pb-interval} of the \file{.mdp} (at every regular solve without a schedule)
+and multiplied by each atom's current charge in between.
+A schedule's longer PB intervals do not apply to it: the bare far-field push falls as the sample expands, and held
+for 2--5\,fs it over-drove the explosion (11k atoms: ion kinetic energy +17 to +50\,\% at 200\,fs).
 For up to $\sim$10\,000 atoms all pairs is as fast; for the GroEL ring (55\,000 atoms) long range is 1.9$\times$ faster.
+
+\section{Changing the step during the run}
+\label{sec:schedule-num}
+
+With \opt{mcmd-schedule} (Section~\ref{sec:schedule}) the stage boundaries are steps that follow from the
+\file{.tpr} alone, so the stage of any step is known without storing anything, and a continuation (\code{mdrun -cpi})
+finds its stage from its first step.
+At the first step of a stage:
+\begin{itemize}
+  \item \code{dt} changes; leap-frog holds $\vect v(t-\Delta t_{\mathrm{old}}/2)$, so before the update the velocities
+    get $\vect a(t)\,(\Delta t_{\mathrm{old}}-\Delta t_{\mathrm{new}})/2$, which makes the next half step
+    $\vect v(t+\Delta t_{\mathrm{new}}/2)$;
+  \item every interval counted in steps keeps its length in time (at least one step): \code{nstlist},
+    \code{nstcalcenergy}, \code{nstcomm}, \code{nstenergy}, \code{nstlog}, the trajectory intervals,
+    the charge output stride, the charge-transfer idle and recheck intervals;
+  \item the PB solve moves to the stage's interval; the long-range ion field keeps the \file{.mdp}'s
+    (Section~\ref{sec:longrange}), and the direction checks of the autostop their interval in fs;
+  \item a line in \file{md.log} gives the stage, its first step, \code{dt}, the PB and long-range intervals in steps and
+    \code{nstenergy}.
+\end{itemize}
+The output intervals and \code{nstcalcenergy} count from \code{tinit} in the stage's step, so frames and text output
+stay on the grid $t_{\mathrm{init}}+k\,\Delta t_{\mathrm{out}}$ whatever the switch times (\code{grompp} checks that the
+intervals divide); \code{nstlist} and \code{nstcomm} count from the stage's first step.
+Step numbers in the \file{.trr} are therefore no longer proportional to time; the times are.
+The run summary lists the stages, and the run's step count is that of the stages up to
+\code{tinit + nsteps}$\times$\code{dt}.
+Without a schedule the build reproduces the previous one bit for bit.
 
 \section{One MD step}
 
